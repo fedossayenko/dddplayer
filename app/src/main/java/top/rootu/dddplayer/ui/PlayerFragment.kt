@@ -207,11 +207,24 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
             true // Поглощаем событие
         }
 
-        // Настройка GL Surface
-        ui.glSurfaceView.setEGLContextClientVersion(2)
+        // ==========================================
+        // НАСТРОЙКА OPENGL ES (Детекция GLES 3.0)
+        // ==========================================
+        val activityManager = requireContext().getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager
+        val configurationInfo = activityManager.deviceConfigurationInfo
+        // Проверяем поддержку OpenGL ES 3.0 (0x30000)
+        val supportsEs3 = configurationInfo.reqGlEsVersion >= 0x30000
+
+        if (supportsEs3) {
+            ui.glSurfaceView.setEGLContextClientVersion(3)
+        } else {
+            ui.glSurfaceView.setEGLContextClientVersion(2)
+        }
+
         ui.glSurfaceView.setEGLConfigChooser(8, 8, 8, 8, 16, 0)
 
-        stereoRenderer = StereoRenderer(ui.glSurfaceView, this)
+        // Передаем флаг supportsEs3 в рендерер
+        stereoRenderer = StereoRenderer(ui.glSurfaceView, this, supportsEs3)
         ui.glSurfaceView.setRenderer(stereoRenderer)
         ui.glSurfaceView.renderMode = GLSurfaceView.RENDERMODE_WHEN_DIRTY
 

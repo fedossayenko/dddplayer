@@ -24,7 +24,8 @@ interface OnSurfaceReadyListener {
 
 class StereoRenderer(
     private val glSurfaceView: GLSurfaceView,
-    private val surfaceReadyListener: OnSurfaceReadyListener
+    private val surfaceReadyListener: OnSurfaceReadyListener,
+    private val useGles3: Boolean
 ) : GLSurfaceView.Renderer, SurfaceTexture.OnFrameAvailableListener {
 
     private val tAG = "StereoRenderer"
@@ -230,8 +231,12 @@ class StereoRenderer(
     }
 
     private fun setupShaders() {
-        val vertexShader = loadShader(GLES20.GL_VERTEX_SHADER, ShaderSource.VERTEX_SHADER)
-        val fragmentShader = loadShader(GLES20.GL_FRAGMENT_SHADER, ShaderSource.FRAGMENT_SHADER)
+        // Выбираем шейдеры в зависимости от версии GLES
+        val vertexSource = if (useGles3) ShaderSource.VERTEX_SHADER_300 else ShaderSource.VERTEX_SHADER
+        val fragmentSource = if (useGles3) ShaderSource.FRAGMENT_SHADER_300 else ShaderSource.FRAGMENT_SHADER
+
+        val vertexShader = loadShader(GLES20.GL_VERTEX_SHADER, vertexSource)
+        val fragmentShader = loadShader(GLES20.GL_FRAGMENT_SHADER, fragmentSource)
 
         program = GLES20.glCreateProgram()
         GLES20.glAttachShader(program, vertexShader)
