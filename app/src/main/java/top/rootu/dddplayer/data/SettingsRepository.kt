@@ -47,6 +47,10 @@ class SettingsRepository private constructor(context: Context) {
         db.videoSettingsDao().deleteOldSettings(System.currentTimeMillis() - 2592000000L)
     }
 
+    // 0 = Auto/GLES 3.0 (если доступно), 1 = Force GLES 2.0
+    fun getRenderApiMode(): Int = prefs.getInt("render_api_mode", 0)
+    fun setRenderApiMode(mode: Int) = prefs.edit { putInt("render_api_mode", mode) }
+
     // --- Zoom Settings ---
     fun isRememberZoomEnabled(): Boolean = prefs.getBoolean("remember_zoom", false)
     fun setRememberZoomEnabled(enabled: Boolean) = prefs.edit { putBoolean("remember_zoom", enabled) }

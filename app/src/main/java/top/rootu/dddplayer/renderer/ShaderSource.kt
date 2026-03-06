@@ -2,7 +2,7 @@ package top.rootu.dddplayer.renderer
 
 object ShaderSource {
     // ==========================================================================================
-    // GLES 2.0 SHADERS (Fallback для старых устройств)
+    // GLES 2.0 SHADERS (Legacy)
     // ==========================================================================================
     const val VERTEX_SHADER = """
         attribute vec4 a_position;
@@ -155,7 +155,7 @@ object ShaderSource {
             } else if (u_outputMode == OUTPUT_RIGHT_ONLY) {
                 gl_FragColor = vec4(texture2D(u_texture, tex_tc_r).rgb, 1.0);
             } else { 
-                // Анаглиф
+                // --- ANAGLYPH GLES 2.0 ---
                 vec3 left_color;
                 vec3 right_color;
                 
@@ -173,16 +173,24 @@ object ShaderSource {
                     right_color = texture2D(u_texture, tex_tc_r).rgb;
                 }
 
-                float r = dot(u_l_row1, left_color) + dot(u_r_row1, right_color);
-                float g = dot(u_l_row2, left_color) + dot(u_r_row2, right_color);
-                float b = dot(u_l_row3, left_color) + dot(u_r_row3, right_color);
+                // Adaptive Ghost Compensation (Simplified for GLES 2.0)
+                float lum = dot(left_color + right_color, vec3(0.333));
+                float ghost = 0.15 * smoothstep(0.1, 0.9, lum);
+
+                vec3 left_clean  = max(left_color  - right_color * ghost, 0.0);
+                vec3 right_clean = max(right_color - left_color  * ghost, 0.0);
+
+                float r = dot(u_l_row1, left_clean) + dot(u_r_row1, right_clean);
+                float g = dot(u_l_row2, left_clean) + dot(u_r_row2, right_clean);
+                float b = dot(u_l_row3, left_clean) + dot(u_r_row3, right_clean);
+                
                 gl_FragColor = vec4(clamp(vec3(r, g, b), 0.0, 1.0), 1.0);
             }
         }
     """
 
     // ==========================================================================================
-    // GLES 3.0 SHADERS (HDR + ACES Tone Mapping)
+    // GLES 3.0 SHADERS (HDR / Linear Workflow)
     // ==========================================================================================
     const val VERTEX_SHADER_300 = """#version 300 es
         in vec4 a_position;
@@ -220,26 +228,38 @@ object ShaderSource {
         const int INPUT_NONE = 0; const int INPUT_SBS = 1; const int INPUT_TB = 2; const int INPUT_INTERLACED = 3; const int INPUT_TILED_1080P = 4;
         const int OUTPUT_ANAGLYPH = 0; const int OUTPUT_LEFT_ONLY = 1; const int OUTPUT_RIGHT_ONLY = 2; const int OUTPUT_CARDBOARD = 3;
 
-        // Мягкая компрессия пересветов (Photographic Tone Mapping)
-        // Вместо жесткого обрезания (clamp), мы плавно прижимаем яркие цвета к 1.0
-        // Формула: 1.0 - exp(-color * exposure)
-        vec3 toneMap(vec3 color) {
-            // Exposure 1.2 дает хороший баланс: сохраняет яркость средних тонов 
-            // и спасает детали в диапазоне [1.0 ... 3.0]
-            return vec3(1.0) - exp(-color * 1.2);
+        // Корректная sRGB -> Linear конвертация
+        vec3 toLinear(vec3 c) {
+            vec3 lo = c / 12.92;
+            vec3 hi = pow((c + 0.055) / 1.055, vec3(2.4));
+            return mix(lo, hi, step(vec3(0.04045), c));
+        }
+
+        // Корректная Linear -> sRGB конвертация
+        vec3 toGamma(vec3 c) {
+            vec3 lo = c * 12.92;
+            vec3 hi = 1.055 * pow(c, vec3(1.0/2.4)) - 0.055;
+            return mix(lo, hi, step(vec3(0.0031308), c));
+        }
+        
+        // Soft Clip (Reinhard tone mapping)
+        // Мягко сжимает значения > 1.0, не затрагивая основной диапазон
+        vec3 softClip(vec3 c) {
+            return min(c, 1.0) + (max(c - 1.0, 0.0) / (1.0 + max(c - 1.0, 0.0)));
         }
 
         vec2 distort(vec2 p) {
-            float r2 = p.x * p.x + p.y * p.y;
-            float f = 1.0 + u_k1 * r2 + u_k2 * r2 * r2;
+            float r2 = dot(p,p);
+            float f = 1.0 + r2*(u_k1 + u_k2*r2);
             return p * f;
         }
 
         vec2 fitToScreen(vec2 tc, float videoAR, float screenAR) {
             float arScale = videoAR / screenAR;
             vec2 final_tc = tc;
-            if (arScale > 1.0) { final_tc.y = (tc.y - 0.5) * arScale + 0.5; } 
-            else { final_tc.x = (tc.x - 0.5) / arScale + 0.5; }
+            float cond = step(1.0, arScale);
+            final_tc.y = mix(tc.y, (tc.y - 0.5) * arScale + 0.5, cond);
+            final_tc.x = mix((tc.x - 0.5) / arScale + 0.5, tc.x, cond);
             return final_tc;
         }
 
@@ -291,38 +311,37 @@ object ShaderSource {
             vec3 color;
 
             if (u_outputMode == OUTPUT_ANAGLYPH) {
-                vec3 left_color; vec3 right_color;
-                
-                // Читаем текстуру
-                if (u_inputType == INPUT_INTERLACED) {
-                     float is_odd_line = mod(gl_FragCoord.y, 2.0);
-                     if (is_odd_line > 0.5) {
-                         left_color = texture(u_texture, tex_tc_l - vec2(0.0, 1.0/u_videoDimensions.y)).rgb;
-                         right_color = texture(u_texture, tex_tc_r).rgb;
-                     } else {
-                         left_color = texture(u_texture, tex_tc_l).rgb;
-                         right_color = texture(u_texture, tex_tc_r + vec2(0.0, 1.0/u_videoDimensions.y)).rgb;
-                     }
-                } else {
-                    left_color = texture(u_texture, tex_tc_l).rgb; 
-                    right_color = texture(u_texture, tex_tc_r).rgb;
-                }
-                
-                // Защита от NaN и отрицательных значений (убирает черные точки)
-                left_color = max(left_color, 0.0);
-                right_color = max(right_color, 0.0);
+                vec3 left_srgb = texture(u_texture, tex_tc_l).rgb; 
+                vec3 right_srgb = texture(u_texture, tex_tc_r).rgb;
 
-                // Сложение в HDR пространстве (без clamp)
-                // Мы НЕ делаем toLinear, так как матрицы Dubois рассчитаны на Gamma-пространство
-                float r = dot(u_l_row1, left_color) + dot(u_r_row1, right_color);
-                float g = dot(u_l_row2, left_color) + dot(u_r_row2, right_color);
-                float b = dot(u_l_row3, left_color) + dot(u_r_row3, right_color);
+                left_srgb = max(left_srgb, 0.0);
+                right_srgb = max(right_srgb, 0.0);
+
+                // 1. Correct sRGB -> Linear
+                vec3 left_lin = toLinear(left_srgb);
+                vec3 right_lin = toLinear(right_srgb);
+
+                // 2. Symmetric & Adaptive Ghost Compensation
+                float lum = dot(left_lin + right_lin, vec3(0.2126, 0.7152, 0.0722)) * 0.5;
+                float ghost = 0.2 * smoothstep(0.15, 0.85, lum);
+                vec3 ghostTerm = ghost * min(left_lin, right_lin);
+
+                vec3 left_clean  = max(left_lin  - ghostTerm, 0.0);
+                vec3 right_clean = max(right_lin - ghostTerm, 0.0);
+
+                // 3. Dubois Matrix Mixing
+                float r = dot(u_l_row1, left_clean) + dot(u_r_row1, right_clean);
+                float g = dot(u_l_row2, left_clean) + dot(u_r_row2, right_clean);
+                float b = dot(u_l_row3, left_clean) + dot(u_r_row3, right_clean);
                 
-                vec3 hdrColor = vec3(r, g, b);
+                vec3 linearColor = vec3(r, g, b);
+                linearColor = max(linearColor, 0.0);
                 
-                // Если цвет вышел за 1.0, мягко сжимаем его, вместо жесткого обрезания
-                // Если цвет в пределах 1.0, он почти не меняется
-                outColor = vec4(toneMap(hdrColor), 1.0);
+                // highlight compression
+                vec3 over = max(linearColor - 1.0, 0.0);
+                linearColor -= over * 0.5;
+                
+                outColor = vec4(toGamma(linearColor), 1.0);
 
             } else {
                 if (u_outputMode == OUTPUT_CARDBOARD) {

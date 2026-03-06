@@ -214,6 +214,7 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
         val configurationInfo = activityManager.deviceConfigurationInfo
         // Проверяем поддержку OpenGL ES 3.0 (0x30000)
         val supportsEs3 = configurationInfo.reqGlEsVersion >= 0x30000
+        viewModel.setDeviceSupportsEs3(supportsEs3)
 
         if (supportsEs3) {
             ui.glSurfaceView.setEGLContextClientVersion(3)
@@ -1014,6 +1015,16 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
             ui.updateStereoLayout(mode, viewModel.screenSeparation.value ?: 0f)
         }
         viewModel.anaglyphType.observe(viewLifecycleOwner) { stereoRenderer?.setAnaglyphType(it) }
+        viewModel.renderApiMode.observe(viewLifecycleOwner) { mode ->
+            // mode 0 = HDR (Use ES3), mode 1 = SDR (Force Legacy)
+            val forceLegacy = (mode == 1)
+            stereoRenderer?.setRenderApi(forceLegacy)
+
+            // Обновляем текст в OSD
+            if (settingsViewModel.currentSettingType.value == SettingType.RENDER_API) {
+                updateSettingsText()
+            }
+        }
         viewModel.singleFrameSize.observe(viewLifecycleOwner) { (w, h) -> stereoRenderer?.setSingleFrameDimensions(w, h) }
         viewModel.depth.observe(viewLifecycleOwner) { stereoRenderer?.setDepth(it) }
         viewModel.screenSeparation.observe(viewLifecycleOwner) {
@@ -1211,6 +1222,10 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
             SettingType.GLASSES_TYPE -> {
                 val group = AnaglyphLogic.getGlassesGroup(viewModel.anaglyphType.value!!)
                 viewModel.getOptionsForSetting(type, context)?.first?.getOrNull(group.ordinal) ?: group.name.replace("_", " ")
+            }
+            SettingType.RENDER_API -> {
+                if (viewModel.renderApiMode.value == 1) getString(R.string.api_gles2)
+                else getString(R.string.api_gles3)
             }
             SettingType.FILTER_MODE -> {
                 val name = viewModel.anaglyphType.value?.name ?: ""

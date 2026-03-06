@@ -25,7 +25,7 @@ interface OnSurfaceReadyListener {
 class StereoRenderer(
     private val glSurfaceView: GLSurfaceView,
     private val surfaceReadyListener: OnSurfaceReadyListener,
-    private val useGles3: Boolean
+    private val deviceSupportsEs3: Boolean
 ) : GLSurfaceView.Renderer, SurfaceTexture.OnFrameAvailableListener {
 
     private val tAG = "StereoRenderer"
@@ -65,6 +65,14 @@ class StereoRenderer(
 
     @Volatile
     private var currentInputType: StereoInputType = StereoInputType.NONE
+
+    // Флаг: использовать ли HDR шейдеры прямо сейчас
+    @Volatile
+    private var useEs3Shaders: Boolean = deviceSupportsEs3
+
+    // Флаг: нужно ли перекомпилировать программу на следующем кадре
+    @Volatile
+    private var shouldReloadShaders: Boolean = false
 
     @Volatile
     private var currentOutputMode: StereoOutputMode = StereoOutputMode.ANAGLYPH
@@ -166,10 +174,17 @@ class StereoRenderer(
 
     override fun onDrawFrame(gl: GL10?) {
         synchronized(this) {
+            // 1. Проверяем, нужно ли обновить текстуру
             if (frameAvailable) {
                 surfaceTexture?.updateTexImage()
                 surfaceTexture?.getTransformMatrix(texMatrix)
                 frameAvailable = false
+            }
+
+            // 2. Проверяем, нужно ли сменить шейдеры (Hot Swap)
+            if (shouldReloadShaders) {
+                setupShaders()
+                shouldReloadShaders = false
             }
         }
 
@@ -230,10 +245,27 @@ class StereoRenderer(
         )
     }
 
+    // Метод для переключения режима извне
+    fun setRenderApi(forceLegacy: Boolean) {
+        if (!deviceSupportsEs3) return // Если устройство не умеет ES3, переключать нечего
+
+        val newUseEs3 = !forceLegacy
+        if (useEs3Shaders != newUseEs3) {
+            useEs3Shaders = newUseEs3
+            shouldReloadShaders = true // Сигнал для onDrawFrame
+            glSurfaceView.requestRender()
+        }
+    }
     private fun setupShaders() {
-        // Выбираем шейдеры в зависимости от версии GLES
-        val vertexSource = if (useGles3) ShaderSource.VERTEX_SHADER_300 else ShaderSource.VERTEX_SHADER
-        val fragmentSource = if (useGles3) ShaderSource.FRAGMENT_SHADER_300 else ShaderSource.FRAGMENT_SHADER
+        // Удаляем старую программу, если она была
+        if (program != 0) {
+            GLES20.glDeleteProgram(program)
+            program = 0
+        }
+
+        // Выбираем исходники в зависимости от текущего режима
+        val vertexSource = if (useEs3Shaders) ShaderSource.VERTEX_SHADER_300 else ShaderSource.VERTEX_SHADER
+        val fragmentSource = if (useEs3Shaders) ShaderSource.FRAGMENT_SHADER_300 else ShaderSource.FRAGMENT_SHADER
 
         val vertexShader = loadShader(GLES20.GL_VERTEX_SHADER, vertexSource)
         val fragmentShader = loadShader(GLES20.GL_FRAGMENT_SHADER, fragmentSource)

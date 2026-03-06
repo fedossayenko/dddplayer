@@ -47,7 +47,7 @@ import androidx.media3.common.MediaItem as Media3MediaItem
 
 // --- Enums & Data Classes ---
 enum class SettingType {
-    VIDEO_TYPE, OUTPUT_FORMAT, GLASSES_TYPE, FILTER_MODE,
+    VIDEO_TYPE, OUTPUT_FORMAT, GLASSES_TYPE, RENDER_API, FILTER_MODE,
     CUSTOM_HUE_L, CUSTOM_HUE_R, CUSTOM_LEAK_L, CUSTOM_LEAK_R, CUSTOM_SPACE,
     SWAP_EYES, DEPTH_3D, SCREEN_SEPARATION, VR_DISTORTION, VR_ZOOM, AUDIO_TRACK, SUBTITLES
 }
@@ -131,6 +131,9 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     val currentQualityName: LiveData<String> = _currentQualityName
 
     // Renderer Settings
+    private var deviceSupportsEs3 = false
+    private val _renderApiMode = MutableLiveData(repository.getRenderApiMode()) // 0=HDR, 1=SDR
+    val renderApiMode: LiveData<Int> = _renderApiMode
     private val _inputType = MutableLiveData(StereoInputType.NONE)
     val inputType: LiveData<StereoInputType> = _inputType
     private val _outputMode = MutableLiveData(StereoOutputMode.ANAGLYPH)
@@ -1158,6 +1161,13 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                 anaglyphDelegate.setCustomSpaceLms(!anaglyphDelegate.customSpaceLms.value!!)
                 anaglyphDelegate.saveCustomSettings(_anaglyphType.value!!)
             }
+            SettingType.RENDER_API -> {
+                // 0 -> 1 -> 0
+                val current = _renderApiMode.value ?: 0
+                val next = if (current == 0) 1 else 0
+                repository.setRenderApiMode(next)
+                _renderApiMode.value = next
+            }
             SettingType.SWAP_EYES -> _swapEyes.value = !_swapEyes.value!!
             SettingType.DEPTH_3D -> _depth.value = SettingsMutator.modifyInt(_depth.value!!, direction, 1, -50, 50)
             SettingType.SCREEN_SEPARATION -> _screenSeparation.value = SettingsMutator.modifyFloat(_screenSeparation.value!!, direction, 0.005f, -0.15f, 0.15f)
@@ -1238,6 +1248,13 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                 val index = filters.indexOf(_anaglyphType.value!!)
                 Pair(list, index)
             }
+            SettingType.RENDER_API -> {
+                val list = listOf(
+                    context.getString(R.string.api_gles3), // 0
+                    context.getString(R.string.api_gles2)  // 1
+                )
+                Pair(list, _renderApiMode.value ?: 0)
+            }
             SettingType.AUDIO_TRACK -> {
                 if (audioOptions.isNotEmpty()) {
                     // Генерируем строки "здесь и сейчас" используя актуальный контекст
@@ -1302,6 +1319,9 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                     list.add(SettingType.CUSTOM_HUE_R); list.add(SettingType.CUSTOM_LEAK_R)
                     list.add(SettingType.CUSTOM_SPACE)
                 }
+            }
+            if (deviceSupportsEs3) {
+                list.add(SettingType.RENDER_API)
             }
             list.add(SettingType.SWAP_EYES)
             list.add(SettingType.DEPTH_3D)
@@ -1368,6 +1388,11 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             }
         }
         return AnaglyphLogic.getFiltersForGroup(group).first()
+    }
+
+    fun setDeviceSupportsEs3(supported: Boolean) {
+        deviceSupportsEs3 = supported
+        updateAvailableSettings()
     }
 
     // --- Hot Restart Logic ---

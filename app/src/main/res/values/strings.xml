@@ -67,6 +67,7 @@
     <string name="setting_leak_l">Leak (Left)</string>
     <string name="setting_leak_r">Leak (Right)</string>
     <string name="setting_space">Space</string>
+    <string name="setting_render_api">Render</string>
 
     <!-- OSD Settings Values -->
     <string name="val_custom">Custom</string>
@@ -77,6 +78,8 @@
     <string name="screen_separation_format" translatable="false">%.1f</string>
     <string name="vr_distortion_format" translatable="false">%.2f</string>
     <string name="vr_zoom_format" translatable="false">%.2f</string>
+    <string name="api_gles2">OpenGL ES 2.0</string>
+    <string name="api_gles3">OpenGL ES 3.0</string>
 
     <!-- Side Menu -->
     <string name="menu_main_title">Settings</string>
