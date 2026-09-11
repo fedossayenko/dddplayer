@@ -43,6 +43,8 @@ class GlobalSettingsActivity : AppCompatActivity() {
     private lateinit var btnClose: ImageButton
     private lateinit var itemExit: LinearLayout
     private lateinit var itemDecoder: LinearLayout
+    private lateinit var itemAutoPip: LinearLayout
+    private lateinit var switchAutoPip: SwitchCompat
     private lateinit var textDecoderDesc: TextView
     private lateinit var textDecoderValue: TextView
     private lateinit var itemTunneling: LinearLayout
@@ -144,6 +146,8 @@ class GlobalSettingsActivity : AppCompatActivity() {
         btnClose = findViewById(R.id.btn_close)
         itemExit = findViewById(R.id.item_exit)
         itemDecoder = findViewById(R.id.item_decoder)
+        itemAutoPip = findViewById(R.id.item_auto_pip)
+        switchAutoPip = findViewById(R.id.switch_auto_pip)
         textDecoderDesc = findViewById(R.id.text_decoder_desc)
         textDecoderValue = findViewById(R.id.text_decoder_value)
         itemTunneling = findViewById(R.id.item_tunneling)
@@ -206,6 +210,9 @@ class GlobalSettingsActivity : AppCompatActivity() {
 
         // Decoder
         itemDecoder.setOnClickListener { settingsViewModel.toggleDecoderPriority() }
+        itemAutoPip.setOnClickListener {
+            settingsViewModel.toggleAutoPip(!switchAutoPip.isChecked)
+        }
 
         // Downmix
         itemDownmix.setOnClickListener {
@@ -339,6 +346,7 @@ class GlobalSettingsActivity : AppCompatActivity() {
 
     private fun observeViewModel() {
         // Playback
+        settingsViewModel.isAutoPipEnabled.observe(this) { switchAutoPip.isChecked = it }
         settingsViewModel.decoderPriority.observe(this) { mode ->
             textDecoderValue.text = settingsViewModel.getDecoderValueString(mode)
             textDecoderDesc.setText(settingsViewModel.getDecoderDescResId(mode))

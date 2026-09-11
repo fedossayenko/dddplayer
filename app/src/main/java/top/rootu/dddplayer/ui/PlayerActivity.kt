@@ -2,12 +2,17 @@ package top.rootu.dddplayer.ui
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.app.PictureInPictureParams
 import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
+import android.content.res.Configuration
+import android.graphics.Rect
 import android.os.Build
 import android.os.Bundle
+import android.util.Rational
 import android.view.KeyEvent
+import android.view.View
 import android.view.WindowManager
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
@@ -18,9 +23,11 @@ import androidx.core.net.toUri
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import top.rootu.dddplayer.BuildConfig
 import top.rootu.dddplayer.R
+import top.rootu.dddplayer.data.SettingsRepository
 import top.rootu.dddplayer.utils.IntentUtils
 import top.rootu.dddplayer.viewmodel.PlayerViewModel
 
@@ -33,6 +40,82 @@ class PlayerActivity : AppCompatActivity() {
     private var isCompleted = false
     // Сохраняем Intent, чтобы обработать его после получения разрешения
     private var pendingIntent: Intent? = null
+    private var pipPlayer: Player? = null
+    private val pipListener = object : Player.Listener {
+        override fun onEvents(player: Player, events: Player.Events) {
+            updatePictureInPictureParams()
+        }
+    }
+
+    val supportsPictureInPicture: Boolean
+        get() = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
+            packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE)
+
+    private fun canEnterPictureInPicture(): Boolean {
+        val player = viewModel.player ?: return false
+        return supportsPictureInPicture && !isFinishing && player.currentMediaItem != null &&
+            player.playerError == null && player.playbackState != Player.STATE_IDLE &&
+            player.playbackState != Player.STATE_ENDED
+    }
+
+    @androidx.annotation.RequiresApi(Build.VERSION_CODES.O)
+    private fun buildPictureInPictureParams(): PictureInPictureParams {
+        val stereoView = findViewById<View>(R.id.gl_surface_view)
+        val frame = if (stereoView?.visibility == View.VISIBLE) stereoView
+            else findViewById<View>(R.id.aspect_ratio_frame)
+        val rect = Rect()
+        val builder = PictureInPictureParams.Builder()
+        if (frame != null && frame.getGlobalVisibleRect(rect) && rect.width() > 0 && rect.height() > 0) {
+            val ratio = (rect.width().toFloat() / rect.height()).coerceIn(0.42f, 2.39f)
+            builder.setAspectRatio(Rational((ratio * 1000).toInt(), 1000))
+            builder.setSourceRectHint(rect)
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            builder.setAutoEnterEnabled(shouldAutoEnterPictureInPicture())
+        }
+        return builder.build()
+    }
+
+    private fun updatePictureInPictureParams() {
+        if (!supportsPictureInPicture || Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
+        if (!isInPictureInPictureMode) setPictureInPictureParams(buildPictureInPictureParams())
+    }
+
+    fun enterPlayerPictureInPicture(showError: Boolean = false) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O || isInPictureInPictureMode) return
+        val entered = if (canEnterPictureInPicture()) {
+            try {
+                enterPictureInPictureMode(buildPictureInPictureParams())
+            } catch (_: IllegalStateException) {
+                false
+            }
+        } else false
+        if (!entered && showError) {
+            Toast.makeText(applicationContext, R.string.pip_unavailable, Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    override fun onUserLeaveHint() {
+        super.onUserLeaveHint()
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S && shouldAutoEnterPictureInPicture()) {
+            enterPlayerPictureInPicture()
+        }
+    }
+
+    private fun shouldAutoEnterPictureInPicture(): Boolean =
+        SettingsRepository.getInstance(applicationContext).isAutoPipEnabled() &&
+            canEnterPictureInPicture() && viewModel.player?.playWhenReady == true
+
+    override fun onResume() {
+        super.onResume()
+        updatePictureInPictureParams()
+    }
+
+    override fun onPictureInPictureModeChanged(inPip: Boolean, newConfig: Configuration) {
+        super.onPictureInPictureModeChanged(inPip, newConfig)
+        playerFragment?.setPictureInPictureMode(inPip)
+        if (!inPip) updatePictureInPictureParams()
+    }
 
     // Регистрация коллбека для запроса разрешений
     private val requestPermissionLauncher = registerForActivityResult(
@@ -106,6 +189,26 @@ class PlayerActivity : AppCompatActivity() {
             playerFragment =
                 supportFragmentManager.findFragmentById(R.id.container) as? PlayerFragment
         }
+        viewModel.playerRecreatedEvent.observe(this) { player ->
+            pipPlayer?.removeListener(pipListener)
+            pipPlayer = player
+            player.addListener(pipListener)
+            updatePictureInPictureParams()
+        }
+        pipPlayer = viewModel.player
+        pipPlayer?.addListener(pipListener)
+        listOf(R.id.aspect_ratio_frame, R.id.gl_surface_view).forEach { id ->
+            findViewById<View>(id)?.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
+                updatePictureInPictureParams()
+            }
+        }
+        updatePictureInPictureParams()
+    }
+
+    override fun onDestroy() {
+        pipPlayer?.removeListener(pipListener)
+        pipPlayer = null
+        super.onDestroy()
     }
 
     private fun isLaunchedFromLauncher(intent: Intent): Boolean {
@@ -204,6 +307,9 @@ class PlayerActivity : AppCompatActivity() {
      */
     @SuppressLint("RestrictedApi")
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && isInPictureInPictureMode) {
+            return super.dispatchKeyEvent(event)
+        }
         // Передаем событие во фрагмент для обработки.
         // Если фрагмент его обработал (вернул true), то мы прекращаем дальнейшее распространение.
         if (playerFragment?.handleKeyEvent(event) == true) {

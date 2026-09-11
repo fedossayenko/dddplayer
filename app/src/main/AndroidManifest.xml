@@ -44,7 +44,9 @@
             android:logo="@mipmap/ic_launcher"
             android:banner="@drawable/tv_banner"
             android:screenOrientation="landscape"
-            android:configChanges="orientation|screenSize|keyboardHidden|keyboard|navigation">
+            android:supportsPictureInPicture="true"
+            android:resizeableActivity="true"
+            android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboardHidden|keyboard|navigation">
 
             <!-- Точка входа для Android TV -->
             <intent-filter>

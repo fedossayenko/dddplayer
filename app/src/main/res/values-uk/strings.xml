@@ -18,6 +18,7 @@
     <string name="playback_speed">Швидкість</string>
     <string name="playback_zoom">Масштаб</string>
     <string name="playback_zoom_scale">Збільшення %d%%</string>
+    <string name="picture_in_picture">Картинка в картинці</string>
     <string name="playback_zoom_percent">Масштаб: %d%%</string>
 
     <!-- Режими масштабування -->
@@ -83,6 +84,7 @@
     <string name="error_video_decoder">Помилка відеодекодера.\nВідтворюється тільки аудіо.</string>
     <string name="error_audio_disabled">Помилка аудіо. Звук вимкнено.\n%s</string>
     <string name="error_audio_disabled_hint">Помилка аудіо. Звук вимкнено.\nСпробуйте іншу доріжку.\n%s</string>
+    <string name="pip_unavailable">Не вдалося відкрити PiP. Запустіть відео та дозвольте режим «Картинка в картинці» в налаштуваннях системи.</string>
     <string name="msg_playlist_empty">Плейлист порожній</string>
     <string name="msg_auto_detect">Автовизначення: %s</string>
     <string name="press_back_exit">Натисніть НАЗАД для виходу</string>
@@ -96,6 +98,7 @@
     <string name="pref_decoder_priority_prefer_device">Надавати перевагу декодерам пристрою (за замовчуванням) HW+SW</string>
     <string name="pref_decoder_priority_prefer_app">Надавати перевагу декодерам програми (AV1 + FFmpeg) SW+HW</string>
     <string name="pref_decoder_priority_only_device">Тільки декодери пристрою</string>
+    <string name="pref_auto_pip_desc">Автоматично відкривати невелике вікно з відео під час згортання застосунку, коли триває відтворення.</string>
     <string name="pref_downmix">Downmix у стерео</string>
     <string name="pref_downmix_desc">При використанні SW декодера, дозволяє перетворити багатоканальний звук у правильно¹ зміксоване стерео, що вирішує проблему з відсутністю голосу/перекладу (зазвичай на центральному каналі).\n¹ - Матриці для downmix розраховані аналогічно RFC 7845 (Section 5.1.1.5).</string>
     <string name="pref_downmix_config">Корекція Downmix</string>

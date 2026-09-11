@@ -94,6 +94,7 @@ class PlayerUiController(private val rootView: View) {
     val buttonQuality: TextView = controlsView.findViewById(R.id.button_quality)
     val buttonSpeed: TextView = controlsView.findViewById(R.id.button_speed)
     val buttonResize: ImageButton = controlsView.findViewById(R.id.button_resize)
+    val buttonPip: ImageButton = controlsView.findViewById(R.id.button_pip)
     val buttonPlaylist: ImageButton = controlsView.findViewById(R.id.button_playlist)
     val buttonAudio: ImageButton = controlsView.findViewById(R.id.button_audio)
     val buttonSubs: ImageButton = controlsView.findViewById(R.id.button_subs)
@@ -153,6 +154,25 @@ class PlayerUiController(private val rootView: View) {
 
     // Состояние из настроек (показываем ли часы)
     private var isStandaloneClockEnabled: Boolean = false
+    private var inPictureInPicture = false
+
+    fun setPictureInPictureMode(enabled: Boolean) {
+        inPictureInPicture = enabled
+        if (enabled) {
+            playlistDialog?.dismiss()
+            hideControls()
+            topSettingsPanel.isVisible = false
+            hideHandler.removeCallbacks(hideGestureRunnable)
+            listOf(seekOverlay, gestureContainer, rewindOverlay, ffwdOverlay,
+                overlayPrev, overlayNext, dimOverlay).forEach {
+                it.animate().cancel()
+                it.isVisible = false
+            }
+        } else {
+            showControls()
+        }
+        updateClockVisibility()
+    }
 
     init {
         // Настройка ленты
@@ -172,7 +192,7 @@ class PlayerUiController(private val rootView: View) {
     }
 
     private fun updateClockVisibility() {
-        standaloneClock.isVisible = isStandaloneClockEnabled && !topInfoPanel.isVisible
+        standaloneClock.isVisible = !inPictureInPicture && isStandaloneClockEnabled && !topInfoPanel.isVisible
     }
 
     fun showVolumeIndicator(percent: Int) {
@@ -543,6 +563,7 @@ class PlayerUiController(private val rootView: View) {
     }
 
     fun showControls(focusOnSeekBar: Boolean = false) {
+        if (inPictureInPicture) return
         controlsView.visibility = View.VISIBLE
         topInfoPanel.visibility = View.VISIBLE
         updateClockVisibility() // Скрываем одиночные часы, т.к. показана панель

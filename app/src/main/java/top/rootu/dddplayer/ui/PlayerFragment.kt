@@ -66,6 +66,8 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
 
     private var dimJob: Job? = null
     private var zoomDialog: Dialog? = null
+    private var resumePlaybackOnStart = false
+    private var inPictureInPicture = false
     private val viewModel: PlayerViewModel by activityViewModels()
     private val settingsViewModel: SettingsViewModel by viewModels()
     private val updateViewModel: UpdateViewModel by viewModels()
@@ -439,6 +441,10 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
         }
     }
     private fun setupControls() {
+        ui.buttonPip.isVisible = (activity as? PlayerActivity)?.supportsPictureInPicture == true
+        ui.buttonPip.setOnClickListener {
+            (activity as? PlayerActivity)?.enterPlayerPictureInPicture(showError = true)
+        }
         // Навигация в настройках
         ui.btnSettingsPrev.setOnClickListener {
             viewModel.changeSettingValue(settingsViewModel.currentSettingType.value!!, -1)
@@ -806,6 +812,7 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
 
     private fun resetDimTimer() {
         dimJob?.cancel()
+        if (inPictureInPicture) return
         ui.animateDimming(0f) // Сразу осветляем экран при любой активности
 
         val isPlaying = viewModel.isPlaying.value == true
@@ -1331,7 +1338,14 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
 
         // Проверяем, нужно ли перезапустить плеер из-за смены настроек
         viewModel.checkSettingsAndRestart()
-        viewModel.player?.playWhenReady = true
+    }
+
+    override fun onStart() {
+        super.onStart()
+        if (resumePlaybackOnStart) {
+            viewModel.player?.play()
+            resumePlaybackOnStart = false
+        }
         if (viewModel.inputType.value != StereoInputType.NONE) {
             ui.glSurfaceView.onResume()
         }
@@ -1340,8 +1354,31 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
     override fun onPause() {
         super.onPause()
         viewModel.saveCurrentSettings()
-        viewModel.player?.playWhenReady = false
+    }
+
+    override fun onStop() {
+        resumePlaybackOnStart = viewModel.player?.playWhenReady == true
+        viewModel.player?.pause()
+        viewModel.saveCurrentSettings()
         ui.glSurfaceView.onPause()
+        super.onStop()
+    }
+
+    fun setPictureInPictureMode(enabled: Boolean) {
+        inPictureInPicture = enabled
+        if (_ui == null) return
+        if (enabled) {
+            dimJob?.cancel()
+            timerController.stopControlsTimer()
+            settingsViewModel.closePanel()
+            sideMenuDialog?.dismiss()
+            zoomDialog?.dismiss()
+        }
+        ui.setPictureInPictureMode(enabled)
+        if (!enabled) {
+            resetDimTimer()
+            timerController.resetControlsTimer()
+        }
     }
 
     override fun onDestroyView() {

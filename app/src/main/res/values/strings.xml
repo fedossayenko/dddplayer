@@ -25,6 +25,7 @@
     <string name="playback_zoom">Zoom</string>
     <string name="playback_zoom_percent">Zoom: %d%%</string>
     <string name="playback_zoom_scale">Scale %d%%</string>
+    <string name="picture_in_picture">Picture-in-picture</string>
 
     <!-- Zoom modes -->
     <string name="resize_mode_fit">Fit</string>
@@ -95,6 +96,7 @@
     <string name="error_video_decoder">Video decoder error.\nPlaying audio only.</string>
     <string name="error_audio_disabled">Audio error. Sound is disabled.\n%s</string>
     <string name="error_audio_disabled_hint">Audio error. Sound is disabled.\nTry another track.\n%s</string>
+    <string name="pip_unavailable">Cannot open picture-in-picture. Start a video and allow picture-in-picture in system settings.</string>
     <string name="msg_playlist_empty">Playlist is empty</string>
     <string name="msg_auto_detect">Auto-detect: %s</string>
     <string name="press_back_exit">Press BACK to exit</string>
@@ -110,6 +112,7 @@
     <string name="pref_decoder_priority_prefer_app" tools:ignore="Typos">Prefer app decoders (AV1 + Ffmpeg) SW+HW</string>
     <string name="pref_decoder_priority_only_device">Device decoders only</string>
     <string name="pref_decoder_sw_desc">¹ - SW includes AV1 and Ffmpeg decoders (built with audio codecs: vorbis, opus, flac, alac, pcm_mulaw, pcm_alaw, mp3, amrnb, amrwb, aac, ac3, eac3, dca(DTS), mlp, truehd)</string>
+    <string name="pref_auto_pip_desc">Automatically open a small video window when minimizing during playback.</string>
     <string name="pref_downmix">Downmix to Stereo</string>
     <string name="pref_downmix_desc">When using the SW decoder, this allows converting multi-channel audio into a properly¹ mixed stereo, which can solve the problem of missing voice/translation (usually present on the center channel).\n¹ - The downmix matrices are calculated similarly to RFC 7845 (Section 5.1.1.5).</string>
     <string name="pref_downmix_config">Downmix Correction</string>
