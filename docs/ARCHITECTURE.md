@@ -1,0 +1,76 @@
+# Архитектура
+
+## Слои
+
+```
+PlayerActivity ──(Intent, PiP, результат)──┐
+                                            ▼
+PlayerFragment ◄──LiveData── PlayerViewModel ──► PlayerManager ──► ExoPlayer
+ │  PlayerUiController (вьюхи)    │  AnaglyphDelegate     │  OkHttp, DataSource-цепочка,
+ │  PlayerInputHandler (пульт)    │  SettingsRepository   │  NetworkBufferLoadControl, M3U-проба
+ │  PlayerTouchHandler (жесты)    │  (prefs + Room)       │
+ │  PlayerTimerController         │                       │
+ ▼                                ▼                       ▼
+SurfaceView (2D/HDR)  или  StereoGLSurfaceView ─► StereoRenderer (GLSL)
+```
+
+- **`PlayerActivity`** — единственная точка входа для видео. Здесь проверяются разрешения на файлы,
+  разбирается Intent (`IntentUtils`), открывается стартовый плейлист и работает PiP (действие
+  play/pause через `RemoteAction` и `BroadcastReceiver`, авто-PiP по настройке). В `finish()`
+  формируется результат для вызывающего приложения (`return_result`). Нажатия клавиш передаются в
+  `PlayerFragment.handleKeyEvent` через `dispatchKeyEvent`.
+- **`PlayerFragment`** — экран плеера. Создает GL-поверхность (выбор ES 2/3), подписывается на LiveData
+  (`observeViewModel`), показывает меню, диалоги (продолжение просмотра, плейлист, группы,
+  качество, зум) и AFR. Еще здесь обрабатывается «Назад» с подтверждением выхода.
+- **`PlayerUiController`** — `findViewById` и операции над вьюхами: панели, часы, бейджи,
+  переключение поверхностей, раскладка стерео/VR.
+- **`PlayerInputHandler`** — логика пульта: OSD-настройки, OK/Вверх по настройкам, перемотка
+  по сикбару, эфирный режим (OK — плейлист, Влево/Вправо — каналы, Вверх — инфопанель).
+- **`PlayerViewModel`** — состояние плеера и плейлиста. Отвечает за загрузку медиа, группы, зап-переключение,
+  продолжение просмотра, восстановление после ошибок, настройки текущего видео (стерео, дорожки, масштаб,
+  соотношение сторон), меню и FPS/инфо-бейджи. 3D/VR параметры вынесены в `AnaglyphDelegate`.
+- **`SettingsViewModel`** — состояние OSD-панели настроек (видимость, текущий пункт).
+- **`PlayerManager`** — владеет ExoPlayer. Создает и пересоздает плеер, собирает источники,
+  применяет заголовки, делает M3U-пробу и выдает метаданные дорожек.
+- **`GlobalSettingsActivity` / `GlobalSettingsViewModel`** — экран глобальных настроек, проверка
+  и установка обновлений (`UpdateManager`, GitHub Releases), ввод стартового плейлиста.
+- **`VrConfigActivity`** принимает ссылки Cardboard (QR-коды профилей линз) и сохраняет параметры дисторсии.
+- **`CrashHandler` / `CrashActivity`** перехватывают необработанные исключения и показывают лог.
+
+## Модель данных
+
+- `model/MediaItem` — элемент плейлиста. Поля: `uri`, `title`, `filename`, `posterUri`, `headers`, `subtitles`,
+  `startPositionMs`, `group`, `uuid` (он же `mediaId` в Media3) и `absoluteIndex` (индекс в полном плейлисте).
+- `data/VideoSettings` (Room, таблица `video_settings`, ключ — URI) хранит стерео-режим, анаглиф,
+  swap, глубину, последнюю позицию и длительность, а также ID аудио- и субтитровой дорожек.
+- Глобальные настройки лежат в `SettingsRepository` (SharedPreferences), см. [SETTINGS.md](SETTINGS.md).
+
+## Жизненный цикл плеера
+
+1. `PlayerFragment.onViewCreated` создает `PlayerUiController` и GL-поверхность, а затем, когда плеер
+   создан, подключает поверхность (`attachSurfaceToPlayer`).
+2. `PlayerViewModel.loadMedia` → `PlayerManager.loadPlaylist`. Если ExoPlayer еще нет, вызывается
+   `initializePlayer()`, иначе меняются источники.
+3. `onMediaItemTransition` → `handleMediaItemTransition`: сбрасывается стерео-режим, загружаются
+   `VideoSettings` по URI (или глобальные значения по умолчанию), для первого элемента нового плейлиста
+   срабатывает продолжение просмотра, а для M3U запоминается последний канал.
+4. Если при возврате из настроек сменились «жесткие» настройки (декодеры, туннелирование, DV→HEVC,
+   даунмикс, буфер), `checkSettingsAndRestart()` пересоздает плеер с сохранением позиции.
+   Остальные настройки применяются через `applyLiveSettings()`.
+5. Во время работы плеер сохраняет текущие настройки видео (`saveCurrentSettings`) при уходе с экрана и в `finish()`.
+
+## Потоки и корутины
+
+- ExoPlayer и LiveData обновляются в главном потоке. Сеть и чтение файлов при M3U-пробе идут на
+  `Dispatchers.IO` (`expandM3u`), после чего результат возвращается в `viewModelScope`.
+- `ParsingDataSource` разбирает метаданные MKV/MP4 в собственной корутине, данные приходят через пайп.
+- `StereoRenderer` работает в GL-потоке `GLSurfaceView` (`RENDERMODE_WHEN_DIRTY`, кадры по
+  `onFrameAvailable`).
+
+## Ресурсы
+
+- Разметка лежит в `res/layout`: `player_fragment.xml`, `playback_controls.xml`, `layout_top_info_panel.xml`,
+  `layout_top_settings_panel.xml`, `activity_global_settings.xml` и `dialog_*.xml`.
+- Строки есть в 5 локалях: `values` (en), `values-ru`, `values-uk`, `values-be`, `values-zh-rCN`.
+  Lint `MissingTranslation` выключен, поэтому за полнотой переводов следите сами.
+- `xml/network_security_config.xml` разрешает cleartext и пользовательские сертификаты.
