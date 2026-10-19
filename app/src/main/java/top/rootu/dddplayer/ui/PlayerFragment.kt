@@ -216,16 +216,20 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
         val supportsEs3 = configurationInfo.reqGlEsVersion >= 0x30000
         viewModel.setDeviceSupportsEs3(supportsEs3)
 
-        if (supportsEs3) {
-            ui.glSurfaceView.setEGLContextClientVersion(3)
-        } else {
-            ui.glSurfaceView.setEGLContextClientVersion(2)
-        }
+        // При принудительном GLES 2.0 создаем и контекст ES 2.0: это обходит и проблемы
+        // самого ES 3.0 драйвера, а не только шейдеров
+        val preferEs3 = viewModel.renderApiMode.value != SettingsRepository.RENDER_API_GLES2
+        val contextIsEs3 = supportsEs3 && preferEs3
+        ui.glSurfaceView.setEGLContextClientVersion(if (contextIsEs3) 3 else 2)
 
         ui.glSurfaceView.setEGLConfigChooser(8, 8, 8, 8, 16, 0)
 
-        // Передаем флаг supportsEs3 в рендерер
-        stereoRenderer = StereoRenderer(ui.glSurfaceView, this, supportsEs3)
+        stereoRenderer = StereoRenderer(ui.glSurfaceView, this, contextIsEs3, preferEs3).apply {
+            onEs3ShadersUnavailable = {
+                // Вызывается в GL потоке
+                activity?.runOnUiThread { viewModel.setDeviceSupportsEs3(false) }
+            }
+        }
         ui.glSurfaceView.setRenderer(stereoRenderer)
         ui.glSurfaceView.renderMode = GLSurfaceView.RENDERMODE_WHEN_DIRTY
 
@@ -1016,9 +1020,12 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
         }
         viewModel.anaglyphType.observe(viewLifecycleOwner) { stereoRenderer?.setAnaglyphType(it) }
         viewModel.renderApiMode.observe(viewLifecycleOwner) { mode ->
-            // mode 0 = HDR (Use ES3), mode 1 = SDR (Force Legacy)
-            val forceLegacy = (mode == 1)
-            stereoRenderer?.setRenderApi(forceLegacy)
+            val forceLegacy = (mode == SettingsRepository.RENDER_API_GLES2)
+            val applied = stereoRenderer?.setRenderApi(forceLegacy) ?: true
+            if (!applied && settingsViewModel.isSettingsPanelVisible.value == true) {
+                // Контекст ES 2.0 нельзя переключить на лету
+                Toast.makeText(requireContext(), R.string.msg_render_api_restart, Toast.LENGTH_SHORT).show()
+            }
 
             // Обновляем текст в OSD
             if (settingsViewModel.currentSettingType.value == SettingType.RENDER_API) {
@@ -1224,7 +1231,7 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
                 viewModel.getOptionsForSetting(type, context)?.first?.getOrNull(group.ordinal) ?: group.name.replace("_", " ")
             }
             SettingType.RENDER_API -> {
-                if (viewModel.renderApiMode.value == 1) getString(R.string.api_gles2)
+                if (viewModel.renderApiMode.value == SettingsRepository.RENDER_API_GLES2) getString(R.string.api_gles2)
                 else getString(R.string.api_gles3)
             }
             SettingType.FILTER_MODE -> {

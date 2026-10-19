@@ -62,6 +62,8 @@
     <string name="setting_leak_l">漏光 (左)</string>
     <string name="setting_leak_r">漏光 (右)</string>
     <string name="setting_space">色彩空间</string>
+    <string name="setting_render_api">渲染</string>
+    <string name="msg_render_api_restart">重新打开播放器后将使用 OpenGL ES 3.0</string>
 
     <!-- OSD 设置值 -->
     <string name="val_custom">自定义</string>

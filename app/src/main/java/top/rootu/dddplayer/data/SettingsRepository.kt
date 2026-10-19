@@ -20,6 +20,8 @@ class SettingsRepository private constructor(context: Context) {
         const val RESUME_ASK = 0
         const val RESUME_ALWAYS = 1
         const val RESUME_NEVER = 2
+        const val RENDER_API_AUTO = 0
+        const val RENDER_API_GLES2 = 1
 
         @Volatile
         private var instance: SettingsRepository? = null
@@ -47,8 +49,8 @@ class SettingsRepository private constructor(context: Context) {
         db.videoSettingsDao().deleteOldSettings(System.currentTimeMillis() - 2592000000L)
     }
 
-    // 0 = Auto/GLES 3.0 (если доступно), 1 = Force GLES 2.0
-    fun getRenderApiMode(): Int = prefs.getInt("render_api_mode", 0)
+    // RENDER_API_AUTO = GLES 3.0 (если доступно), RENDER_API_GLES2 = принудительно GLES 2.0
+    fun getRenderApiMode(): Int = prefs.getInt("render_api_mode", RENDER_API_AUTO)
     fun setRenderApiMode(mode: Int) = prefs.edit { putInt("render_api_mode", mode) }
 
     // --- Zoom Settings ---

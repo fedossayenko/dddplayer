@@ -25,7 +25,9 @@ interface OnSurfaceReadyListener {
 class StereoRenderer(
     private val glSurfaceView: GLSurfaceView,
     private val surfaceReadyListener: OnSurfaceReadyListener,
-    private val deviceSupportsEs3: Boolean
+    // Контекст создан как OpenGL ES 3.0 (в ES 2.0 контексте шейдеры 300 es не компилируются)
+    private val contextIsEs3: Boolean,
+    preferEs3Shaders: Boolean
 ) : GLSurfaceView.Renderer, SurfaceTexture.OnFrameAvailableListener {
 
     private val tAG = "StereoRenderer"
@@ -49,6 +51,7 @@ class StereoRenderer(
     private var inputTypeHandle: Int = 0
     private var outputModeHandle: Int = 0
     private var swapEyesHandle: Int = 0
+    private var linearBlendHandle: Int = -1
     private var videoDimensionsHandle: Int = 0
     private var screenAspectRatioHandle: Int = 0
     private var singleFrameDimensionsHandle: Int = 0
@@ -66,9 +69,20 @@ class StereoRenderer(
     @Volatile
     private var currentInputType: StereoInputType = StereoInputType.NONE
 
-    // Флаг: использовать ли HDR шейдеры прямо сейчас
+    // Шейдеры ES 3.0 доступны: контекст ES 3.0 и они успешно собрались
     @Volatile
-    private var useEs3Shaders: Boolean = deviceSupportsEs3
+    private var es3ShadersAvailable: Boolean = contextIsEs3
+
+    // Использовать ли шейдеры ES 3.0 прямо сейчас
+    @Volatile
+    private var useEs3Shaders: Boolean = contextIsEs3 && preferEs3Shaders
+
+    /**
+     * Вызывается (в GL потоке), если шейдеры ES 3.0 не поддерживаются драйвером
+     * и рендерер откатился на ES 2.0.
+     */
+    @Volatile
+    var onEs3ShadersUnavailable: (() -> Unit)? = null
 
     // Флаг: нужно ли перекомпилировать программу на следующем кадре
     @Volatile
@@ -156,6 +170,7 @@ class StereoRenderer(
 
     override fun onSurfaceCreated(gl: GL10?, config: EGLConfig?) {
         GLES20.glClearColor(0.0f, 0.0f, 0.0f, 1.0f)
+        program = 0 // Новый контекст: старая программа уже недействительна
         setupShaders()
         setupTexture()
 
@@ -245,17 +260,24 @@ class StereoRenderer(
         )
     }
 
-    // Метод для переключения режима извне
-    fun setRenderApi(forceLegacy: Boolean) {
-        if (!deviceSupportsEs3) return // Если устройство не умеет ES3, переключать нечего
-
+    /**
+     * Переключает набор шейдеров.
+     * @return false, если переключение невозможно без пересоздания GL контекста
+     * (контекст ES 2.0, а запрошены шейдеры ES 3.0).
+     */
+    fun setRenderApi(forceLegacy: Boolean): Boolean {
         val newUseEs3 = !forceLegacy
+        if (newUseEs3 && !contextIsEs3) return false
+        if (newUseEs3 && !es3ShadersAvailable) return true // Уже откатились на ES 2.0
+
         if (useEs3Shaders != newUseEs3) {
             useEs3Shaders = newUseEs3
             shouldReloadShaders = true // Сигнал для onDrawFrame
             glSurfaceView.requestRender()
         }
+        return true
     }
+
     private fun setupShaders() {
         // Удаляем старую программу, если она была
         if (program != 0) {
@@ -263,26 +285,26 @@ class StereoRenderer(
             program = 0
         }
 
-        // Выбираем исходники в зависимости от текущего режима
-        val vertexSource = if (useEs3Shaders) ShaderSource.VERTEX_SHADER_300 else ShaderSource.VERTEX_SHADER
-        val fragmentSource = if (useEs3Shaders) ShaderSource.FRAGMENT_SHADER_300 else ShaderSource.FRAGMENT_SHADER
-
-        val vertexShader = loadShader(GLES20.GL_VERTEX_SHADER, vertexSource)
-        val fragmentShader = loadShader(GLES20.GL_FRAGMENT_SHADER, fragmentSource)
-
-        program = GLES20.glCreateProgram()
-        GLES20.glAttachShader(program, vertexShader)
-        GLES20.glAttachShader(program, fragmentShader)
-        GLES20.glLinkProgram(program)
-
-        val linkStatus = IntArray(1)
-        GLES20.glGetProgramiv(program, GLES20.GL_LINK_STATUS, linkStatus, 0)
-        if (linkStatus[0] == 0) {
-            Log.e(tAG, "Could not link program: " + GLES20.glGetProgramInfoLog(program))
-            GLES20.glDeleteProgram(program)
-            program = 0
-            return
+        if (useEs3Shaders) {
+            program = if (hasEssl3ExternalImageSupport()) {
+                buildProgram(ShaderSource.VERTEX_SHADER_300, ShaderSource.FRAGMENT_SHADER_300)
+            } else {
+                Log.w(tAG, "GL_OES_EGL_image_external_essl3 is not supported")
+                0
+            }
+            if (program == 0) {
+                // Драйвер не собрал шейдеры ES 3.0 - откатываемся на ES 2.0, чтобы не было черного экрана
+                Log.w(tAG, "Falling back to GLES 2.0 shaders")
+                useEs3Shaders = false
+                es3ShadersAvailable = false
+                onEs3ShadersUnavailable?.invoke()
+            }
         }
+
+        if (program == 0) {
+            program = buildProgram(ShaderSource.VERTEX_SHADER, ShaderSource.FRAGMENT_SHADER)
+        }
+        if (program == 0) return
 
         positionHandle = GLES20.glGetAttribLocation(program, "a_position")
         texCoordHandle = GLES20.glGetAttribLocation(program, "a_texCoord")
@@ -299,6 +321,7 @@ class StereoRenderer(
         inputTypeHandle = GLES20.glGetUniformLocation(program, "u_inputType")
         outputModeHandle = GLES20.glGetUniformLocation(program, "u_outputMode")
         swapEyesHandle = GLES20.glGetUniformLocation(program, "u_swapEyes")
+        linearBlendHandle = GLES20.glGetUniformLocation(program, "u_linearBlend") // -1 в ES 2.0
         videoDimensionsHandle = GLES20.glGetUniformLocation(program, "u_videoDimensions")
         screenAspectRatioHandle = GLES20.glGetUniformLocation(program, "u_screenAspectRatio")
         singleFrameDimensionsHandle =
@@ -309,9 +332,39 @@ class StereoRenderer(
         k2Handle = GLES20.glGetUniformLocation(program, "u_k2")
         distortScaleHandle = GLES20.glGetUniformLocation(program, "u_distortScale")
         screenSeparationHandle = GLES20.glGetUniformLocation(program, "u_screenSeparation")
+    }
 
+    private fun hasEssl3ExternalImageSupport(): Boolean {
+        val extensions = GLES20.glGetString(GLES20.GL_EXTENSIONS) ?: return false
+        return extensions.contains("GL_OES_EGL_image_external_essl3")
+    }
+
+    private fun buildProgram(vertexSource: String, fragmentSource: String): Int {
+        val vertexShader = loadShader(GLES20.GL_VERTEX_SHADER, vertexSource)
+        if (vertexShader == 0) return 0
+        val fragmentShader = loadShader(GLES20.GL_FRAGMENT_SHADER, fragmentSource)
+        if (fragmentShader == 0) {
+            GLES20.glDeleteShader(vertexShader)
+            return 0
+        }
+
+        val newProgram = GLES20.glCreateProgram()
+        GLES20.glAttachShader(newProgram, vertexShader)
+        GLES20.glAttachShader(newProgram, fragmentShader)
+        GLES20.glLinkProgram(newProgram)
+
+        // Шейдеры больше не нужны: программа держит их до своего удаления
         GLES20.glDeleteShader(vertexShader)
         GLES20.glDeleteShader(fragmentShader)
+
+        val linkStatus = IntArray(1)
+        GLES20.glGetProgramiv(newProgram, GLES20.GL_LINK_STATUS, linkStatus, 0)
+        if (linkStatus[0] == 0) {
+            Log.e(tAG, "Could not link program: " + GLES20.glGetProgramInfoLog(newProgram))
+            GLES20.glDeleteProgram(newProgram)
+            return 0
+        }
+        return newProgram
     }
 
     private fun loadShader(type: Int, shaderCode: String): Int {
@@ -398,6 +451,9 @@ class StereoRenderer(
         GLES20.glUniform1i(inputTypeHandle, currentInputType.ordinal)
         GLES20.glUniform1i(outputModeHandle, currentOutputMode.ordinal)
         GLES20.glUniform1i(swapEyesHandle, if (swapEyes) 1 else 0)
+        if (linearBlendHandle >= 0) {
+            GLES20.glUniform1i(linearBlendHandle, if (usesLinearMatrix(currentAnaglyphType)) 1 else 0)
+        }
         GLES20.glUniform2f(videoDimensionsHandle, videoWidth.toFloat(), videoHeight.toFloat())
         GLES20.glUniform1f(screenAspectRatioHandle, screenAspectRatio)
         GLES20.glUniform2f(singleFrameDimensionsHandle, singleFrameWidth, singleFrameHeight)
@@ -418,6 +474,13 @@ class StereoRenderer(
             GLES20.glUniform3f(rRow3Handle, matrixR[6], matrixR[7], matrixR[8])
         }
     }
+
+    // Матрицы Dubois/Optimized и Custom (DuboisMath) рассчитаны для линейного RGB.
+    // Mono/Half Color построены на весах яркости Rec.601 для гамма-значений,
+    // а Color лишь копирует каналы - для них смешивание остается в гамме.
+    private fun usesLinearMatrix(type: AnaglyphType): Boolean =
+        type.name.endsWith("_DUBOIS") || type.name.endsWith("_CUSTOM") ||
+                type == AnaglyphType.RC_OPTIMIZED
 
     fun release() {
         // Освобождаем Java-объекты Surface, чтобы ExoPlayer перестал в них писать

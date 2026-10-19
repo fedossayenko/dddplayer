@@ -132,7 +132,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
     // Renderer Settings
     private var deviceSupportsEs3 = false
-    private val _renderApiMode = MutableLiveData(repository.getRenderApiMode()) // 0=HDR, 1=SDR
+    private val _renderApiMode = MutableLiveData(repository.getRenderApiMode())
     val renderApiMode: LiveData<Int> = _renderApiMode
     private val _inputType = MutableLiveData(StereoInputType.NONE)
     val inputType: LiveData<StereoInputType> = _inputType
@@ -1162,9 +1162,9 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                 anaglyphDelegate.saveCustomSettings(_anaglyphType.value!!)
             }
             SettingType.RENDER_API -> {
-                // 0 -> 1 -> 0
-                val current = _renderApiMode.value ?: 0
-                val next = if (current == 0) 1 else 0
+                val current = _renderApiMode.value ?: SettingsRepository.RENDER_API_AUTO
+                val next = if (current == SettingsRepository.RENDER_API_AUTO) SettingsRepository.RENDER_API_GLES2
+                else SettingsRepository.RENDER_API_AUTO
                 repository.setRenderApiMode(next)
                 _renderApiMode.value = next
             }
@@ -1253,7 +1253,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                     context.getString(R.string.api_gles3), // 0
                     context.getString(R.string.api_gles2)  // 1
                 )
-                Pair(list, _renderApiMode.value ?: 0)
+                Pair(list, _renderApiMode.value ?: SettingsRepository.RENDER_API_AUTO)
             }
             SettingType.AUDIO_TRACK -> {
                 if (audioOptions.isNotEmpty()) {
@@ -1320,6 +1320,8 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                     list.add(SettingType.CUSTOM_SPACE)
                 }
             }
+            // Влияет на все 3D режимы: в ES 3.0 текстурные координаты считаются в highp
+            // (mediump на части GPU дает ступенчатость на 4K), в анаглифе - еще и смешивание цветов
             if (deviceSupportsEs3) {
                 list.add(SettingType.RENDER_API)
             }
