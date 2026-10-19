@@ -588,7 +588,7 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
             if (selected == null) {
                 showMainMenu("audio")
             } else {
-                viewModel.selectTrackByIndex(C.TRACK_TYPE_AUDIO, selected.id.toInt())
+                selected.id.toIntOrNull()?.let { viewModel.selectTrackByIndex(C.TRACK_TYPE_AUDIO, it) }
                 sideMenuDialog?.dismiss()
             }
         }
@@ -607,7 +607,7 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
             if (selected == null) {
                 showMainMenu("subtitles")
             } else {
-                viewModel.selectTrackByIndex(C.TRACK_TYPE_TEXT, selected.id.toInt())
+                selected.id.toIntOrNull()?.let { viewModel.selectTrackByIndex(C.TRACK_TYPE_TEXT, it) }
                 sideMenuDialog?.dismiss()
             }
         }
@@ -766,17 +766,20 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
         header?.text = title
 
         val recycler = sideMenuDialog?.findViewById<RecyclerView>(R.id.menu_recycler)
-        if (sideMenuAdapter == null) {
-            sideMenuAdapter = SideMenuAdapter { item ->
+        val onItemClick: (MenuItem) -> Unit = { item ->
+            // DiffUtil применяет новый список асинхронно, а обработчик меняется сразу.
+            // Клик, пришедший в этот промежуток, относится к элементу предыдущего меню
+            // (например, "audio" из главного меню) - игнорируем его.
+            if (items.any { it === item }) {
                 isSelectionMade = true
                 onItemSelected(item)
             }
+        }
+        if (sideMenuAdapter == null) {
+            sideMenuAdapter = SideMenuAdapter(onItemClick)
             recycler?.adapter = sideMenuAdapter
         } else {
-            sideMenuAdapter?.onItemClick = { item ->
-                isSelectionMade = true
-                onItemSelected(item)
-            }
+            sideMenuAdapter?.onItemClick = onItemClick
         }
 
         sideMenuAdapter?.submitList(items) {
