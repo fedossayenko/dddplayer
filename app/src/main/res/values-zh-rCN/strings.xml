@@ -209,6 +209,7 @@
     <string name="update_found">发现新版本：%s</string>
     <string name="update_latest">您使用的是最新版本</string>
     <string name="update_error">检查更新失败</string>
+    <string name="update_download_error">下载更新失败</string>
     <string name="update_exist">有可用更新</string>
     <string name="update_desc">更新日志…</string>
     <string name="loading">下载中…</string>

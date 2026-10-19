@@ -218,6 +218,7 @@
     <string name="update_found">Найдено обновление: %s</string>
     <string name="update_latest">У вас последняя версия</string>
     <string name="update_error">Ошибка проверки обновлений</string>
+    <string name="update_download_error">Не удалось скачать обновление</string>
     <string name="update_exist">Доступно обновление</string>
     <string name="update_desc">Список изменений…</string>
     <string name="loading">Скачивание…</string>

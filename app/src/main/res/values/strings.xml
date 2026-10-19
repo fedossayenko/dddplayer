@@ -219,6 +219,7 @@
     <string name="update_found">Update found: %s</string>
     <string name="update_latest">You have the latest version</string>
     <string name="update_error">Error checking for updates</string>
+    <string name="update_download_error">Failed to download the update</string>
     <string name="update_exist">Update available</string>
     <string name="update_desc">Changelog…</string>
     <string name="loading">Downloading…</string>

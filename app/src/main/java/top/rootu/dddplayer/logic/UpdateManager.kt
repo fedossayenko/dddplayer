@@ -12,6 +12,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 import java.io.FileOutputStream
+import java.io.IOException
 
 data class UpdateInfo(
     val version: String,
@@ -25,84 +26,88 @@ class UpdateManager(private val context: Context) {
     private val client = OkHttpClient()
     private val repoUrl = "https://api.github.com/repos/usmanec/dddplayer/releases"
 
+    /**
+     * Возвращает информацию о более новом релизе или null, если обновлений нет.
+     * Сетевые ошибки и ошибки разбора пробрасываются, чтобы вызывающий код
+     * мог отличить "нет обновлений" от "не удалось проверить".
+     */
     suspend fun checkForUpdates(currentVersionName: String?): UpdateInfo? = withContext(Dispatchers.IO) {
-        try {
-            val request = Request.Builder().url(repoUrl).build()
-            val response = client.newCall(request).execute()
-            val json = response.body.string()
-
-            val releases = JSONArray(json)
-            if (releases.length() > 0) {
-                val latest = releases.getJSONObject(0)
-                val tagName = latest.getString("tag_name") // e.g. "v1.0.1"
-
-                // Сравниваем версии (простая проверка на неравенство, можно усложнить)
-                // Убираем 'v' если есть
-                val cleanTag = tagName.removePrefix("v")
-                val cleanCurrent = currentVersionName?.removePrefix("v")
-
-                if (cleanTag != cleanCurrent) {
-                    val assets = latest.getJSONArray("assets")
-                    if (assets.length() > 0) {
-                        val apkAsset = assets.getJSONObject(0) // Берем первый ассет (обычно APK)
-                        // Лучше поискать по имени .apk
-                        var downloadUrl = apkAsset.getString("browser_download_url")
-                        var size = apkAsset.getLong("size")
-
-                        for (i in 0 until assets.length()) {
-                            val asset = assets.getJSONObject(i)
-                            if (asset.getString("name").endsWith(".apk")) {
-                                downloadUrl = asset.getString("browser_download_url")
-                                size = asset.getLong("size")
-                                break
-                            }
-                        }
-
-                        return@withContext UpdateInfo(
-                            version = tagName,
-                            description = latest.optString("body", "").ifEmpty { "Список изменений не предоставлен." },
-                            downloadUrl = downloadUrl,
-                            size = size
-                        )
-                    }
-                }
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
+        val request = Request.Builder().url(repoUrl).build()
+        val json = client.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) throw IOException("HTTP ${response.code}")
+            response.body.string()
         }
-        return@withContext null
+
+        val releases = JSONArray(json)
+        // Берем первый опубликованный стабильный релиз (без черновиков и pre-release)
+        val latest = (0 until releases.length())
+            .map { releases.getJSONObject(it) }
+            .firstOrNull { !it.optBoolean("draft") && !it.optBoolean("prerelease") }
+            ?: return@withContext null
+
+        val tagName = latest.getString("tag_name") // e.g. "v1.0.1"
+        if (currentVersionName != null && !isNewer(tagName, currentVersionName)) {
+            return@withContext null
+        }
+
+        val assets = latest.getJSONArray("assets")
+        if (assets.length() == 0) return@withContext null
+
+        // Ищем ассет .apk, иначе берем первый
+        var apkAsset = assets.getJSONObject(0)
+        for (i in 0 until assets.length()) {
+            val asset = assets.getJSONObject(i)
+            if (asset.getString("name").endsWith(".apk")) {
+                apkAsset = asset
+                break
+            }
+        }
+
+        UpdateInfo(
+            version = tagName,
+            description = latest.optString("body", "").ifEmpty { "Список изменений не предоставлен." },
+            downloadUrl = apkAsset.getString("browser_download_url"),
+            size = apkAsset.getLong("size")
+        )
     }
 
     suspend fun downloadApk(url: String, onProgress: (Int) -> Unit): File? = withContext(Dispatchers.IO) {
+        val file = File(context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), "update.apk")
         try {
             val request = Request.Builder().url(url).build()
-            val response = client.newCall(request).execute()
-            val body = response.body
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) throw IOException("HTTP ${response.code}")
+                val body = response.body
+                val totalLength = body.contentLength()
 
-            val file = File(context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), "update.apk")
-            val inputStream = body.byteStream()
-            val outputStream = FileOutputStream(file)
-            val totalLength = body.contentLength()
+                body.byteStream().use { inputStream ->
+                    FileOutputStream(file).use { outputStream ->
+                        val data = ByteArray(16 * 1024)
+                        var count: Int
+                        var total: Long = 0
+                        var lastProgress = -1
 
-            val data = ByteArray(4096)
-            var count: Int
-            var total: Long = 0
-
-            while (inputStream.read(data).also { count = it } != -1) {
-                total += count
-                outputStream.write(data, 0, count)
-                if (totalLength > 0) {
-                    onProgress(((total * 100) / totalLength).toInt())
+                        while (inputStream.read(data).also { count = it } != -1) {
+                            total += count
+                            outputStream.write(data, 0, count)
+                            if (totalLength > 0) {
+                                val progress = ((total * 100) / totalLength).toInt()
+                                if (progress != lastProgress) {
+                                    lastProgress = progress
+                                    onProgress(progress)
+                                }
+                            }
+                        }
+                    }
+                }
+                if (totalLength > 0 && file.length() != totalLength) {
+                    throw IOException("Incomplete download: ${file.length()} of $totalLength")
                 }
             }
-
-            outputStream.flush()
-            outputStream.close()
-            inputStream.close()
-
             return@withContext file
         } catch (e: Exception) {
             e.printStackTrace()
+            file.delete() // Не оставляем битый или чужой (HTML ошибки) файл
             return@withContext null
         }
     }
@@ -145,7 +150,28 @@ class UpdateManager(private val context: Context) {
         } catch (_: Exception) { null }
     }
 
+    /**
+     * Сравнивает версии вида "v1.2.3" с текущей версией сборки, которая может иметь
+     * суффиксы от git describe ("1.2.3-5-gabcdef", "1.2.3-dirty", "0.0.1-dev-abcdef").
+     * Сравниваются только числовые компоненты, поэтому сборка после тега
+     * не считается старше этого тега, а откат на старый релиз не предлагается.
+     */
     fun isNewer(remote: String, current: String): Boolean {
-        return remote.removePrefix("v") != current.removePrefix("v")
+        val r = parseVersion(remote) ?: return false
+        val c = parseVersion(current) ?: return true
+        for (i in 0 until maxOf(r.size, c.size)) {
+            val diff = r.getOrElse(i) { 0 } - c.getOrElse(i) { 0 }
+            if (diff != 0) return diff > 0
+        }
+        return false
+    }
+
+    private fun parseVersion(version: String): List<Int>? {
+        val match = VERSION_REGEX.find(version.trim().removePrefix("v")) ?: return null
+        return match.value.split('.').map { it.toIntOrNull() ?: 0 }
+    }
+
+    private companion object {
+        val VERSION_REGEX = Regex("""^\d+(\.\d+)*""")
     }
 }

@@ -193,6 +193,7 @@
     <string name="update_found">Знайдено оновлення: %s</string>
     <string name="update_latest">У вас остання версія</string>
     <string name="update_error">Помилка перевірки оновлень</string>
+    <string name="update_download_error">Не вдалося завантажити оновлення</string>
     <string name="update_exist">Доступне оновлення</string>
     <string name="update_desc">Список змін…</string>
     <string name="loading">Завантаження…</string>

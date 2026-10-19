@@ -5,6 +5,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import top.rootu.dddplayer.BuildConfig
 import top.rootu.dddplayer.R
@@ -71,6 +72,7 @@ class UpdateViewModel(application: Application) : AndroidViewModel(application) 
                     repository.saveUpdateInfo(null)
                     _updateInfo.postValue(null)
                 }
+                repository.setLastUpdateTime(System.currentTimeMillis())
             } catch (_: Exception) {
                 // Тихая ошибка при автопроверке
             }
@@ -105,14 +107,20 @@ class UpdateViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
+    private var downloadJob: Job? = null
+
     fun startUpdate() {
         val info = _updateInfo.value ?: return
-        viewModelScope.launch {
+        // Защита от повторного нажатия: два загрузчика писали бы в один файл
+        if (downloadJob?.isActive == true) return
+        downloadJob = viewModelScope.launch {
             val file = updateManager.downloadApk(info.downloadUrl) { progress ->
                 _downloadProgress.postValue(progress)
             }
             if (file != null) {
                 updateManager.installApk(file)
+            } else {
+                _toastMessage.postValue(getString(R.string.update_download_error))
             }
         }
     }

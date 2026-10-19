@@ -193,6 +193,7 @@
     <string name="update_found">Знойдзена абнаўленне: %s</string>
     <string name="update_latest">У вас апошняя версія</string>
     <string name="update_error">Памылка праверкі абнаўленняў</string>
+    <string name="update_download_error">Не ўдалося спампаваць абнаўленне</string>
     <string name="update_exist">Даступна абнаўленне</string>
     <string name="update_desc">Спіс змен…</string>
     <string name="loading">Загрузка…</string>
