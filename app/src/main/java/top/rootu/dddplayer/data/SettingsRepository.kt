@@ -214,6 +214,10 @@ class SettingsRepository private constructor(context: Context) {
     fun getUpButtonAction(): Int = prefs.getInt("up_button_action", UP_ACTION_MENU)
     fun setUpButtonAction(action: Int) = prefs.edit { putInt("up_button_action", action) }
 
+    // Подтверждение выхода из плеера повторным нажатием "Назад"
+    fun isConfirmExitEnabled(): Boolean = prefs.getBoolean("confirm_exit", true)
+    fun setConfirmExitEnabled(enabled: Boolean) = prefs.edit { putBoolean("confirm_exit", enabled) }
+
     // Действие кнопки "OK" (OK_ACTION_*). По умолчанию - пауза + панель (текущее поведение)
     fun getOkButtonAction(): Int = prefs.getInt("ok_button_action", OK_ACTION_PAUSE_PANEL)
     fun setOkButtonAction(action: Int) = prefs.edit { putInt("ok_button_action", action) }

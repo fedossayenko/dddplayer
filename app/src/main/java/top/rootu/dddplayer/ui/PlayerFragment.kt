@@ -9,6 +9,7 @@ import android.opengl.GLSurfaceView
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.view.ContextThemeWrapper
 import android.view.GestureDetector
 import android.view.Gravity
@@ -68,6 +69,9 @@ import kotlin.math.abs
 class PlayerFragment : Fragment(), OnSurfaceReadyListener {
 
     private var dimJob: Job? = null
+
+    // Время первого нажатия "Назад" для подтверждения выхода
+    private var lastExitBackPressMs = 0L
     private var zoomDialog: Dialog? = null
     private var inPictureInPicture = false
     private val viewModel: PlayerViewModel by activityViewModels()
@@ -1478,6 +1482,12 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
         popup.show()
     }
 
+    private fun shouldAskExitConfirmation(): Boolean {
+        val settingsRepo = SettingsRepository.getInstance(requireContext().applicationContext)
+        if (!settingsRepo.isConfirmExitEnabled()) return false
+        return SystemClock.elapsedRealtime() - lastExitBackPressMs > EXIT_CONFIRM_WINDOW_MS
+    }
+
     private fun setupBackPressedHandler() {
         requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
@@ -1486,6 +1496,10 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
                     viewModel.restoreSettings()
                 } else if (ui.controlsView.isVisible) {
                     ui.hideControls()
+                } else if (shouldAskExitConfirmation()) {
+                    // Первое нажатие только предупреждает, выход - повторным нажатием
+                    lastExitBackPressMs = SystemClock.elapsedRealtime()
+                    Toast.makeText(requireContext().applicationContext, R.string.press_back_exit, Toast.LENGTH_SHORT).show()
                 } else {
                     isEnabled = false
                     requireActivity().onBackPressedDispatcher.onBackPressed()
@@ -1589,6 +1603,8 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
     }
 
     companion object {
+        private const val EXIT_CONFIRM_WINDOW_MS = 2000L
+
         fun newInstance() = PlayerFragment()
     }
 }

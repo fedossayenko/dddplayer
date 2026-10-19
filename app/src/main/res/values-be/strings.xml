@@ -92,6 +92,8 @@
     <string name="msg_playlist_empty">Плэйліст пусты</string>
     <string name="msg_auto_detect">Аўтавызначэнне: %s</string>
     <string name="press_back_exit">Націсніце НАЗАД для выхаду</string>
+    <string name="pref_confirm_exit">Пацвярджаць выхад</string>
+    <string name="pref_confirm_exit_desc">Закрываць плэер паўторным націсканнем НАЗАД</string>
 
     <!-- Глабальныя налады -->
     <string name="pref_title">Налады</string>

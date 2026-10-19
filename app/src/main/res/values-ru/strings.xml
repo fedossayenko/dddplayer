@@ -99,6 +99,8 @@
     <string name="msg_playlist_empty">Плейлист пуст</string>
     <string name="msg_auto_detect">Автоопределение: %s</string>
     <string name="press_back_exit">Нажмите НАЗАД для выхода</string>
+    <string name="pref_confirm_exit">Подтверждать выход</string>
+    <string name="pref_confirm_exit_desc">Закрывать плеер повторным нажатием НАЗАД</string>
 
     <!-- ==================================================== -->
     <!-- Экран глобальных настроек (GlobalSettingsActivity)   -->

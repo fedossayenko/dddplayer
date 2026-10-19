@@ -98,6 +98,8 @@ class GlobalSettingsActivity : AppCompatActivity() {
     private lateinit var switchRememberZoom: SwitchCompat
     private lateinit var itemShowIndex: LinearLayout
     private lateinit var switchShowIndex: SwitchCompat
+    private lateinit var itemConfirmExit: LinearLayout
+    private lateinit var switchConfirmExit: SwitchCompat
     private lateinit var itemShowClock: LinearLayout
     private lateinit var textShowClockValue: TextView
     private lateinit var itemPauseDim: LinearLayout
@@ -213,6 +215,8 @@ class GlobalSettingsActivity : AppCompatActivity() {
         switchRememberZoom = findViewById(R.id.switch_remember_zoom)
         itemShowIndex = findViewById(R.id.item_show_index)
         switchShowIndex = findViewById(R.id.switch_show_index)
+        itemConfirmExit = findViewById(R.id.item_confirm_exit)
+        switchConfirmExit = findViewById(R.id.switch_confirm_exit)
         itemShowClock = findViewById(R.id.item_show_clock)
         textShowClockValue = findViewById(R.id.text_show_clock_value)
         itemPauseDim = findViewById(R.id.item_pause_dim)
@@ -308,6 +312,10 @@ class GlobalSettingsActivity : AppCompatActivity() {
 
         itemRememberZoom.setOnClickListener {
             settingsViewModel.toggleRememberZoom(!switchRememberZoom.isChecked)
+        }
+
+        itemConfirmExit.setOnClickListener {
+            settingsViewModel.toggleConfirmExit(!switchConfirmExit.isChecked)
         }
 
         itemShowIndex.setOnClickListener {
@@ -495,6 +503,7 @@ class GlobalSettingsActivity : AppCompatActivity() {
 
         settingsViewModel.isRememberZoomEnabled.observe(this) { switchRememberZoom.isChecked = it }
         settingsViewModel.isShowPlaylistIndexEnabled.observe(this) { switchShowIndex.isChecked = it }
+        settingsViewModel.isConfirmExitEnabled.observe(this) { switchConfirmExit.isChecked = it }
         settingsViewModel.clockTransparency.observe(this) { transparency ->
             textShowClockValue.text = if (transparency == SettingsRepository.CLOCK_OFF) getString(R.string.track_off) else getString(R.string.percentage_int_format, transparency)
         }

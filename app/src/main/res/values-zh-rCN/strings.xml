@@ -94,6 +94,8 @@
     <string name="msg_playlist_empty">播放列表为空</string>
     <string name="msg_auto_detect">自动检测：%s</string>
     <string name="press_back_exit">按返回键退出</string>
+    <string name="pref_confirm_exit">确认退出</string>
+    <string name="pref_confirm_exit_desc">再按一次返回键关闭播放器</string>
 
     <!-- 全局设置 -->
     <string name="pref_title">设置</string>
