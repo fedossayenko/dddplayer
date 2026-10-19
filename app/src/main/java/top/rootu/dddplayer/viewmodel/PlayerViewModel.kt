@@ -289,19 +289,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                 if (!isUserInteracting) {
                     _currentPosition.value = p.currentPosition
                 }
-                _bufferedPosition.value = p.bufferedPosition
-
-                // Логика расчета процента буферизации вперед
-                // (ExoPlayer.bufferedPercentage не подходит,
-                // т.к. он показывает % буфера на прогрессе, а не заполненность буфера)
-                // Если для сетевого видео задан размер буфера в МБ - считаем по объему
-                val percent = playerManager.getNetworkBufferFillPercent() ?: run {
-                    val bufferedDuration = p.bufferedPosition - p.currentPosition
-                    val targetBuffer = if (bufferedDuration > 6_000L) 50_000L else 5_000L
-                    val maxPercent = if (targetBuffer == 5_000L) 99 else 100
-                    ((bufferedDuration * 101) / targetBuffer).toInt().coerceIn(0, maxPercent)
-                }
-                _bufferedPercentage.value = percent
+                updateBufferInfo(p)
 
                 // Если AFR еще не сработал, проверяем формат
                 if (!afrAppliedForCurrentItem) {
@@ -315,9 +303,30 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
+    private fun updateBufferInfo(p: Player) {
+        _bufferedPosition.value = p.bufferedPosition
+
+        // Логика расчета процента буферизации вперед
+        // (ExoPlayer.bufferedPercentage не подходит,
+        // т.к. он показывает % буфера на прогрессе, а не заполненность буфера)
+        // Если для сетевого видео задан размер буфера в МБ - считаем по объему
+        val percent = playerManager.getNetworkBufferFillPercent() ?: run {
+            val bufferedDuration = p.bufferedPosition - p.currentPosition
+            val targetBuffer = if (bufferedDuration > 6_000L) 50_000L else 5_000L
+            val maxPercent = if (targetBuffer == 5_000L) 99 else 100
+            ((bufferedDuration * 101) / targetBuffer).toInt().coerceIn(0, maxPercent)
+        }
+        _bufferedPercentage.value = percent
+    }
+
     private val playerListener = object : Player.Listener {
         override fun onIsPlayingChanged(isPlaying: Boolean) {
             _isPlaying.value = isPlaying
+            updateProgressUpdaterState()
+        }
+
+        // На паузе буфер продолжает загружаться: обновляем его, пока идет загрузка
+        override fun onIsLoadingChanged(isLoading: Boolean) {
             updateProgressUpdaterState()
         }
 
@@ -424,13 +433,14 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
     private fun updateProgressUpdaterState() {
         val p = playerManager.exoPlayer ?: return
-        val shouldRun = p.isPlaying || p.playbackState == Player.STATE_BUFFERING
+        val shouldRun = p.isPlaying || p.isLoading || p.playbackState == Player.STATE_BUFFERING
 
+        handler.removeCallbacks(progressUpdater)
         if (shouldRun) {
-            handler.removeCallbacks(progressUpdater)
             handler.post(progressUpdater)
         } else {
-            handler.removeCallbacks(progressUpdater)
+            // Последнее значение после остановки загрузки (на паузе буфер мог дозаполниться)
+            updateBufferInfo(p)
         }
     }
 
