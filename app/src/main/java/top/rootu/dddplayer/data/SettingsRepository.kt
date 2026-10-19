@@ -5,6 +5,7 @@ import android.content.SharedPreferences
 import androidx.core.content.edit
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import top.rootu.dddplayer.model.StereoOutputMode
+import top.rootu.dddplayer.player.NetworkBufferLoadControl
 import top.rootu.dddplayer.renderer.StereoRenderer
 
 class SettingsRepository private constructor(context: Context) {
@@ -111,12 +112,10 @@ class SettingsRepository private constructor(context: Context) {
 
     // Размер буфера сетевого видео в мегабайтах (BUFFER_SIZE_AUTO = текущие параметры плеера)
     fun getTargetBufferOptions(): List<Int> {
-        val uiReserveMB = 96
         val bufferSizeOptions = listOf(BUFFER_SIZE_AUTO, 16, 32, 48, 64, 96, 128, 160, 192, 224, 256, 320, 352, 384, 448, 512, 768, 1024)
-        val maxHeapMB = Runtime.getRuntime().maxMemory() / 1024 / 1024
 
-        // Разрешаем выбирать буфер в пределах кучи с учетом резерва под UI
-        val safeLimit = (maxHeapMB - uiReserveMB).toInt().coerceAtLeast(16)
+        // Разрешаем выбирать буфер в пределах кучи с учетом резерва под UI (тот же лимит, что у плеера)
+        val safeLimit = NetworkBufferLoadControl.maxBufferBytesForHeap() / 1024 / 1024
 
         return bufferSizeOptions.filter { it == BUFFER_SIZE_AUTO || it <= safeLimit }
     }

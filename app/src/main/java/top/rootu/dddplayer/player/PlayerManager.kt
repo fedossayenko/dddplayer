@@ -369,7 +369,11 @@ class PlayerManager(
         // Объем буфера из настроек применяется только к сетевому видео,
         // локальные файлы и режим "Авто" буферизуются с прежними параметрами
         val networkBufferMB = settingsRepo.getTargetBufferCorrectMB()
-        networkBufferBytes = if (networkBufferMB > 0) networkBufferMB * 1024 * 1024 else C.LENGTH_UNSET
+        networkBufferBytes = if (networkBufferMB > 0) {
+            (networkBufferMB * 1024 * 1024).coerceAtMost(NetworkBufferLoadControl.maxBufferBytesForHeap())
+        } else {
+            C.LENGTH_UNSET
+        }
         val loadControl = NetworkBufferLoadControl.create(networkBufferMB)
         bufferAllocator = loadControl.bufferAllocator
 
