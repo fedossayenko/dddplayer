@@ -80,6 +80,8 @@ class GlobalSettingsActivity : AppCompatActivity() {
     private lateinit var itemDownmixConfig: LinearLayout
     private lateinit var itemUpAction: LinearLayout
     private lateinit var textUpActionValue: TextView
+    private lateinit var itemOkAction: LinearLayout
+    private lateinit var textOkActionValue: TextView
     private lateinit var itemResumeAction: LinearLayout
     private lateinit var textResumeActionValue: TextView
     private lateinit var itemSwipeAction: LinearLayout
@@ -94,7 +96,7 @@ class GlobalSettingsActivity : AppCompatActivity() {
     private lateinit var itemShowIndex: LinearLayout
     private lateinit var switchShowIndex: SwitchCompat
     private lateinit var itemShowClock: LinearLayout
-    private lateinit var switchShowClock: SwitchCompat
+    private lateinit var textShowClockValue: TextView
     private lateinit var itemPauseDim: LinearLayout
     private lateinit var textPauseDimValue: TextView
 
@@ -181,6 +183,8 @@ class GlobalSettingsActivity : AppCompatActivity() {
         itemDownmixConfig = findViewById(R.id.item_downmix_config)
         itemUpAction = findViewById(R.id.item_up_action)
         textUpActionValue = findViewById(R.id.text_up_action_value)
+        itemOkAction = findViewById(R.id.item_ok_action)
+        textOkActionValue = findViewById(R.id.text_ok_action_value)
         itemResumeAction = findViewById(R.id.item_resume_mode)
         textResumeActionValue = findViewById(R.id.text_resume_mode_value)
         itemSwipeAction = findViewById(R.id.item_swipe_action)
@@ -195,7 +199,7 @@ class GlobalSettingsActivity : AppCompatActivity() {
         itemShowIndex = findViewById(R.id.item_show_index)
         switchShowIndex = findViewById(R.id.switch_show_index)
         itemShowClock = findViewById(R.id.item_show_clock)
-        switchShowClock = findViewById(R.id.switch_show_clock)
+        textShowClockValue = findViewById(R.id.text_show_clock_value)
         itemPauseDim = findViewById(R.id.item_pause_dim)
         textPauseDimValue = findViewById(R.id.text_pause_dim_value)
     }
@@ -282,13 +286,31 @@ class GlobalSettingsActivity : AppCompatActivity() {
             settingsViewModel.toggleShowPlaylistIndex(!switchShowIndex.isChecked)
         }
 
-        itemShowClock.setOnClickListener {
-            settingsViewModel.toggleShowClock(!switchShowClock.isChecked)
+        itemShowClock.setOnClickListener { settingsViewModel.cycleClockTransparency() }
+        itemResumeAction.setOnClickListener {
+            val options = listOf(getString(R.string.resume_mode_ask), getString(R.string.resume_mode_always), getString(R.string.resume_mode_never))
+            showSingleChoiceDialog(getString(R.string.pref_resume_mode), options, settingsViewModel.resumeModeAction.value ?: 0) {
+                settingsViewModel.setResumeModeAction(it)
+            }
         }
-
-        itemResumeAction.setOnClickListener { settingsViewModel.cycleResumeModeAction() }
-        itemUpAction.setOnClickListener { settingsViewModel.cycleUpButtonAction() }
-        itemSwipeAction.setOnClickListener { settingsViewModel.cycleHorizontalSwipeAction() }
+        itemUpAction.setOnClickListener {
+            val options = listOf(getString(R.string.pref_up_action_none), getString(R.string.pref_up_action_osd), getString(R.string.pref_up_action_menu), getString(R.string.pref_up_action_info))
+            showSingleChoiceDialog(getString(R.string.pref_up_action), options, settingsViewModel.upButtonAction.value ?: SettingsRepository.UP_ACTION_MENU) {
+                settingsViewModel.setUpButtonAction(it)
+            }
+        }
+        itemOkAction.setOnClickListener {
+            val options = listOf(getString(R.string.pref_ok_action_pause), getString(R.string.pref_ok_action_pause_panel), getString(R.string.pref_ok_action_panel))
+            showSingleChoiceDialog(getString(R.string.pref_ok_action), options, settingsViewModel.okButtonAction.value ?: SettingsRepository.OK_ACTION_PAUSE_PANEL) {
+                settingsViewModel.setOkButtonAction(it)
+            }
+        }
+        itemSwipeAction.setOnClickListener {
+            val options = listOf(getString(R.string.swipe_action_none), getString(R.string.swipe_action_seek), getString(R.string.swipe_action_playlist))
+            showSingleChoiceDialog(getString(R.string.pref_swipe_horizontal), options, settingsViewModel.horizontalSwipeAction.value ?: 2) {
+                settingsViewModel.setHorizontalSwipeAction(it)
+            }
+        }
 
         // Update
         itemUpdate.setOnClickListener {
@@ -302,35 +324,20 @@ class GlobalSettingsActivity : AppCompatActivity() {
 
         // Languages
         itemAudioLang.setOnClickListener {
-            showLanguageSelectionDialog(
-                title = getString(R.string.pref_language_audio),
-                languageCodes = trackLanguages,
-                currentCode = settingsViewModel.preferredAudioLang.value ?: SettingsRepository.TRACK_DEFAULT
-            ) { selectedCode ->
-                settingsViewModel.setPreferredAudioLang(selectedCode)
-                itemAudioLang.requestFocus()
+            showLanguageSelectionDialog(getString(R.string.pref_language_audio), trackLanguages, settingsViewModel.preferredAudioLang.value ?: SettingsRepository.TRACK_DEFAULT) {
+                settingsViewModel.setPreferredAudioLang(it); itemAudioLang.requestFocus()
             }
         }
 
         itemSubLang.setOnClickListener {
-            showLanguageSelectionDialog(
-                title = getString(R.string.pref_sub_lang_default),
-                languageCodes = trackLanguages,
-                currentCode = settingsViewModel.preferredSubLang.value ?: SettingsRepository.TRACK_DEFAULT
-            ) { selectedCode ->
-                settingsViewModel.setPreferredSubLang(selectedCode)
-                itemSubLang.requestFocus()
+            showLanguageSelectionDialog(getString(R.string.pref_sub_lang_default), trackLanguages, settingsViewModel.preferredSubLang.value ?: SettingsRepository.TRACK_DEFAULT) {
+                settingsViewModel.setPreferredSubLang(it); itemSubLang.requestFocus()
             }
         }
 
         itemAppLanguage.setOnClickListener {
-            showLanguageSelectionDialog(
-                title = getString(R.string.pref_app_language),
-                languageCodes = appLanguageCodes,
-                currentCode = settingsViewModel.appLanguage.value ?: SettingsRepository.LANG_SYSTEM_DEFAULT
-            ) { selectedCode ->
-                settingsViewModel.setAppLanguage(selectedCode)
-                applyAppLocale(selectedCode)
+            showLanguageSelectionDialog(getString(R.string.pref_app_language), appLanguageCodes, settingsViewModel.appLanguage.value ?: SettingsRepository.LANG_SYSTEM_DEFAULT) {
+                settingsViewModel.setAppLanguage(it); applyAppLocale(it)
             }
         }
 
@@ -376,7 +383,10 @@ class GlobalSettingsActivity : AppCompatActivity() {
             textSkipSilenceDesc.setText(settingsViewModel.getSkipSilenceDescResId(enabled))
         }
         settingsViewModel.loudnessBoost.observe(this) { boost ->
-            updateBoostUI(boost)
+            textBoostValue.text = if (boost == 0)
+                getString(R.string.track_off)
+            else
+                getString(R.string.loudness_boost_format, boost / 100)
         }
 
         // Downmix
@@ -398,68 +408,71 @@ class GlobalSettingsActivity : AppCompatActivity() {
 
         // UI
         settingsViewModel.resumeModeAction.observe(this) { action ->
-            updateResumeModeUI(action)
+            textResumeActionValue.text = when (action) {
+                SettingsRepository.RESUME_NEVER -> getString(R.string.resume_mode_never)
+                SettingsRepository.RESUME_ALWAYS -> getString(R.string.resume_mode_always)
+                else -> getString(R.string.resume_mode_ask)
+            }
         }
 
         settingsViewModel.upButtonAction.observe(this) { action ->
-            updateUpActionUI(action)
+            textUpActionValue.text = when (action) {
+                1 -> getString(R.string.pref_up_action_osd)
+                2 -> getString(R.string.pref_up_action_menu)
+                3 -> getString(R.string.pref_up_action_info)
+                else -> getString(R.string.pref_up_action_none)
+            }
+        }
+
+        settingsViewModel.okButtonAction.observe(this) { action ->
+            textOkActionValue.text = when (action) {
+                0 -> getString(R.string.pref_ok_action_pause)
+                1 -> getString(R.string.pref_ok_action_pause_panel)
+                else -> getString(R.string.pref_ok_action_panel)
+            }
         }
 
         settingsViewModel.horizontalSwipeAction.observe(this) { action ->
-            updateHorizontalSwipeActionUI(action)
+            textSwipeActionValue.text = when (action) {
+                1 -> getString(R.string.swipe_action_seek)
+                2 -> getString(R.string.swipe_action_playlist)
+                else -> getString(R.string.swipe_action_none)
+            }
         }
 
         settingsViewModel.isRememberZoomEnabled.observe(this) { switchRememberZoom.isChecked = it }
         settingsViewModel.isShowPlaylistIndexEnabled.observe(this) { switchShowIndex.isChecked = it }
-        settingsViewModel.isShowClockEnabled.observe(this) { switchShowClock.isChecked = it }
-
+        settingsViewModel.clockTransparency.observe(this) { transparency ->
+            textShowClockValue.text = if (transparency == SettingsRepository.CLOCK_OFF) getString(R.string.track_off) else getString(R.string.percentage_int_format, transparency)
+        }
         settingsViewModel.pauseDimLevel.observe(this) { level ->
             textPauseDimValue.text = if (level == 0) getString(R.string.track_off) else "$level%"
         }
 
-        // Update ViewModel
+
         updateViewModel.updateInfo.observe(this) { updateUpdateUI() }
         updateViewModel.isCheckingUpdates.observe(this) { checking ->
-            if (checking) {
-                textUpdateDesc.text = getString(R.string.update_btn_checking)
-            } else {
-                updateUpdateUI()
-            }
+            if (checking) textUpdateDesc.text = getString(R.string.update_btn_checking) else updateUpdateUI()
         }
-        updateViewModel.downloadProgress.observe(this) { progress ->
-            updateDownloadProgress(progress)
-        }
+        updateViewModel.downloadProgress.observe(this) { updateDownloadProgress(it) }
     }
 
-    private fun updateBoostUI(boost: Int) {
-        if (boost == 0) {
-            textBoostValue.text = getString(R.string.track_off)
-        } else {
-            textBoostValue.text = getString(R.string.loudness_boost_format, boost / 100)
-        }
-    }
+    private fun showSingleChoiceDialog(title: String, items: List<String>, currentIndex: Int, onSelected: (Int) -> Unit) {
+        val dialog = Dialog(this, R.style.Theme_App_Dialog)
+        dialog.setContentView(R.layout.dialog_list_choice)
+        dialog.findViewById<TextView>(R.id.dialog_title).text = title
 
-    private fun updateResumeModeUI(action: Int) {
-        textResumeActionValue.text = when (action) {
-            SettingsRepository.RESUME_NEVER -> getString(R.string.resume_mode_never)
-            SettingsRepository.RESUME_ALWAYS -> getString(R.string.resume_mode_always)
-            else -> getString(R.string.resume_mode_ask)
+        val recycler = dialog.findViewById<RecyclerView>(R.id.dialog_recycler_view)
+        recycler.layoutManager = LinearLayoutManager(this)
+        recycler.adapter = ChoiceAdapter(items, currentIndex) { idx ->
+            onSelected(idx)
+            dialog.dismiss()
         }
-    }
 
-    private fun updateUpActionUI(action: Int) {
-        textUpActionValue.text = when (action) {
-            1 -> getString(R.string.pref_up_action_osd)
-            2 -> getString(R.string.pref_up_action_menu)
-            else -> getString(R.string.pref_up_action_none)
-        }
-    }
-
-    private fun updateHorizontalSwipeActionUI(action: Int) {
-        textSwipeActionValue.text = when (action) {
-            1 -> getString(R.string.swipe_action_seek)
-            2 -> getString(R.string.swipe_action_playlist)
-            else -> getString(R.string.swipe_action_none)
+        dialog.show()
+        recycler.post {
+            (recycler.layoutManager as? LinearLayoutManager)?.scrollToPositionWithOffset(currentIndex, 0)
+            recycler.postDelayed({ recycler.findViewHolderForAdapterPosition(currentIndex)?.itemView?.requestFocus() }, 50)
         }
     }
 
@@ -695,29 +708,9 @@ class GlobalSettingsActivity : AppCompatActivity() {
         val languageNames = languageItems.map { it.second }
         val currentIndex = languageItems.indexOfFirst { it.first == currentCode }.coerceAtLeast(0)
 
-        val dialog = Dialog(this, R.style.Theme_App_Dialog)
-        dialog.setContentView(R.layout.dialog_list_choice)
-
-        val titleView = dialog.findViewById<TextView>(R.id.dialog_title)
-        val recyclerView = dialog.findViewById<RecyclerView>(R.id.dialog_recycler_view)
-
-        titleView.text = title
-        recyclerView.layoutManager = LinearLayoutManager(this)
-        recyclerView.adapter = ChoiceAdapter(languageNames, currentIndex) { which ->
-            val selectedCode = languageItems[which].first
-            onLanguageSelected(selectedCode)
-            dialog.dismiss()
+        showSingleChoiceDialog(title, languageNames, currentIndex) { which ->
+            onLanguageSelected(languageItems[which].first)
         }
-
-        recyclerView.post {
-            (recyclerView.layoutManager as? LinearLayoutManager)?.scrollToPositionWithOffset(currentIndex, 0)
-            recyclerView.postDelayed({
-                val viewHolder = recyclerView.findViewHolderForAdapterPosition(currentIndex)
-                viewHolder?.itemView?.requestFocus()
-            }, 50)
-        }
-
-        dialog.show()
     }
 
     private fun updateLangUI(textView: TextView, langCode: String) {

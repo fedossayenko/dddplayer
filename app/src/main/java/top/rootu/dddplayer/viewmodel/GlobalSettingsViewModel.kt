@@ -78,20 +78,25 @@ class GlobalSettingsViewModel(application: Application) : AndroidViewModel(appli
     // --- UI Settings ---
     private val _pauseDimLevel = MutableLiveData(repository.getPauseDimLevel())
     val pauseDimLevel: LiveData<Int> = _pauseDimLevel
+
     private val _isRememberZoomEnabled = MutableLiveData(repository.isRememberZoomEnabled())
     val isRememberZoomEnabled: LiveData<Boolean> = _isRememberZoomEnabled
 
     private val _isShowPlaylistIndexEnabled = MutableLiveData(repository.isShowPlaylistIndexEnabled())
     val isShowPlaylistIndexEnabled: LiveData<Boolean> = _isShowPlaylistIndexEnabled
 
-    private val _isShowClockEnabled = MutableLiveData(repository.isShowClock())
-    val isShowClockEnabled: LiveData<Boolean> = _isShowClockEnabled
+    private val _clockTransparency = MutableLiveData(repository.getClockTransparency())
+    val clockTransparency: LiveData<Int> = _clockTransparency
 
     private val _resumeModeAction = MutableLiveData(repository.getResumeMode())
     val resumeModeAction: LiveData<Int> = _resumeModeAction
 
     private val _upButtonAction = MutableLiveData(repository.getUpButtonAction())
     val upButtonAction: LiveData<Int> = _upButtonAction
+
+    private val _okButtonAction = MutableLiveData(repository.getOkButtonAction())
+    val okButtonAction: LiveData<Int> = _okButtonAction
+
     private val _horizontalSwipeAction = MutableLiveData(repository.getHorizontalSwipeAction())
     val horizontalSwipeAction: LiveData<Int> = _horizontalSwipeAction
 
@@ -107,9 +112,18 @@ class GlobalSettingsViewModel(application: Application) : AndroidViewModel(appli
         _isShowPlaylistIndexEnabled.value = enabled
     }
 
-    fun toggleShowClock(enabled: Boolean) {
-        repository.setShowClock(enabled)
-        _isShowClockEnabled.value = enabled
+    fun cycleClockTransparency() {
+        val current = _clockTransparency.value ?: SettingsRepository.CLOCK_OFF
+
+        // цикл: Выкл (-1) -> 0% -> 20% -> 40% -> 60% -> 80% -> Выкл (-1)
+        val next = when {
+            current == SettingsRepository.CLOCK_OFF -> 0 // С Выкл. переходим на 0% прозрачности (полностью видимо)
+            current >= 80 -> SettingsRepository.CLOCK_OFF // С 80% прозрачности переходим на Выкл.
+            else -> current + 20    // Увеличиваем прозрачность
+        }
+
+        repository.setClockTransparency(next)
+        _clockTransparency.value = next
     }
 
     fun toggleDecoderPriority() {
@@ -206,25 +220,24 @@ class GlobalSettingsViewModel(application: Application) : AndroidViewModel(appli
         _appLanguage.value = langCode
     }
 
-    fun cycleResumeModeAction() {
-        val current = _resumeModeAction.value ?: 0
-        val next = (current + 1) % 3 // 0, 1, 2
-        repository.setResumeMode(next)
-        _resumeModeAction.value = next
+    fun setResumeModeAction(action: Int) {
+        repository.setResumeMode(action)
+        _resumeModeAction.value = action
     }
 
-    fun cycleUpButtonAction() {
-        val current = _upButtonAction.value ?: 1
-        val next = (current + 1) % 3 // 0, 1, 2
-        repository.setUpButtonAction(next)
-        _upButtonAction.value = next
+    fun setUpButtonAction(action: Int) {
+        repository.setUpButtonAction(action)
+        _upButtonAction.value = action
     }
 
-    fun cycleHorizontalSwipeAction() {
-        val current = _horizontalSwipeAction.value ?: 0
-        val next = (current + 1) % 3 // 0, 1, 2
-        repository.setHorizontalSwipeAction(next)
-        _horizontalSwipeAction.value = next
+    fun setOkButtonAction(action: Int) {
+        repository.setOkButtonAction(action)
+        _okButtonAction.value = action
+    }
+
+    fun setHorizontalSwipeAction(action: Int) {
+        repository.setHorizontalSwipeAction(action)
+        _horizontalSwipeAction.value = action
     }
 
     // --- Downmix Logic ---
@@ -275,7 +288,7 @@ class GlobalSettingsViewModel(application: Application) : AndroidViewModel(appli
         _mixParams.value = AudioMixerLogic.getParamsForPreset(AudioMixerLogic.MixPreset.CUSTOM, repository)
     }
 
-    // --- UI Helpers (Возвращают ID ресурсов или сырые данные) ---
+    // --- UI Helpers ---
 
     fun getDecoderValueString(mode: Int): String {
         return when (mode) {

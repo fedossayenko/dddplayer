@@ -13,7 +13,6 @@ import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.ProgressBar
 import android.widget.SeekBar
-import android.widget.TextClock
 import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.toDrawable
@@ -27,6 +26,7 @@ import androidx.recyclerview.widget.LinearSmoothScroller
 import androidx.recyclerview.widget.RecyclerView
 import coil.load
 import top.rootu.dddplayer.R
+import top.rootu.dddplayer.data.SettingsRepository
 import top.rootu.dddplayer.model.MediaItem
 import top.rootu.dddplayer.model.ResizeMode
 import top.rootu.dddplayer.model.StereoInputType
@@ -34,7 +34,7 @@ import top.rootu.dddplayer.model.StereoOutputMode
 import top.rootu.dddplayer.renderer.StereoGLSurfaceView
 import top.rootu.dddplayer.ui.adapter.OptionsAdapter
 import top.rootu.dddplayer.ui.adapter.PlaylistAdapter
-import top.rootu.dddplayer.ui.widget.OutlineTextClock
+import top.rootu.dddplayer.ui.widget.OutlineTextView
 import top.rootu.dddplayer.viewmodel.SettingType
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -55,7 +55,7 @@ class PlayerUiController(private val rootView: View) {
     val subtitleSplitContainer: View = rootView.findViewById(R.id.subtitle_split_container)
     val subtitleViewLeft: SubtitleView = rootView.findViewById(R.id.subtitle_view_left)
     val subtitleViewRight: SubtitleView = rootView.findViewById(R.id.subtitle_view_right)
-    val standaloneClock: OutlineTextClock = rootView.findViewById(R.id.standalone_clock)
+    val standaloneClock: OutlineTextView = rootView.findViewById(R.id.standalone_clock)
 
     // Buffering
     val bufferingSplitContainer: View = rootView.findViewById(R.id.buffering_split_container)
@@ -74,7 +74,7 @@ class PlayerUiController(private val rootView: View) {
     val videoPoster: ImageView = topInfoPanel.findViewById(R.id.video_poster)
     val posterPlaceholderText: TextView = topInfoPanel.findViewById(R.id.poster_placeholder_text)
     val posterNumberBadge: TextView = topInfoPanel.findViewById(R.id.poster_number_badge)
-    val textClock: TextClock = topInfoPanel.findViewById(R.id.text_clock)
+    val textClock: TextView = topInfoPanel.findViewById(R.id.text_clock)
     val textEndsAt: TextView = topInfoPanel.findViewById(R.id.text_ends_at)
     val iconInputMode: ImageView = topInfoPanel.findViewById(R.id.icon_input_mode)
     val iconSwapEyes: ImageView = topInfoPanel.findViewById(R.id.icon_swap_eyes)
@@ -151,8 +151,11 @@ class PlayerUiController(private val rootView: View) {
     private val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
     private val timeFormatSeconds = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
 
-    // Состояние из настроек (показываем ли часы)
-    private var isStandaloneClockEnabled: Boolean = false
+    // Прозрачность одиночных часов из настроек (CLOCK_OFF = часы выключены)
+    private var clockTransparency: Int = SettingsRepository.CLOCK_OFF
+
+    // Автоскрытие инфопанели, показанной без панели управления
+    private val hideInfoPanelRunnable = Runnable { hideInfoPanel() }
 
     init {
         // Настройка ленты
@@ -166,13 +169,36 @@ class PlayerUiController(private val rootView: View) {
         optionsRecycler.itemAnimator = null
     }
 
-    fun setStandaloneClockEnabled(enabled: Boolean) {
-        isStandaloneClockEnabled = enabled
+    fun updateClockTransparency(transparency: Int) {
+        clockTransparency = transparency
+        if (transparency != SettingsRepository.CLOCK_OFF) {
+            standaloneClock.alpha = (100 - transparency) / 100f
+        }
         updateClockVisibility()
     }
 
     private fun updateClockVisibility() {
-        standaloneClock.isVisible = isStandaloneClockEnabled && !topInfoPanel.isVisible
+        standaloneClock.isVisible = clockTransparency != SettingsRepository.CLOCK_OFF && !topInfoPanel.isVisible
+    }
+
+    /**
+     * Показывает только верхнюю инфопанель (без панели управления) и скрывает ее через 3 секунды.
+     */
+    fun showInfoPanelOnly() {
+        topInfoPanel.isVisible = true
+        updateClockVisibility()
+        hideHandler.removeCallbacks(hideInfoPanelRunnable)
+        if (!controlsView.isVisible) {
+            hideHandler.postDelayed(hideInfoPanelRunnable, 3000)
+        }
+    }
+
+    fun hideInfoPanel() {
+        hideHandler.removeCallbacks(hideInfoPanelRunnable)
+        if (!controlsView.isVisible) {
+            topInfoPanel.isVisible = false
+            updateClockVisibility()
+        }
     }
 
     fun showVolumeIndicator(percent: Int) {

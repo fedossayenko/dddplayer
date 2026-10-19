@@ -80,8 +80,14 @@ class PlayerInputHandler(
         when (event.keyCode) {
             KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> {
                 if (!ui.controlsView.isVisible) {
-                    viewModel.togglePlayPause()
-                    onShowControls()
+                    when (repo.getOkButtonAction()) {
+                        SettingsRepository.OK_ACTION_PAUSE -> viewModel.togglePlayPause()
+                        SettingsRepository.OK_ACTION_PANEL -> onShowControls()
+                        else -> { // OK_ACTION_PAUSE_PANEL (по умолчанию)
+                            viewModel.togglePlayPause()
+                            onShowControls()
+                        }
+                    }
                     return true
                 }
             }
@@ -108,12 +114,20 @@ class PlayerInputHandler(
                     return true
                 } else if (!ui.controlsView.isVisible) {
                     when (repo.getUpButtonAction()) {
-                        1 -> { // OSD
+                        SettingsRepository.UP_ACTION_OSD -> {
                             viewModel.prepareSettingsPanel()
                             settingsViewModel.openPanel(viewModel.availableSettings.value ?: emptyList())
                         }
-                        2 -> onShowMainMenu() // Боковое меню
-                        // 0 -> Ничего
+                        SettingsRepository.UP_ACTION_MENU -> onShowMainMenu() // Боковое меню
+                        SettingsRepository.UP_ACTION_INFO -> {
+                            if (ui.topInfoPanel.isVisible) {
+                                // Если панель уже есть, то показываем боковое меню
+                                onShowMainMenu()
+                            } else {
+                                // Показать только инфопанель
+                                ui.showInfoPanelOnly()
+                            }
+                        }
                     }
                     return true
                 }

@@ -20,6 +20,20 @@ class SettingsRepository private constructor(context: Context) {
         const val RESUME_ASK = 0
         const val RESUME_ALWAYS = 1
         const val RESUME_NEVER = 2
+
+        // Действие кнопки "Вверх"
+        const val UP_ACTION_NONE = 0
+        const val UP_ACTION_OSD = 1
+        const val UP_ACTION_MENU = 2
+        const val UP_ACTION_INFO = 3
+
+        // Действие кнопки "OK" при скрытой панели
+        const val OK_ACTION_PAUSE = 0
+        const val OK_ACTION_PAUSE_PANEL = 1
+        const val OK_ACTION_PANEL = 2
+
+        // Прозрачность часов: -1 = часы выключены, 0..80 = прозрачность в %
+        const val CLOCK_OFF = -1
         const val RENDER_API_AUTO = 0
         const val RENDER_API_GLES2 = 1
 
@@ -143,14 +157,31 @@ class SettingsRepository private constructor(context: Context) {
     fun setResumeMode(mode: Int) = prefs.edit { putInt("resume_mode", mode) }
 
     // Действие кнопки "Вверх" ( 0 = Nothing, 1 = OSD, 2 = Side Menu)
-    fun getUpButtonAction(): Int = prefs.getInt("up_button_action", 1)
+    // Действие кнопки "Вверх" (UP_ACTION_*). По умолчанию - боковое меню
+    fun getUpButtonAction(): Int = prefs.getInt("up_button_action", UP_ACTION_MENU)
     fun setUpButtonAction(action: Int) = prefs.edit { putInt("up_button_action", action) }
+
+    // Действие кнопки "OK" (OK_ACTION_*). По умолчанию - пауза + панель (текущее поведение)
+    fun getOkButtonAction(): Int = prefs.getInt("ok_button_action", OK_ACTION_PAUSE_PANEL)
+    fun setOkButtonAction(action: Int) = prefs.edit { putInt("ok_button_action", action) }
     // Горизонтальный свайп ( 0 = None, 1 = Seek, 2 = Playlist)
     fun getHorizontalSwipeAction(): Int = prefs.getInt("horizontal_swipe_action", 2)
     fun setHorizontalSwipeAction(action: Int) = prefs.edit { putInt("horizontal_swipe_action", action) }
 
-    fun isShowClock(): Boolean = prefs.getBoolean("show_clock", false)
-    fun setShowClock(enabled: Boolean) = prefs.edit { putBoolean("show_clock", enabled) }
+    // Прозрачность часов (CLOCK_OFF или 0..80 %).
+    // Миграция со старого переключателя "show_clock": выкл -> часы выключены, вкл -> без прозрачности.
+    fun getClockTransparency(): Int {
+        if (!prefs.contains("clock_transparency")) {
+            val migrated = if (prefs.getBoolean("show_clock", false)) 0 else CLOCK_OFF
+            prefs.edit {
+                putInt("clock_transparency", migrated)
+                remove("show_clock")
+            }
+            return migrated
+        }
+        return prefs.getInt("clock_transparency", CLOCK_OFF)
+    }
+    fun setClockTransparency(transparency: Int) = prefs.edit { putInt("clock_transparency", transparency) }
 
     // Сигнатура настроек, требующих полного перезапуска плеера
     fun getHardSettingsSignature(): String {

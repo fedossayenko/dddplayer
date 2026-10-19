@@ -133,14 +133,14 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
                     view.findViewById<View>(R.id.root_container)?.requestFocus()
                 }
             },
-            clockView = ui.textClock
+            clockViews = listOf(ui.standaloneClock, ui.textClock)
         )
 
         // Используем Application Context для репозитория, чтобы избежать утечек
         val settingsRepo = SettingsRepository.getInstance(requireContext().applicationContext)
 
         // Устанавливаем видимость часов на основе настроек
-        ui.setStandaloneClockEnabled(settingsRepo.isShowClock())
+        ui.updateClockTransparency(settingsRepo.getClockTransparency())
 
         inputHandler = PlayerInputHandler(
             viewModel, settingsViewModel, ui,
@@ -482,15 +482,24 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
             val settingsRepo = SettingsRepository.getInstance(requireContext().applicationContext)
 
             when (settingsRepo.getUpButtonAction()) {
-                1 -> { // OSD (Быстрые настройки)
+                SettingsRepository.UP_ACTION_OSD -> { // Быстрые настройки
                     viewModel.prepareSettingsPanel()
                     settingsViewModel.openPanel(viewModel.availableSettings.value ?: emptyList())
                 }
-                2 -> { // Боковое меню
+                SettingsRepository.UP_ACTION_MENU -> { // Боковое меню
                     ui.hideControls()
                     showMainMenu()
                 }
-                // 0 -> Ничего не делать
+                SettingsRepository.UP_ACTION_INFO -> {
+                    if (ui.topInfoPanel.isVisible) {
+                        // Если панель уже есть, то показываем боковое меню
+                        ui.hideControls()
+                        showMainMenu()
+                    } else {
+                        ui.showInfoPanelOnly()
+                    }
+                }
+                // UP_ACTION_NONE -> Ничего не делать
             }
         }
 
@@ -1367,7 +1376,7 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
         swipeAction = settingsRepo.getHorizontalSwipeAction()
 
         // Обновляем видимость часов (на случай, если изменили в настройках)
-        ui.setStandaloneClockEnabled(settingsRepo.isShowClock())
+        ui.updateClockTransparency(settingsRepo.getClockTransparency())
 
         // Проверяем, нужно ли перезапустить плеер из-за смены настроек
         viewModel.checkSettingsAndRestart()
