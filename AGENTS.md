@@ -27,6 +27,11 @@ compileSdk 36). Умеет обычное 2D/HDR видео и стереопа�
   Поэтому нужна полная история (`fetch-depth: 0`), а в shallow-клоне версия будет неправильной.
 - CI: `.github/workflows/android-build.yml` собирает `assembleDebug` на push/PR в `main`
   и выкладывает APK как артефакт `dddplayer-debug-apk`.
+- Релиз: `.github/workflows/release.yml` запускается на тег `vX.Y.Z` (`git tag v1.2.5 && git push origin v1.2.5`).
+  Он собирает `assembleRelease`, подписывает APK ключом из приватного репозитория (секреты `KEYSTORE_*`,
+  `RELEASE_SIGN_*`) и публикует GitHub Release с `app-release.apk`. Встроенное обновление
+  (`UpdateManager`) берет последний не-draft и не-prerelease релиз и первый `.apk` в нем.
+  Подпись настраивается в `app/build.gradle.kts` из переменных окружения, без них релиз собирается неподписанным.
 - **Unit/UI тестов в проекте нет.** Если Android SDK недоступен (облачная песочница),
   единственная проверка компиляции — CI. Поэтому:
   - перечитывайте свой diff и проверяйте импорты, порядок инициализации свойств и ссылки на ресурсы;
