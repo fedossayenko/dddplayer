@@ -17,6 +17,8 @@
     <!-- Керування відтворенням -->
     <string name="playback_speed">Швидкість</string>
     <string name="playback_zoom">Масштаб</string>
+    <string name="aspect_ratio">Співвідношення сторін</string>
+    <string name="aspect_ratio_auto">Як у відео</string>
     <string name="playback_zoom_scale">Збільшення %d%%</string>
     <string name="picture_in_picture">Картинка в картинці</string>
     <string name="playback_zoom_percent">Масштаб: %d%%</string>

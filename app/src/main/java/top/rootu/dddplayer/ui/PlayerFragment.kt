@@ -41,6 +41,7 @@ import top.rootu.dddplayer.R
 import top.rootu.dddplayer.data.SettingsRepository
 import top.rootu.dddplayer.logic.AnaglyphLogic
 import top.rootu.dddplayer.logic.TrackLogic
+import top.rootu.dddplayer.model.AspectRatioMode
 import top.rootu.dddplayer.model.MenuItem
 import top.rootu.dddplayer.model.PlaybackSpeed
 import top.rootu.dddplayer.model.ResizeMode
@@ -621,6 +622,7 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
                 "subtitles" -> showSubtitlesMenu()
                 "speed" -> showPlaybackSpeedMenu()
                 "resize" -> showResizeMenu()
+                "aspect" -> showAspectRatioMenu()
                 "quick_settings" -> {
                     sideMenuDialog?.dismiss()
                     viewModel.prepareSettingsPanel()
@@ -682,6 +684,21 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
                 val speedValue = selected.id.toFloatOrNull()
                 if (speedValue != null) {
                     viewModel.setPlaybackSpeed(PlaybackSpeed.fromValue(speedValue))
+                }
+                sideMenuDialog?.dismiss()
+            }
+        }
+    }
+
+    private fun showAspectRatioMenu() {
+        val menuItems = viewModel.getAspectRatioMenuItems(requireContext())
+
+        showSideMenu(getString(R.string.aspect_ratio), menuItems) { selected ->
+            if (selected == null) {
+                showMainMenu("aspect")
+            } else {
+                AspectRatioMode.entries.firstOrNull { it.name == selected.id }?.let {
+                    viewModel.setAspectRatioMode(it)
                 }
                 sideMenuDialog?.dismiss()
             }

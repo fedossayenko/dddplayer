@@ -23,6 +23,8 @@
     <!-- Playback Controls -->
     <string name="playback_speed">Speed</string>
     <string name="playback_zoom">Zoom</string>
+    <string name="aspect_ratio">Aspect ratio</string>
+    <string name="aspect_ratio_auto">Original</string>
     <string name="playback_zoom_percent">Zoom: %d%%</string>
     <string name="playback_zoom_scale">Scale %d%%</string>
     <string name="picture_in_picture">Picture-in-picture</string>

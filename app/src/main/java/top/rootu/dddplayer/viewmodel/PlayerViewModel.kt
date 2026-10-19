@@ -31,6 +31,7 @@ import top.rootu.dddplayer.data.VideoSettings
 import top.rootu.dddplayer.logic.AnaglyphLogic
 import top.rootu.dddplayer.logic.SettingsMutator
 import top.rootu.dddplayer.logic.TrackLogic
+import top.rootu.dddplayer.model.AspectRatioMode
 import top.rootu.dddplayer.model.MediaItem
 import top.rootu.dddplayer.model.MenuItem
 import top.rootu.dddplayer.model.PlaybackSpeed
@@ -169,8 +170,12 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     // Quality & Info
     private val _videoResolution = MutableLiveData<String>()
     val videoResolution: LiveData<String> = _videoResolution
+    // Соотношение сторон для отображения: принудительное (если выбрано) или из видео
     private val _videoAspectRatio = MutableLiveData(1.777f)
     val videoAspectRatio: LiveData<Float> = _videoAspectRatio
+    private var naturalAspectRatio = 1.777f
+    private val _aspectRatioMode = MutableLiveData(AspectRatioMode.AUTO)
+    val aspectRatioMode: LiveData<AspectRatioMode> = _aspectRatioMode
     private val _videoQualityOptions = MutableLiveData<List<VideoQualityOption>>()
     val videoQualityOptions: LiveData<List<VideoQualityOption>> = _videoQualityOptions
     private val _currentQualityName = MutableLiveData("Auto")
@@ -774,7 +779,8 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         lastVideoSize = videoSize
         if (videoSize.height > 0) {
             val ratio = (videoSize.width * videoSize.pixelWidthHeightRatio) / videoSize.height
-            _videoAspectRatio.postValue(ratio)
+            naturalAspectRatio = ratio
+            _videoAspectRatio.postValue(_aspectRatioMode.value?.ratio ?: ratio)
         }
 
         if (videoSize.width == 0 || videoSize.height == 0) return
@@ -1161,6 +1167,25 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
+    fun setAspectRatioMode(mode: AspectRatioMode) {
+        _aspectRatioMode.value = mode
+        _videoAspectRatio.value = mode.ratio ?: naturalAspectRatio
+    }
+
+    private fun getAspectRatioLabel(context: Context, mode: AspectRatioMode): String =
+        mode.label ?: context.getString(R.string.aspect_ratio_auto)
+
+    fun getAspectRatioMenuItems(context: Context): List<MenuItem> {
+        val current = _aspectRatioMode.value ?: AspectRatioMode.AUTO
+        return AspectRatioMode.entries.map { mode ->
+            MenuItem(
+                id = mode.name,
+                title = getAspectRatioLabel(context, mode),
+                isSelected = mode == current
+            )
+        }
+    }
+
     fun getMainMenuItems(context: Context): List<MenuItem> {
         val currentAudioName = currentAudioTrack.value?.let { TrackLogic.buildTrackLabel(it, context) } ?: ""
         val currentSubtitleName = currentSubtitleTrack.value?.let { TrackLogic.buildTrackLabel(it, context) } ?: ""
@@ -1190,6 +1215,12 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                 context.getString(R.string.playback_zoom),
                 getResizeModeLabel(context),
                 getResizeModeIconResId(_resizeMode.value)
+            ),
+            MenuItem(
+                "aspect",
+                context.getString(R.string.aspect_ratio),
+                getAspectRatioLabel(context, _aspectRatioMode.value ?: AspectRatioMode.AUTO),
+                R.drawable.ic_fit_screen
             ),
             MenuItem(
                 "quick_settings",
