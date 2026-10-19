@@ -100,7 +100,24 @@ class GlobalSettingsViewModel(application: Application) : AndroidViewModel(appli
     private val _horizontalSwipeAction = MutableLiveData(repository.getHorizontalSwipeAction())
     val horizontalSwipeAction: LiveData<Int> = _horizontalSwipeAction
 
+    // --- Buffer Settings ---
+    private val _bufferDisplayMode = MutableLiveData(repository.getBufferDisplayMode())
+    val bufferDisplayMode: LiveData<Int> = _bufferDisplayMode
+    private val _targetBufferMB = MutableLiveData(repository.getTargetBufferCorrectMB())
+    val targetBufferMB: LiveData<Int> = _targetBufferMB
+    val targetBufferOptions = repository.getTargetBufferOptions()
+
     // --- Actions ---
+
+    fun setBufferDisplayMode(mode: Int) {
+        repository.setBufferDisplayMode(mode)
+        _bufferDisplayMode.value = mode
+    }
+
+    fun setTargetBufferMB(sizeInMB: Int) {
+        repository.setTargetBufferMB(sizeInMB)
+        _targetBufferMB.value = sizeInMB
+    }
 
     fun toggleRememberZoom(enabled: Boolean) {
         repository.setRememberZoomEnabled(enabled)

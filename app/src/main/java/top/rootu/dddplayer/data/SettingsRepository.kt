@@ -34,6 +34,13 @@ class SettingsRepository private constructor(context: Context) {
 
         // Прозрачность часов: -1 = часы выключены, 0..80 = прозрачность в %
         const val CLOCK_OFF = -1
+
+        // Отображение процента буфера
+        const val BUFFER_DISPLAY_OFF = 0
+        const val BUFFER_DISPLAY_PANEL = 1
+        const val BUFFER_DISPLAY_CLOCK = 2 // Рядом с часами (одиночные часы и инфопанель)
+
+        const val BUFFER_SIZE_AUTO = -1
         const val RENDER_API_AUTO = 0
         const val RENDER_API_GLES2 = 1
 
@@ -78,6 +85,31 @@ class SettingsRepository private constructor(context: Context) {
     // Custom Video Zoom Scale
     fun getZoomScalePercent(): Int = prefs.getInt("video_zoom_scale", 115)
     fun setZoomScalePercent(percent: Int) = prefs.edit { putInt("video_zoom_scale", percent) }
+
+    // --- Buffer Settings ---
+    // Отображение процента буфера (BUFFER_DISPLAY_*)
+    fun getBufferDisplayMode(): Int = prefs.getInt("buffer_display_mode", BUFFER_DISPLAY_OFF)
+    fun setBufferDisplayMode(mode: Int) = prefs.edit { putInt("buffer_display_mode", mode) }
+
+    // Размер буфера сетевого видео в мегабайтах (BUFFER_SIZE_AUTO = текущие параметры плеера)
+    fun getTargetBufferOptions(): List<Int> {
+        val uiReserveMB = 96
+        val bufferSizeOptions = listOf(BUFFER_SIZE_AUTO, 16, 32, 48, 64, 96, 128, 160, 192, 224, 256, 320, 352, 384, 448, 512, 768, 1024)
+        val maxHeapMB = Runtime.getRuntime().maxMemory() / 1024 / 1024
+
+        // Разрешаем выбирать буфер в пределах кучи с учетом резерва под UI
+        val safeLimit = (maxHeapMB - uiReserveMB).toInt().coerceAtLeast(16)
+
+        return bufferSizeOptions.filter { it == BUFFER_SIZE_AUTO || it <= safeLimit }
+    }
+
+    // Значение из настроек, если оно допустимо для текущего устройства, иначе "Авто"
+    fun getTargetBufferCorrectMB(): Int {
+        val currentVal = getTargetBufferMB()
+        return if (currentVal in getTargetBufferOptions()) currentVal else BUFFER_SIZE_AUTO
+    }
+    fun getTargetBufferMB(): Int = prefs.getInt("target_buffer_mb", BUFFER_SIZE_AUTO)
+    fun setTargetBufferMB(sizeInMB: Int) = prefs.edit { putInt("target_buffer_mb", sizeInMB) }
 
     // --- UI Settings ---
     fun getPauseDimLevel(): Int = prefs.getInt("pause_dim_level", 60)
@@ -187,7 +219,7 @@ class SettingsRepository private constructor(context: Context) {
     fun getHardSettingsSignature(): String {
         val videoParams = "${getDecoderPriority()}_${isTunnelingEnabled()}_${isMapDvToHevcEnabled()}"
         val audioDownmix = "${isStereoDownmixEnabled()}_${getMixPreset()}_${getMixFront()}_${getMixCenter()}_${getMixRear()}_${getMixMiddle()}_${getMixLfe()}"
-        return "${videoParams}_${audioDownmix}"
+        return "${videoParams}_${audioDownmix}_${getTargetBufferCorrectMB()}"
     }
 
     // --- Global Preferences Helpers ---

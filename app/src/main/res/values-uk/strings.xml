@@ -177,6 +177,16 @@
     <string name="swipe_release_exit">Відпустіть для виходу</string>
     <string name="pref_pause_dim">Затемнювати екран на паузі</string>
     <string name="pref_pause_dim_desc">Захищає OLED екрани від вигоряння</string>
+    <string name="pref_buffer_display">Відображення буфера</string>
+    <string name="pref_buffer_display_desc">Де показувати відсоток буферизації</string>
+    <string name="buffer_off">Вимк</string>
+    <string name="buffer_panel">В панелі управління</string>
+    <string name="buffer_clock">Поруч з годинником та в інфопанелі</string>
+    <string name="pref_buffer_size">Розмір буфера</string>
+    <string name="pref_buffer_size_desc">Об\'єм ОЗП для буферизації мережевого відео. Локальні файли використовують буфер за замовчуванням</string>
+    <string name="buffer_size_auto">Авто</string>
+    <string name="buffer_size_mb">%d МБ</string>
+    <string name="buffer_percentage">Буфер: %d%%</string>
 
     <!-- Resume Playback -->
     <string name="pref_resume_mode">Відновлення перегляду</string>

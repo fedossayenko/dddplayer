@@ -101,6 +101,7 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
 
     // Переменные для горизонтального свайпа
     private var swipeAction = 0 // 0=None, 1=Seek, 2=Playlist
+    private var bufferDisplayMode = SettingsRepository.BUFFER_DISPLAY_OFF
     private var isSwipeSeeking = false
     private var swipeSeekStartPosition = 0L
     private var swipeSeekCurrentPosition = 0L
@@ -141,6 +142,7 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
 
         // Устанавливаем видимость часов на основе настроек
         ui.updateClockTransparency(settingsRepo.getClockTransparency())
+        applyBufferDisplayMode(settingsRepo.getBufferDisplayMode())
 
         inputHandler = PlayerInputHandler(
             viewModel, settingsViewModel, ui,
@@ -834,6 +836,18 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
         sideMenuDialog?.show()
     }
 
+    private fun applyBufferDisplayMode(mode: Int) {
+        bufferDisplayMode = mode
+        updateBufferDisplay(viewModel.bufferedPercentage.value ?: 0)
+    }
+
+    private fun updateBufferDisplay(percent: Int) {
+        ui.updateBufferDisplay(percent, bufferDisplayMode)
+        // Рядом с часами: и в одиночных часах, и в часах инфопанели
+        timerController.bufferText =
+            if (bufferDisplayMode == SettingsRepository.BUFFER_DISPLAY_CLOCK) "$percent%" else ""
+    }
+
     private fun resetDimTimer() {
         dimJob?.cancel()
         ui.animateDimming(0f) // Сразу осветляем экран при любой активности
@@ -998,6 +1012,7 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
             if (viewModel.isBuffering.value == true) {
                 ui.updateBufferingState(true, viewModel.outputMode.value, percent)
             }
+            updateBufferDisplay(percent)
         }
 
         viewModel.bufferedPosition.observe(viewLifecycleOwner) { bufferedPos ->
@@ -1377,6 +1392,7 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
 
         // Обновляем видимость часов (на случай, если изменили в настройках)
         ui.updateClockTransparency(settingsRepo.getClockTransparency())
+        applyBufferDisplayMode(settingsRepo.getBufferDisplayMode())
 
         // Проверяем, нужно ли перезапустить плеер из-за смены настроек
         viewModel.checkSettingsAndRestart()

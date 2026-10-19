@@ -61,6 +61,7 @@ class PlayerUiController(private val rootView: View) {
     val bufferingSplitContainer: View = rootView.findViewById(R.id.buffering_split_container)
     val bufferingContainer: View = rootView.findViewById(R.id.buffering_container)
     val bufferingPercentage: TextView = rootView.findViewById(R.id.buffering_percentage)
+    val bufferingValueTextView: TextView = controlsView.findViewById(R.id.buffering_value)
     val loaderLeft: ProgressBar = rootView.findViewById(R.id.loader_left)
     val loaderRight: ProgressBar = rootView.findViewById(R.id.loader_right)
 
@@ -723,6 +724,18 @@ class PlayerUiController(private val rootView: View) {
         } else {
             bufferingContainer.isVisible = false
             bufferingSplitContainer.isVisible = false
+        }
+    }
+
+    /**
+     * Процент буфера под полосой перемотки (режим BUFFER_DISPLAY_PANEL).
+     */
+    fun updateBufferDisplay(percent: Int, displayMode: Int) {
+        if (displayMode == SettingsRepository.BUFFER_DISPLAY_PANEL) {
+            bufferingValueTextView.isVisible = true
+            bufferingValueTextView.text = rootView.context.getString(R.string.buffer_percentage, percent)
+        } else {
+            bufferingValueTextView.isVisible = false
         }
     }
 

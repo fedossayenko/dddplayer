@@ -99,6 +99,10 @@ class GlobalSettingsActivity : AppCompatActivity() {
     private lateinit var textShowClockValue: TextView
     private lateinit var itemPauseDim: LinearLayout
     private lateinit var textPauseDimValue: TextView
+    private lateinit var itemBufferDisplay: LinearLayout
+    private lateinit var textBufferDisplayValue: TextView
+    private lateinit var itemBufferSize: LinearLayout
+    private lateinit var textBufferSizeValue: TextView
 
     // Список языков для выбора аудио/субтитров (ISO 639-1)
     private val trackLanguages = listOf(
@@ -202,6 +206,10 @@ class GlobalSettingsActivity : AppCompatActivity() {
         textShowClockValue = findViewById(R.id.text_show_clock_value)
         itemPauseDim = findViewById(R.id.item_pause_dim)
         textPauseDimValue = findViewById(R.id.text_pause_dim_value)
+        itemBufferDisplay = findViewById(R.id.item_buffer_display)
+        textBufferDisplayValue = findViewById(R.id.text_buffer_display_value)
+        itemBufferSize = findViewById(R.id.item_buffer_size)
+        textBufferSizeValue = findViewById(R.id.text_buffer_size_value)
     }
 
     private fun setupListeners() {
@@ -319,6 +327,26 @@ class GlobalSettingsActivity : AppCompatActivity() {
                 showUpdateDialog(info)
             } else {
                 updateViewModel.forceCheckUpdates()
+            }
+        }
+
+        itemBufferDisplay.setOnClickListener {
+            val options = listOf(getString(R.string.buffer_off), getString(R.string.buffer_panel), getString(R.string.buffer_clock))
+            showSingleChoiceDialog(getString(R.string.pref_buffer_display), options, settingsViewModel.bufferDisplayMode.value ?: SettingsRepository.BUFFER_DISPLAY_OFF) {
+                settingsViewModel.setBufferDisplayMode(it)
+            }
+        }
+
+        itemBufferSize.setOnClickListener {
+            val availableOptions = settingsViewModel.targetBufferOptions
+            val optionsLabels = availableOptions.map {
+                if (it == SettingsRepository.BUFFER_SIZE_AUTO) getString(R.string.buffer_size_auto) else getString(R.string.buffer_size_mb, it)
+            }
+            val currentVal = settingsViewModel.targetBufferMB.value ?: SettingsRepository.BUFFER_SIZE_AUTO
+            val currentIndex = availableOptions.indexOf(currentVal).coerceAtLeast(0)
+
+            showSingleChoiceDialog(getString(R.string.pref_buffer_size), optionsLabels, currentIndex) {
+                settingsViewModel.setTargetBufferMB(availableOptions[it])
             }
         }
 
@@ -449,6 +477,17 @@ class GlobalSettingsActivity : AppCompatActivity() {
             textPauseDimValue.text = if (level == 0) getString(R.string.track_off) else "$level%"
         }
 
+
+        settingsViewModel.bufferDisplayMode.observe(this) { mode ->
+            textBufferDisplayValue.text = when (mode) {
+                SettingsRepository.BUFFER_DISPLAY_PANEL -> getString(R.string.buffer_panel)
+                SettingsRepository.BUFFER_DISPLAY_CLOCK -> getString(R.string.buffer_clock)
+                else -> getString(R.string.buffer_off)
+            }
+        }
+        settingsViewModel.targetBufferMB.observe(this) { size ->
+            textBufferSizeValue.text = if (size == SettingsRepository.BUFFER_SIZE_AUTO) getString(R.string.buffer_size_auto) else getString(R.string.buffer_size_mb, size)
+        }
 
         updateViewModel.updateInfo.observe(this) { updateUpdateUI() }
         updateViewModel.isCheckingUpdates.observe(this) { checking ->

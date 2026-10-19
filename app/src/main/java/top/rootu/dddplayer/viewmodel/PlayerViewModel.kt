@@ -245,10 +245,13 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                 // Логика расчета процента буферизации вперед
                 // (ExoPlayer.bufferedPercentage не подходит,
                 // т.к. он показывает % буфера на прогрессе, а не заполненность буфера)
-                val bufferedDuration = p.bufferedPosition - p.currentPosition
-                val targetBuffer = if (bufferedDuration > 6_000L) 50_000L else 5_000L
-                val maxPercent = if (targetBuffer == 5_000L) 99 else 100
-                val percent = ((bufferedDuration * 101) / targetBuffer).toInt().coerceIn(0, maxPercent)
+                // Если для сетевого видео задан размер буфера в МБ - считаем по объему
+                val percent = playerManager.getNetworkBufferFillPercent() ?: run {
+                    val bufferedDuration = p.bufferedPosition - p.currentPosition
+                    val targetBuffer = if (bufferedDuration > 6_000L) 50_000L else 5_000L
+                    val maxPercent = if (targetBuffer == 5_000L) 99 else 100
+                    ((bufferedDuration * 101) / targetBuffer).toInt().coerceIn(0, maxPercent)
+                }
                 _bufferedPercentage.value = percent
 
                 // Если AFR еще не сработал, проверяем формат

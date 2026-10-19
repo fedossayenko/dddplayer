@@ -33,6 +33,7 @@ import androidx.media3.exoplayer.mediacodec.MediaCodecUtil
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.source.MediaSource
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
+import androidx.media3.exoplayer.upstream.DefaultAllocator
 import androidx.media3.exoplayer.upstream.DefaultLoadErrorHandlingPolicy
 import androidx.media3.extractor.DefaultExtractorsFactory
 import androidx.media3.extractor.mp4.Mp4Extractor
@@ -68,6 +69,10 @@ class PlayerManager(
         private set
 
     private var mediaSession: MediaSession? = null
+
+    // Для расчета заполненности буфера, заданного в МБ
+    private var bufferAllocator: DefaultAllocator? = null
+    private var networkBufferBytes: Int = C.LENGTH_UNSET
     private var loudnessEnhancer: LoudnessEnhancer? = null
 
     // Состояние для восстановления
@@ -347,15 +352,12 @@ class PlayerManager(
             setEnableDecoderFallback(true) // Разрешаем софтовый декодер
         }
 
-        val loadControl = DefaultLoadControl.Builder()
-            .setBufferDurationsMs(
-                15000, // minBufferMs
-                50000, // maxBufferMs
-                500,   // bufferForPlaybackMs
-                5000   // bufferForPlaybackAfterRebufferMs
-            )
-            .setPrioritizeTimeOverSizeThresholds(true)
-            .build()
+        // Объем буфера из настроек применяется только к сетевому видео,
+        // локальные файлы и режим "Авто" буферизуются с прежними параметрами
+        val networkBufferMB = settingsRepo.getTargetBufferCorrectMB()
+        networkBufferBytes = if (networkBufferMB > 0) networkBufferMB * 1024 * 1024 else C.LENGTH_UNSET
+        val loadControl = NetworkBufferLoadControl.create(networkBufferMB)
+        bufferAllocator = loadControl.bufferAllocator
 
         // Build Player
         val player = ExoPlayer.Builder(appContext, renderersFactory)
@@ -645,6 +647,19 @@ class PlayerManager(
     }
 
     fun getTrackMetadata(): Map<Int, UnifiedMetadataReader.TrackInfo> = currentTrackInfo
+
+    /**
+     * Заполненность буфера (0-100) по объему, если для текущего сетевого видео задан размер в МБ.
+     * null - режим "Авто" или локальный файл: процент считается по времени, как раньше.
+     */
+    fun getNetworkBufferFillPercent(): Int? {
+        val player = exoPlayer ?: return null
+        val allocator = bufferAllocator ?: return null
+        if (networkBufferBytes == C.LENGTH_UNSET) return null
+        val scheme = player.currentMediaItem?.localConfiguration?.uri?.scheme
+        if (scheme.isNullOrEmpty() || scheme in DefaultLoadControl.LOCAL_PLAYBACK_SCHEMES) return null
+        return ((allocator.totalBytesAllocated * 100L) / networkBufferBytes).toInt().coerceIn(0, 100)
+    }
 
     fun togglePlayPause() {
         val player = exoPlayer ?: return

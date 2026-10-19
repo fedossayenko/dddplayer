@@ -186,6 +186,16 @@
     <string name="swipe_release_exit">松开退出</string>
     <string name="pref_pause_dim">暂停时调暗屏幕</string>
     <string name="pref_pause_dim_desc">保护 OLED 屏幕免受烧屏影响</string>
+    <string name="pref_buffer_display">缓冲显示</string>
+    <string name="pref_buffer_display_desc">在哪里显示缓冲百分比</string>
+    <string name="buffer_off">关闭</string>
+    <string name="buffer_panel">在控制面板中</string>
+    <string name="buffer_clock">在时钟旁边和信息面板中</string>
+    <string name="pref_buffer_size">缓冲区大小</string>
+    <string name="pref_buffer_size_desc">用于缓冲网络视频的内存大小。本地文件使用默认缓冲</string>
+    <string name="buffer_size_auto">自动</string>
+    <string name="buffer_size_mb">%d MB</string>
+    <string name="buffer_percentage">缓冲: %d%%</string>
 
     <!-- Resume Playback -->
     <string name="pref_resume_mode">恢复播放</string>

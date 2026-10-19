@@ -26,6 +26,14 @@ class PlayerTimerController(
 
     private var lastTimeStr: String = ""
 
+    // Текст буфера, который добавляется к часам (например "95%")
+    var bufferText: String = ""
+        set(value) {
+            if (field == value) return
+            field = value
+            updateClockViews()
+        }
+
     fun startClock() {
         clockJob?.cancel()
         clockJob = scope.launch {
@@ -49,7 +57,8 @@ class PlayerTimerController(
 
     private fun updateClockViews() {
         if (lastTimeStr.isEmpty()) return
-        clockViews.forEach { it.text = lastTimeStr }
+        val content = if (bufferText.isNotEmpty()) "$bufferText • $lastTimeStr" else lastTimeStr
+        clockViews.forEach { it.text = content }
     }
 
     fun resetControlsTimer() {

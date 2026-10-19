@@ -203,6 +203,16 @@
     <string name="swipe_release_exit">Release to exit</string>
     <string name="pref_pause_dim">Dim screen on pause</string>
     <string name="pref_pause_dim_desc">Protects OLED screens from burn-in</string>
+    <string name="pref_buffer_display">Buffer Display</string>
+    <string name="pref_buffer_display_desc">Where to show buffering percentage</string>
+    <string name="buffer_off">Off</string>
+    <string name="buffer_panel">In control panel</string>
+    <string name="buffer_clock">Near the clock and in the info panel</string>
+    <string name="pref_buffer_size">Buffer size</string>
+    <string name="pref_buffer_size_desc">Amount of RAM for buffering network video. Local files use the default buffer</string>
+    <string name="buffer_size_auto">Auto</string>
+    <string name="buffer_size_mb">%d MB</string>
+    <string name="buffer_percentage">Buffer: %d%%</string>
 
     <!-- Resume Playback -->
     <string name="pref_resume_mode">Resume playback</string>
