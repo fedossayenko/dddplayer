@@ -61,6 +61,8 @@
     <string name="setting_leak_l">Уцечка (Левае)</string>
     <string name="setting_leak_r">Уцечка (Правае)</string>
     <string name="setting_space">Прастора</string>
+    <string name="setting_render_api">Рэндэр</string>
+    <string name="msg_render_api_restart">OpenGL ES 3.0 будзе выкарыстаны пасля паўторнага адкрыцця плэера</string>
 
     <!-- Значэнні налад OSD -->
     <string name="val_custom">Карыст.</string>

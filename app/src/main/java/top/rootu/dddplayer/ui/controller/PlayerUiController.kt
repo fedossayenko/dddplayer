@@ -673,6 +673,7 @@ class PlayerUiController(private val rootView: View) {
             SettingType.CUSTOM_LEAK_L -> context.getString(R.string.setting_leak_l)
             SettingType.CUSTOM_LEAK_R -> context.getString(R.string.setting_leak_r)
             SettingType.CUSTOM_SPACE -> context.getString(R.string.setting_space)
+            SettingType.RENDER_API -> context.getString(R.string.setting_render_api)
             SettingType.SWAP_EYES -> context.getString(R.string.setting_swap_eyes)
             SettingType.DEPTH_3D -> context.getString(R.string.setting_depth)
             SettingType.SCREEN_SEPARATION -> context.getString(R.string.setting_screen_separation)

@@ -61,6 +61,8 @@
     <string name="setting_leak_l">Витік (Ліве)</string>
     <string name="setting_leak_r">Витік (Праве)</string>
     <string name="setting_space">Простір</string>
+    <string name="setting_render_api">Рендер</string>
+    <string name="msg_render_api_restart">OpenGL ES 3.0 буде використано після повторного відкриття плеєра</string>
 
     <!-- Значення налаштувань OSD -->
     <string name="val_custom">Користув.</string>
