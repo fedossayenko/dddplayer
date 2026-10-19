@@ -22,6 +22,10 @@ class SettingsRepository private constructor(context: Context) {
         const val RESUME_ALWAYS = 1
         const val RESUME_NEVER = 2
 
+        // Позиция, переданная внешним приложением (например, Лампой)
+        const val EXTERNAL_POSITION_APPLY = 0
+        const val EXTERNAL_POSITION_ASK = 1
+
         // Действие кнопки "Вверх"
         const val UP_ACTION_NONE = 0
         const val UP_ACTION_OSD = 1
@@ -208,6 +212,10 @@ class SettingsRepository private constructor(context: Context) {
 
     fun getResumeMode(): Int = prefs.getInt("resume_mode", RESUME_ASK)
     fun setResumeMode(mode: Int) = prefs.edit { putInt("resume_mode", mode) }
+
+    // Позиция из внешнего приложения: применять сразу (по умолчанию) или спрашивать
+    fun getExternalPositionMode(): Int = prefs.getInt("external_position_mode", EXTERNAL_POSITION_APPLY)
+    fun setExternalPositionMode(mode: Int) = prefs.edit { putInt("external_position_mode", mode) }
 
     // Действие кнопки "Вверх" ( 0 = Nothing, 1 = OSD, 2 = Side Menu)
     // Действие кнопки "Вверх" (UP_ACTION_*). По умолчанию - боковое меню

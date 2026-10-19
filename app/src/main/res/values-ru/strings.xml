@@ -228,6 +228,10 @@
     <!-- Resume Playback -->
     <string name="pref_resume_mode">Возобновление просмотра</string>
     <string name="pref_resume_mode_desc">Как вести себя при наличии сохраненного прогресса</string>
+    <string name="pref_external_position">Позиция из приложения</string>
+    <string name="pref_external_position_desc">Позиция, переданная другим приложением (например, Лампой)</string>
+    <string name="external_position_apply">Применять сразу</string>
+    <string name="external_position_ask">Спрашивать</string>
     <string name="resume_mode_ask">Спрашивать</string>
     <string name="resume_mode_always">Всегда продолжать</string>
     <string name="resume_mode_never">Всегда с начала</string>

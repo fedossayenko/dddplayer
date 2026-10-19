@@ -273,6 +273,9 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
     // Флаг для однократного срабатывания Resume при открытии плеера
     private var isFirstItemLoaded = false
+
+    // Позиция из внешнего приложения, о которой нужно спросить (id элемента -> позиция)
+    private var pendingExternalPosition: Pair<String, Long>? = null
     private val _showResumeDialogEvent = MutableLiveData<Pair<Long, Long>?>()
     val showResumeDialogEvent: LiveData<Pair<Long, Long>?> = _showResumeDialogEvent
 
@@ -614,12 +617,11 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                         pendingSubtitleId = saved.subtitleTrackId
 
                         isSettingsLoadedFromDb = true
-
-                        if (!isFirstItemLoaded) {
-                            handleResumeLogic(saved)
-                        }
                     } else {
                         loadGlobalDefaults()
+                    }
+                    if (!isFirstItemLoaded) {
+                        handleResumeLogic(saved)
                     }
                     // Помечаем, что первое видео обработавано.
                     isFirstItemLoaded = true
@@ -628,25 +630,43 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
-    private fun handleResumeLogic(settings: VideoSettings) {
-        if (player?.isCurrentMediaItemLive == true) return
+    /**
+     * Продолжение просмотра для первого элемента.
+     * Позиция из внешнего приложения (интент) приоритетнее сохраненной в плеере: при режиме
+     * "Применять сразу" плеер уже стартовал с нее, при режиме "Спрашивать" - показываем диалог.
+     * Сохраненная позиция используется, только если приложение позицию не передало.
+     */
+    private fun handleResumeLogic(settings: VideoSettings?) {
+        if (player?.isCurrentMediaItemLive == true) {
+            pendingExternalPosition = null
+            return
+        }
 
-        val savedPos = settings.lastPosition
-        val totalDur = settings.duration
-        val resumeMode = repository.getResumeMode()
+        val playingId = player?.currentMediaItem?.mediaId
+        val external = pendingExternalPosition?.takeIf { it.first == playingId }?.second
+        pendingExternalPosition = null
+
+        val knownDuration = player?.duration?.takeIf { it > 0 && it != C.TIME_UNSET }
+        if (external != null) {
+            val duration = settings?.duration?.takeIf { it > 0 } ?: knownDuration ?: 0L
+            if (isResumePositionMeaningful(external, duration)) {
+                player?.pause()
+                _showResumeDialogEvent.postValue(Pair(external, duration))
+            }
+            return
+        }
 
         val currentIndex = player?.currentMediaItemIndex ?: -1
         val intentPos = if (currentIndex != -1) {
             _currentPlaylist.value?.getOrNull(currentIndex)?.startPositionMs ?: 0L
         } else 0L
+        val resumeMode = repository.getResumeMode()
         // Если в интенте была позиция (не 0), игнорируем БД
-        if (intentPos > 0 || resumeMode == SettingsRepository.RESUME_NEVER) return
+        if (settings == null || intentPos > 0 || resumeMode == SettingsRepository.RESUME_NEVER) return
 
-        // Правило 95% или менее 5 секунд прогресса - начинаем с 0
-        if (totalDur > 0) {
-            val percent = (savedPos.toFloat() / totalDur.toFloat())
-            if (percent > 0.95f || savedPos < 5000L) return
-        } else if (savedPos < 5000L) return
+        val savedPos = settings.lastPosition
+        val totalDur = settings.duration
+        if (!isResumePositionMeaningful(savedPos, totalDur)) return
 
         // Применяем режим
         when (resumeMode) {
@@ -658,6 +678,13 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                 _showResumeDialogEvent.postValue(Pair(savedPos, totalDur))
             }
         }
+    }
+
+    // Правило 95% или менее 5 секунд прогресса - начинаем с 0
+    private fun isResumePositionMeaningful(position: Long, duration: Long): Boolean {
+        if (position < 5000L) return false
+        if (duration > 0 && position.toFloat() / duration.toFloat() > 0.95f) return false
+        return true
     }
 
     fun resumePlayback(position: Long) {
@@ -942,7 +969,17 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         )
 
         resumePlayWhenReady = true // Новый плейлист всегда стартует
-        val startPos = indexedItems.getOrNull(startIndex)?.startPositionMs ?: 0L
+        val startItem = indexedItems.getOrNull(startIndex)
+        var startPos = startItem?.startPositionMs ?: 0L
+        pendingExternalPosition = null
+        isFirstItemLoaded = false // Продолжение просмотра - для первого элемента нового плейлиста
+        if (startItem != null && startPos > 0 &&
+            repository.getExternalPositionMode() == SettingsRepository.EXTERNAL_POSITION_ASK
+        ) {
+            // Позицию из приложения не применяем сразу, а предлагаем в диалоге продолжения
+            pendingExternalPosition = startItem.uuid to startPos
+            startPos = 0L
+        }
         playerManager.loadPlaylist(indexedItems, startIndex, startPos)
         viewModelScope.launch { repository.cleanupOldSettings() }
     }

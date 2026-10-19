@@ -238,6 +238,10 @@
     <!-- Resume Playback -->
     <string name="pref_resume_mode">Resume playback</string>
     <string name="pref_resume_mode_desc">How to behave when saved progress exists</string>
+    <string name="pref_external_position">Position from app</string>
+    <string name="pref_external_position_desc">Position passed by another app (e.g. Lampa)</string>
+    <string name="external_position_apply">Apply at once</string>
+    <string name="external_position_ask">Ask</string>
     <string name="resume_mode_ask">Ask</string>
     <string name="resume_mode_always">Always resume</string>
     <string name="resume_mode_never">Always start from beginning</string>
