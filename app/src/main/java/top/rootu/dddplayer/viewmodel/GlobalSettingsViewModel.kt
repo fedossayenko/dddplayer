@@ -18,6 +18,9 @@ class GlobalSettingsViewModel(application: Application) : AndroidViewModel(appli
     val repository = SettingsRepository.getInstance(application)
 
     // --- Playback Settings ---
+    private val _isAutoPipEnabled = MutableLiveData(repository.isAutoPipEnabled())
+    val isAutoPipEnabled: LiveData<Boolean> = _isAutoPipEnabled
+
     private val _decoderPriority = MutableLiveData(repository.getDecoderPriority())
     val decoderPriority: LiveData<Int> = _decoderPriority
 
@@ -134,6 +137,10 @@ class GlobalSettingsViewModel(application: Application) : AndroidViewModel(appli
     val targetBufferOptions = repository.getTargetBufferOptions()
 
     // --- Actions ---
+    fun toggleAutoPip(enabled: Boolean) {
+        repository.setAutoPipEnabled(enabled)
+        _isAutoPipEnabled.value = enabled
+    }
 
     fun setBufferDisplayMode(mode: Int) {
         repository.setBufferDisplayMode(mode)

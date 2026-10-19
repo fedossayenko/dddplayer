@@ -222,6 +222,17 @@
             android:nextFocusUp="@id/seek_bar"
             tools:ignore="HardcodedText" />
 
+        <ImageButton
+            android:id="@+id/button_pip"
+            style="@style/PlayerSecondaryControlButton"
+            android:contentDescription="@string/picture_in_picture"
+            android:src="@drawable/ic_picture_in_picture"
+            android:background="?android:attr/selectableItemBackgroundBorderless"
+            app:tint="@color/tv_white"
+            android:padding="8dp"
+            android:visibility="gone"
+            android:nextFocusUp="@id/seek_bar" />
+
         <!-- Quality -->
         <TextView
             android:id="@+id/button_quality"

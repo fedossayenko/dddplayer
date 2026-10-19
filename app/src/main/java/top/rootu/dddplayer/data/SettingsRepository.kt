@@ -136,6 +136,10 @@ class SettingsRepository private constructor(context: Context) {
     fun setShowPlaylistIndexEnabled(enabled: Boolean) = prefs.edit { putBoolean("show_playlist_index", enabled) }
 
     // --- Global Player Preferences ---
+    // Автоматический переход в PiP при сворачивании. По умолчанию выключен
+    fun isAutoPipEnabled(): Boolean = prefs.getBoolean("auto_pip", false)
+    fun setAutoPipEnabled(enabled: Boolean) = prefs.edit { putBoolean("auto_pip", enabled) }
+
     fun getDecoderPriority(): Int = prefs.getInt("decoder_priority", DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
     fun setDecoderPriority(mode: Int) = prefs.edit { putInt("decoder_priority", mode) }
 

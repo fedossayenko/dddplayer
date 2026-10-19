@@ -64,6 +64,7 @@
     <string name="playback_speed">Скорость</string>
     <string name="playback_zoom">Масштабирование</string>
     <string name="playback_zoom_scale">Увеличение %d%%</string>
+    <string name="picture_in_picture">Картинка в картинке</string>
     <string name="playback_zoom_percent">Масштаб: %d%%</string>
 
     <!-- Режимы масштабирования -->
@@ -92,6 +93,9 @@
     <string name="error_video_decoder">Ошибка видео декодера.\nВоспроизводится только звук.</string>
     <string name="error_audio_disabled">Ошибка аудио. Звук отключен.\n%s</string>
     <string name="error_audio_disabled_hint">Ошибка аудио. Звук отключен.\nПопробуйте другую дорожку.\n%s</string>
+    <string name="pip_unavailable">Не удалось открыть PiP. Запустите видео и разрешите режим «Картинка в картинке» в настройках системы.</string>
+    <string name="pip_action_play">Воспроизвести</string>
+    <string name="pip_action_pause">Пауза</string>
     <string name="msg_playlist_empty">Плейлист пуст</string>
     <string name="msg_auto_detect">Автоопределение: %s</string>
     <string name="press_back_exit">Нажмите НАЗАД для выхода</string>
@@ -109,6 +113,7 @@
     <string name="pref_decoder_priority_prefer_app">Предпочитать декодеры приложения (AV1 + FFmpeg) SW+HW</string>
     <string name="pref_decoder_priority_only_device">Только декодеры устройства</string>
     <string name="pref_decoder_sw_desc">¹ - SW содержит декодеры AV1 и FFmpeg (собран с аудиокодеками: vorbis, opus, flac, alac, pcm_mulaw, pcm_alaw, mp3, amrnb, amrwb, aac, ac3, eac3, dca(DTS), mlp, truehd)</string>
+    <string name="pref_auto_pip_desc">Автоматически открывать небольшое окно с видео при сворачивании во время воспроизведения.</string>
     <string name="pref_downmix">Downmix в стерео</string>
     <string name="pref_downmix_desc">При использовании SW декодера, позволяет преобразовать многоканальный звук в правильно¹ смиксированное стерео, что позволяет решить проблему с отсутствием голоса/перевода (обычно присутствуют на центральном канале).\n¹ - Матрицы для downmix рассчитаны аналогично RFC 7845 (Section 5.1.1.5).</string>
     <string name="pref_downmix_config">Коррекция Downmix</string>

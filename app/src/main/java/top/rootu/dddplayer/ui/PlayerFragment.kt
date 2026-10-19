@@ -69,6 +69,7 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
 
     private var dimJob: Job? = null
     private var zoomDialog: Dialog? = null
+    private var inPictureInPicture = false
     private val viewModel: PlayerViewModel by activityViewModels()
     private val settingsViewModel: SettingsViewModel by viewModels()
     private val updateViewModel: UpdateViewModel by viewModels()
@@ -474,6 +475,10 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
         }
     }
     private fun setupControls() {
+        ui.buttonPip.isVisible = (activity as? PlayerActivity)?.supportsPictureInPicture == true
+        ui.buttonPip.setOnClickListener {
+            (activity as? PlayerActivity)?.enterPlayerPictureInPicture(showError = true)
+        }
         // Навигация в настройках
         ui.btnSettingsPrev.setOnClickListener {
             viewModel.changeSettingValue(settingsViewModel.currentSettingType.value!!, -1)
@@ -872,6 +877,7 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
 
     private fun resetDimTimer() {
         dimJob?.cancel()
+        if (inPictureInPicture) return
         ui.animateDimming(0f) // Сразу осветляем экран при любой активности
 
         // Затемняем только при паузе пользователем. Во время буферизации,
@@ -1509,7 +1515,15 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
 
         // Проверяем, нужно ли перезапустить плеер из-за смены настроек
         viewModel.checkSettingsAndRestart()
-        viewModel.player?.playWhenReady = viewModel.resumePlayWhenReady
+    }
+
+    override fun onStart() {
+        super.onStart()
+        // Возобновляем, только если видео играло при уходе с экрана (или это новый плейлист).
+        // Пауза снимается в onStop, а не в onPause, чтобы видео продолжало играть в PiP.
+        if (viewModel.resumePlayWhenReady) {
+            viewModel.player?.play()
+        }
         if (viewModel.inputType.value != StereoInputType.NONE) {
             ui.glSurfaceView.onResume()
         }
@@ -1518,11 +1532,33 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
     override fun onPause() {
         super.onPause()
         viewModel.saveCurrentSettings()
+    }
+
+    override fun onStop() {
         viewModel.player?.let { player ->
             viewModel.resumePlayWhenReady = player.playWhenReady
-            player.playWhenReady = false
+            player.pause()
         }
+        viewModel.saveCurrentSettings()
         ui.glSurfaceView.onPause()
+        super.onStop()
+    }
+
+    fun setPictureInPictureMode(enabled: Boolean) {
+        inPictureInPicture = enabled
+        if (_ui == null) return
+        if (enabled) {
+            dimJob?.cancel()
+            timerController.stopControlsTimer()
+            settingsViewModel.closePanel()
+            sideMenuDialog?.dismiss()
+            zoomDialog?.dismiss()
+        }
+        ui.setPictureInPictureMode(enabled)
+        if (!enabled) {
+            resetDimTimer()
+            timerController.resetControlsTimer()
+        }
     }
 
     override fun onDestroyView() {

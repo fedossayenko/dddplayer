@@ -18,6 +18,7 @@
     <string name="playback_speed">Хуткасць</string>
     <string name="playback_zoom">Маштаб</string>
     <string name="playback_zoom_scale">Павялічыць на %d%%</string>
+    <string name="picture_in_picture">Відарыс у відарысе</string>
     <string name="playback_zoom_percent">Маштаб: %d%%</string>
 
     <!-- Рэжымы маштабавання -->
@@ -85,6 +86,9 @@
     <string name="error_video_decoder">Памылка відэадэкодэра.\nПрайграваецца толькі аўдыя.</string>
     <string name="error_audio_disabled">Памылка аўдыя. Гук адключаны.\n%s</string>
     <string name="error_audio_disabled_hint">Памылка аўдыя. Гук адключаны.\nПаспрабуйце іншую дарожку.\n%s</string>
+    <string name="pip_unavailable">Не ўдалося адкрыць PiP. Запусціце відэа і дазвольце рэжым «Відарыс у відарысе» ў наладах сістэмы.</string>
+    <string name="pip_action_play">Прайграць</string>
+    <string name="pip_action_pause">Паўза</string>
     <string name="msg_playlist_empty">Плэйліст пусты</string>
     <string name="msg_auto_detect">Аўтавызначэнне: %s</string>
     <string name="press_back_exit">Націсніце НАЗАД для выхаду</string>
@@ -98,6 +102,7 @@
     <string name="pref_decoder_priority_prefer_device">Аддаваць перавагу дэкодэрам прылады (па змаўчанні) HW+SW</string>
     <string name="pref_decoder_priority_prefer_app">Аддаваць перавагу дэкодэрам праграмы (AV1 + FFmpeg) SW+HW</string>
     <string name="pref_decoder_priority_only_device">Толькі дэкодэры прылады</string>
+    <string name="pref_auto_pip_desc">Аўтаматычна адкрываць невялікае акно з відэа пры згортванні падчас прайгравання.</string>
     <string name="pref_downmix">Downmix у стэрэа</string>
     <string name="pref_downmix_desc">Пры выкарыстанні SW дэкодэра, дазваляе пераўтварыць шматканальны гук у правільна¹ зміксаванае стэрэа, што вырашае праблему з адсутнасцю голасу/перакладу (звычайна на цэнтральным канале).\n¹ - Матрыцы для downmix разлічаны аналагічна RFC 7845 (Section 5.1.1.5).</string>
     <string name="pref_downmix_config">Карэкцыя Downmix</string>

@@ -131,6 +131,31 @@
                     tools:text="HW+SW" />
             </LinearLayout>
 
+            <!-- Picture-in-picture -->
+            <LinearLayout
+                android:id="@+id/item_auto_pip"
+                style="@style/SettingsItemContainer">
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:duplicateParentState="true"
+                    android:orientation="vertical">
+                    <TextView
+                        style="@style/SettingsItemTitle"
+                        android:text="@string/picture_in_picture" />
+                    <TextView
+                        style="@style/SettingsItemDesc"
+                        android:text="@string/pref_auto_pip_desc" />
+                </LinearLayout>
+                <androidx.appcompat.widget.SwitchCompat
+                    android:id="@+id/switch_auto_pip"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:focusable="false"
+                    android:clickable="false" />
+            </LinearLayout>
+
             <!-- Downmix -->
             <LinearLayout
                 android:id="@+id/item_downmix"

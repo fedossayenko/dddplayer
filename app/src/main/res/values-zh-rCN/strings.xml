@@ -19,6 +19,7 @@
     <string name="playback_speed">播放速度</string>
     <string name="playback_zoom">缩放</string>
     <string name="playback_zoom_scale">放大 %d%%</string>
+    <string name="picture_in_picture">画中画</string>
     <string name="playback_zoom_percent">缩放比例: %d%%</string>
 
     <!-- 缩放模式 -->
@@ -87,6 +88,9 @@
     <string name="error_video_decoder">视频解码器错误。\n仅播放音频。</string>
     <string name="error_audio_disabled">音频错误。声音已禁用。\n%s</string>
     <string name="error_audio_disabled_hint">音频错误。声音已禁用。\n请尝试其他音轨。\n%s</string>
+    <string name="pip_unavailable">无法打开画中画。请先播放视频，并在系统设置中允许使用画中画模式。</string>
+    <string name="pip_action_play">播放</string>
+    <string name="pip_action_pause">暂停</string>
     <string name="msg_playlist_empty">播放列表为空</string>
     <string name="msg_auto_detect">自动检测：%s</string>
     <string name="press_back_exit">按返回键退出</string>
@@ -102,6 +106,7 @@
     <string name="pref_decoder_priority_prefer_app" tools:ignore="Typos">优先使用应用解码器（AV1 + Ffmpeg）SW+HW</string>
     <string name="pref_decoder_priority_only_device">仅使用设备解码器</string>
     <string name="pref_decoder_sw_desc">¹ - SW 包括 AV1 和 Ffmpeg 解码器（内置音频编解码器：vorbis、opus、flac、alac、pcm_mulaw、pcm_alaw、mp3、amrnb、amrwb、aac、ac3、eac3、dca(DTS)、mlp、truehd）</string>
+    <string name="pref_auto_pip_desc">播放期间将应用最小化时，自动打开视频小窗。</string>
     <string name="pref_downmix">缩混至立体声</string>
     <string name="pref_downmix_desc">使用 SW 解码器时，可将多声道音频正确¹混合为立体声，解决人声/配音缺失问题（通常存在于中置声道）。\n¹ - 缩混矩阵的计算类似于 RFC 7845（第 5.1.1.5 节）。</string>
     <string name="pref_downmix_config">缩混校正</string>

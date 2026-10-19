@@ -96,6 +96,7 @@ class PlayerUiController(private val rootView: View) {
     val buttonQuality: TextView = controlsView.findViewById(R.id.button_quality)
     val buttonSpeed: TextView = controlsView.findViewById(R.id.button_speed)
     val buttonResize: ImageButton = controlsView.findViewById(R.id.button_resize)
+    val buttonPip: ImageButton = controlsView.findViewById(R.id.button_pip)
     val buttonPlaylist: ImageButton = controlsView.findViewById(R.id.button_playlist)
     val buttonAudio: ImageButton = controlsView.findViewById(R.id.button_audio)
     val buttonSubs: ImageButton = controlsView.findViewById(R.id.button_subs)
@@ -159,6 +160,28 @@ class PlayerUiController(private val rootView: View) {
     // Автоскрытие инфопанели, показанной без панели управления
     private val hideInfoPanelRunnable = Runnable { hideInfoPanel() }
 
+    private var inPictureInPicture = false
+
+    fun setPictureInPictureMode(enabled: Boolean) {
+        inPictureInPicture = enabled
+        if (enabled) {
+            playlistDialog?.dismiss()
+            hideControls()
+            topSettingsPanel.isVisible = false
+            hideHandler.removeCallbacks(hideGestureRunnable)
+            hideHandler.removeCallbacks(hideInfoPanelRunnable)
+            topInfoPanel.isVisible = false
+            listOf(seekOverlay, gestureContainer, rewindOverlay, ffwdOverlay,
+                overlayPrev, overlayNext, dimOverlay).forEach {
+                it.animate().cancel()
+                it.isVisible = false
+            }
+        } else {
+            showControls()
+        }
+        updateClockVisibility()
+    }
+
     init {
         // Настройка ленты
         optionsRecycler.adapter = optionsAdapter
@@ -180,7 +203,8 @@ class PlayerUiController(private val rootView: View) {
     }
 
     private fun updateClockVisibility() {
-        standaloneClock.isVisible = clockTransparency != SettingsRepository.CLOCK_OFF && !topInfoPanel.isVisible
+        standaloneClock.isVisible = !inPictureInPicture &&
+            clockTransparency != SettingsRepository.CLOCK_OFF && !topInfoPanel.isVisible
     }
 
     private fun setSwipeIcon(icon: ImageView, posterUri: android.net.Uri?, iconRes: Int) {
@@ -198,6 +222,7 @@ class PlayerUiController(private val rootView: View) {
      * пока идет выбор канала.
      */
     fun showInfoPanelWithData(item: MediaItem, playlistSize: Int, showIndex: Boolean) {
+        if (inPictureInPicture) return
         hideHandler.removeCallbacks(hideInfoPanelRunnable)
         topInfoPanel.isVisible = true
         updateClockVisibility()
@@ -209,6 +234,7 @@ class PlayerUiController(private val rootView: View) {
      * Показывает только верхнюю инфопанель (без панели управления) и скрывает ее через 3 секунды.
      */
     fun showInfoPanelOnly() {
+        if (inPictureInPicture) return
         topInfoPanel.isVisible = true
         updateClockVisibility()
         hideHandler.removeCallbacks(hideInfoPanelRunnable)
@@ -592,6 +618,7 @@ class PlayerUiController(private val rootView: View) {
     }
 
     fun showControls(focusOnSeekBar: Boolean = false) {
+        if (inPictureInPicture) return
         controlsView.visibility = View.VISIBLE
         topInfoPanel.visibility = View.VISIBLE
         updateClockVisibility() // Скрываем одиночные часы, т.к. показана панель
