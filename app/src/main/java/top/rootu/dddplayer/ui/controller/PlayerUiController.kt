@@ -62,7 +62,6 @@ class PlayerUiController(private val rootView: View) {
     val bufferingSplitContainer: View = rootView.findViewById(R.id.buffering_split_container)
     val bufferingContainer: View = rootView.findViewById(R.id.buffering_container)
     val bufferingPercentage: TextView = rootView.findViewById(R.id.buffering_percentage)
-    val bufferingValueTextView: TextView = controlsView.findViewById(R.id.buffering_value)
     val loaderLeft: ProgressBar = rootView.findViewById(R.id.loader_left)
     val loaderRight: ProgressBar = rootView.findViewById(R.id.loader_right)
 
@@ -91,6 +90,7 @@ class PlayerUiController(private val rootView: View) {
     val prevButton: ImageButton = controlsView.findViewById(R.id.button_prev)
     val nextButton: ImageButton = controlsView.findViewById(R.id.button_next)
     val seekBar: SeekBar = controlsView.findViewById(R.id.seek_bar)
+    val bufferingValueTextView: TextView = controlsView.findViewById(R.id.buffering_value)
     val timeCurrentTextView: TextView = controlsView.findViewById(R.id.time_current)
     val timeDurationTextView: TextView = controlsView.findViewById(R.id.time_duration)
     val buttonQuality: TextView = controlsView.findViewById(R.id.button_quality)
