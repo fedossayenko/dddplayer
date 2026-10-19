@@ -47,6 +47,11 @@ class SettingsRepository private constructor(context: Context) {
 
         const val BUFFER_SIZE_AUTO = -1
         const val MAX_RECENT_AUDIO_TRACKS = 10
+
+        // Совместимость с Dolby Vision: подмена декодера DV на HEVC (базовый слой HDR10/HLG)
+        const val DV_MODE_OFF = 0 // Системный DV декодер
+        const val DV_MODE_AUTO = 1 // HEVC, только если экран или декодер не поддерживают Dolby Vision
+        const val DV_MODE_ALWAYS = 2 // Всегда HEVC
         const val RENDER_API_AUTO = 0
         const val RENDER_API_GLES2 = 1
 
@@ -172,8 +177,20 @@ class SettingsRepository private constructor(context: Context) {
     fun getMixMiddle(): Float = prefs.getFloat("mix_middle", 1.0f)
     fun setMixMiddle(value: Float) = prefs.edit { putFloat("mix_middle", value) }
 
-    fun isMapDvToHevcEnabled(): Boolean = prefs.getBoolean("map_dv_to_hevc", true)
-    fun setMapDvToHevcEnabled(enabled: Boolean) = prefs.edit { putBoolean("map_dv_to_hevc", enabled) }
+    // Совместимость с Dolby Vision (DV_MODE_*).
+    // Миграция со старого переключателя "map_dv_to_hevc" (вкл по умолчанию): вкл -> "Всегда", выкл -> "Выкл".
+    fun getDvMode(): Int {
+        if (!prefs.contains("dv_mode")) {
+            val migrated = if (prefs.getBoolean("map_dv_to_hevc", true)) DV_MODE_ALWAYS else DV_MODE_OFF
+            prefs.edit {
+                putInt("dv_mode", migrated)
+                remove("map_dv_to_hevc")
+            }
+            return migrated
+        }
+        return prefs.getInt("dv_mode", DV_MODE_ALWAYS)
+    }
+    fun setDvMode(mode: Int) = prefs.edit { putInt("dv_mode", mode) }
 
     fun isFrameRateMatchingEnabled(): Boolean = prefs.getBoolean("frame_rate_matching", false)
     fun setFrameRateMatchingEnabled(enabled: Boolean) = prefs.edit { putBoolean("frame_rate_matching", enabled) }
@@ -264,7 +281,7 @@ class SettingsRepository private constructor(context: Context) {
 
     // Сигнатура настроек, требующих полного перезапуска плеера
     fun getHardSettingsSignature(): String {
-        val videoParams = "${getDecoderPriority()}_${isTunnelingEnabled()}_${isMapDvToHevcEnabled()}"
+        val videoParams = "${getDecoderPriority()}_${isTunnelingEnabled()}_${getDvMode()}"
         val audioDownmix = "${isStereoDownmixEnabled()}_${getMixPreset()}_${getMixFront()}_${getMixCenter()}_${getMixRear()}_${getMixMiddle()}_${getMixLfe()}"
         return "${videoParams}_${audioDownmix}_${getTargetBufferCorrectMB()}"
     }

@@ -337,15 +337,13 @@
 
                     <TextView
                         style="@style/SettingsItemDesc"
-                        android:text="@string/pref_map_dv_on" />
+                        android:text="@string/pref_dv_mode_desc" />
                 </LinearLayout>
 
-                <androidx.appcompat.widget.SwitchCompat
-                    android:id="@+id/switch_dv"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:clickable="false"
-                    android:focusable="false" />
+                <TextView
+                    android:id="@+id/text_dv_value"
+                    style="@style/SettingsItemValue"
+                    tools:text="Auto" />
             </LinearLayout>
 
             <!-- Tunneling -->

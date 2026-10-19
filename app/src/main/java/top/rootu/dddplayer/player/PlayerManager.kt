@@ -2,9 +2,12 @@ package top.rootu.dddplayer.player
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.hardware.display.DisplayManager
 import android.media.audiofx.LoudnessEnhancer
+import android.os.Build
 import android.os.Handler
 import android.util.Log
+import android.view.Display
 import android.view.accessibility.CaptioningManager
 import androidx.core.net.toUri
 import androidx.core.os.LocaleListCompat
@@ -224,7 +227,12 @@ class PlayerManager(
         }
 
         // === Кастомный MediaCodecSelector для Dolby Vision Fallback ===
-        val mediaCodecSelector = if (settingsRepo.isMapDvToHevcEnabled()) {
+        val mapDvToHevc = when (settingsRepo.getDvMode()) {
+            SettingsRepository.DV_MODE_ALWAYS -> true
+            SettingsRepository.DV_MODE_AUTO -> !isDolbyVisionSupported()
+            else -> false
+        }
+        val mediaCodecSelector = if (mapDvToHevc) {
             MediaCodecSelector { mimeType, requiresSecureDecoder, requiresTunnelingDecoder ->
                 var finalMimeType = mimeType
 
@@ -470,6 +478,30 @@ class PlayerManager(
         }
 
         onPlayerCreated?.invoke(player)
+    }
+
+    /**
+     * Dolby Vision можно выводить как есть: есть системный DV декодер и экран сообщает о поддержке DV.
+     * Иначе (режим "Авто") видео играет базовым слоем HEVC.
+     */
+    @Suppress("DEPRECATION")
+    private fun isDolbyVisionSupported(): Boolean {
+        val hasDecoder = try {
+            MediaCodecUtil.getDecoderInfos(MimeTypes.VIDEO_DOLBY_VISION, false, false).isNotEmpty()
+        } catch (e: MediaCodecUtil.DecoderQueryException) {
+            false
+        }
+        if (!hasDecoder || Build.VERSION.SDK_INT < Build.VERSION_CODES.N) return false
+
+        val display = (appContext.getSystemService(Context.DISPLAY_SERVICE) as? DisplayManager)
+            ?.getDisplay(Display.DEFAULT_DISPLAY) ?: return false
+        val hdrTypes = display.hdrCapabilities?.supportedHdrTypes?.toMutableSet() ?: mutableSetOf()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            hdrTypes.addAll(display.mode.supportedHdrTypes.toList())
+        }
+        val supported = Display.HdrCapabilities.HDR_TYPE_DOLBY_VISION in hdrTypes
+        Log.i("PlayerManager", "Dolby Vision: decoder=true, display=$supported")
+        return supported
     }
 
     private fun buildMediaSources(exoItems: List<Media3MediaItem>): List<MediaSource> {

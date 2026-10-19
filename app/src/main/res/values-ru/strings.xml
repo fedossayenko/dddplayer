@@ -131,8 +131,6 @@
     <string name="pref_tunneling">Туннельное воспроизведение</string>
     <string name="pref_tunneling_summary">Туннелирование позволяет видео идти в обход кода приложения и Android, что может обеспечить более эффективный рендеринг 4K/HDR контента, но может работать не на всех устройствах.\nВнимание!!! При туннельном воспроизведении обработкой и синхронизацией видео занимается конечное устройство, поэтому с данной опцией не будет работать часть функционала плеера.</string>
     <string name="pref_map_dv">Совместимость с Dolby Vision</string>
-    <string name="pref_map_dv_on">Режим совместимости: воспроизводить базовый HDR/HLG слой (HEVC).\nПомогает, если вместо видео черный экран (актуально для DV Profile 7).</string>
-    <string name="pref_map_dv_off">Полный режим: использовать системный DV декодер\n(актуально для устройств с нативной поддержкой Dolby Vision).</string>
     <string name="pref_afr_sec">AFR</string>
     <string name="pref_framerate_matching">Автоматическое согласование частоты кадров</string>
     <string name="pref_framerate_matching_on">Переключать частоту обновления экрана в соответствии с частотой кадров видеосигнала</string>
@@ -289,4 +287,8 @@
 
     <string name="pref_remember_audio">Запоминать аудиодорожку</string>
     <string name="pref_remember_audio_desc">Автоматически выбирать такую же дорожку (название, язык, кодек) в других видео</string>
+    <string name="pref_dv_mode_desc">Воспроизводить Dolby Vision базовым слоем HDR10/HLG (HEVC). Авто — только если экран или декодер не поддерживают Dolby Vision. Всегда — помогает при черном экране (DV Profile 7).</string>
+    <string name="dv_mode_off">Выкл (декодер Dolby Vision)</string>
+    <string name="dv_mode_auto">Авто</string>
+    <string name="dv_mode_always">Всегда (HDR10/HLG)</string>
 </resources>

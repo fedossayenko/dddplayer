@@ -36,7 +36,7 @@
 | `global_resize_mode`, `video_zoom_scale`, `remember_zoom` | 0 (FIT), 115, false | Масштаб |
 | `decoder_priority` | `EXTENSION_RENDERER_MODE_PREFER` | Приоритет декодеров ffmpeg и AV1 |
 | `tunneling_enabled` | false | Туннелирование |
-| `map_dv_to_hevc` | true | Dolby Vision → HEVC |
+| `dv_mode` | `DV_MODE_ALWAYS` (2) | Dolby Vision → HEVC: 0 выкл (DV декодер), 1 авто (если экран или декодер не поддерживают DV), 2 всегда. Мигрирует из старого `map_dv_to_hevc` |
 | `stereo_downmix`, `mix_*` | true, пресет 0 | Даунмикс многоканального звука в стерео и коэффициенты микшера |
 | `skip_silence`, `loudness_boost` | false, 0 | Пропуск тишины, усиление громкости |
 | `remember_audio_track`, `recent_audio_tracks` | false, — | Выбирать в других видео дорожку, недавно выбранную вручную (подпись: название, язык, кодек, каналы; до 10 последних) |

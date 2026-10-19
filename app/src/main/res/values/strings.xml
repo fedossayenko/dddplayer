@@ -136,8 +136,6 @@
     <string name="pref_tunneling">Tunneled Playback</string>
     <string name="pref_tunneling_summary">Tunneling allows video to bypass the app and Android framework code, which can provide more efficient rendering of 4K/HDR content, but may not work on all devices.\nWarning!!! With tunneled playback, video processing and synchronization are handled by the end device, so some player features will not work with this option.</string>
     <string name="pref_map_dv">Dolby Vision compatibility</string>
-    <string name="pref_map_dv_on">Compatibility mode: play base HDR/HLG layer (HEVC).\nHelps if you get a black screen instead of video (relevant for DV Profile 7).</string>
-    <string name="pref_map_dv_off">Full mode: use system DV decoder\n(relevant for devices with native Dolby Vision support).</string>
     <string name="pref_afr_sec">AFR</string>
     <string name="pref_framerate_matching">Auto Frame Rate Matching</string>
     <string name="pref_framerate_matching_on">Switch display refresh rate to match video frame rate</string>
@@ -292,4 +290,8 @@
     <string name="vr_config_error">Error reading Cardboard profile.</string>
     <string name="pref_remember_audio">Remember audio track</string>
     <string name="pref_remember_audio_desc">Automatically select the same audio track (name, language, codec) in other videos</string>
+    <string name="pref_dv_mode_desc">Play Dolby Vision as the base HDR10/HLG layer (HEVC). Auto: only if the screen or decoder does not support Dolby Vision. Always: helps with a black screen (DV Profile 7).</string>
+    <string name="dv_mode_off">Off (Dolby Vision decoder)</string>
+    <string name="dv_mode_auto">Auto</string>
+    <string name="dv_mode_always">Always (HDR10/HLG)</string>
 </resources>

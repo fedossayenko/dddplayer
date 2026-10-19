@@ -51,7 +51,7 @@ class GlobalSettingsActivity : AppCompatActivity() {
     private lateinit var itemTunneling: LinearLayout
     private lateinit var switchTunneling: SwitchCompat
     private lateinit var itemDv: LinearLayout
-    private lateinit var switchDv: SwitchCompat
+    private lateinit var textDvValue: TextView
     private lateinit var itemAfr: LinearLayout
     private lateinit var switchAfr: SwitchCompat
     private lateinit var textAfrDesc: TextView
@@ -172,7 +172,7 @@ class GlobalSettingsActivity : AppCompatActivity() {
         itemTunneling = findViewById(R.id.item_tunneling)
         switchTunneling = findViewById(R.id.switch_tunneling)
         itemDv = findViewById(R.id.item_dv)
-        switchDv = findViewById(R.id.switch_dv)
+        textDvValue = findViewById(R.id.text_dv_value)
         itemAfr = findViewById(R.id.item_afr)
         switchAfr = findViewById(R.id.switch_afr)
         textAfrDesc = findViewById(R.id.text_afr_desc)
@@ -267,7 +267,11 @@ class GlobalSettingsActivity : AppCompatActivity() {
 
         // Dolby Vision
         itemDv.setOnClickListener {
-            settingsViewModel.toggleMapDvToHevc(!switchDv.isChecked)
+            // Порядок пунктов совпадает с SettingsRepository.DV_MODE_*
+            val options = listOf(getString(R.string.dv_mode_off), getString(R.string.dv_mode_auto), getString(R.string.dv_mode_always))
+            showSingleChoiceDialog(getString(R.string.pref_map_dv), options, settingsViewModel.dvMode.value ?: SettingsRepository.DV_MODE_ALWAYS) {
+                settingsViewModel.setDvMode(it)
+            }
         }
 
         // AFR
@@ -427,7 +431,13 @@ class GlobalSettingsActivity : AppCompatActivity() {
             textDecoderDesc.setText(settingsViewModel.getDecoderDescResId(mode))
         }
         settingsViewModel.isTunnelingEnabled.observe(this) { switchTunneling.isChecked = it }
-        settingsViewModel.isMapDvToHevcEnabled.observe(this) { switchDv.isChecked = it }
+        settingsViewModel.dvMode.observe(this) { mode ->
+            textDvValue.text = when (mode) {
+                SettingsRepository.DV_MODE_OFF -> getString(R.string.dv_mode_off)
+                SettingsRepository.DV_MODE_AUTO -> getString(R.string.dv_mode_auto)
+                else -> getString(R.string.dv_mode_always)
+            }
+        }
         // AFR
         settingsViewModel.isFrameRateMatchingEnabled.observe(this) { enabled ->
             switchAfr.isChecked = enabled
