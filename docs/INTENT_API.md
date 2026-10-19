@@ -41,10 +41,11 @@ HLS (`application/vnd.apple.mpegurl`, `application/x-mpegURL`), `application/das
 | `video_list.thumbnail` | String[] | Постеры, пустая строка — без постера |
 | `video_list.subtitles` | ArrayList<Bundle> | В каждом Bundle: `uris` (Uri[]) и `names` (String[]) |
 | `headers` | String[] | Общие для всех элементов |
-| `start_index` | Int | Стартовый элемент, приводится к допустимому диапазону |
+| `start_index` | Int | Запасной стартовый индекс (если `intent.data` не совпала ни с одним элементом), приводится к допустимому диапазону |
 | `position` | Int / Long / String | Применяется только к элементу, URI которого совпадает с `intent.data` |
 
-Если `intent.data` совпадает с элементом списка, этот элемент становится стартовым и перекрывает `start_index`.
+Стартовый элемент — тот, чей URI совпадает с `intent.data` (основной способ). `start_index` используется, только если
+`intent.data` не задана или не найдена в списке; без обоих стартует первый элемент.
 
 Массивы строк читает `getSmartStringArray`: подходят `String[]`, `ArrayList<String>`, `CharSequence[]`
 и `ArrayList<CharSequence>`.

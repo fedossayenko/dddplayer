@@ -128,11 +128,11 @@ To pass a playlist, use the `video_list` extra (ParcelableArray of URIs) along w
 | `video_list.filename` | String[] | List of filenames (used as titles if names are missing). |
 | `video_list.thumbnail` | String[] | List of poster URLs. |
 | `video_list.subtitles` | ArrayList&lt;Bundle&gt; | List of subtitles for each video item. |
-| `start_index` | Int | Index of the item to start from (default 0). |
+| `start_index` | Int | Fallback start item index, used only when the intent data does not match any item (otherwise the first item). |
 | `headers` | String[] | HTTP headers applied to every item. |
 | `position` | Long / Int / String | Start position for the item whose URI equals the intent data. |
 
-If the intent data (`setData`) matches one of the playlist items, playback starts from that item (it overrides `start_index`).
+**Start item:** playback starts from the item whose URI equals the intent data (`setDataAndType`). `start_index` is only a fallback for when the data is not set or not found in the list; if neither is given, the first item is played.
 
 **Playlist Subtitles Structure:**
 The `video_list.subtitles` extra is an `ArrayList` where each `Bundle` corresponds to a video at the same index.
@@ -157,10 +157,11 @@ val subsList = ArrayList<Bundle>()
 subsList.add(subs1)
 subsList.add(subs2)
 
+// Start from "Movie 2": the intent data selects the start item
+intent.setDataAndType(videoUris[1], "video/*")
 intent.putExtra("video_list", videoUris)
 intent.putExtra("video_list.name", titles)
 intent.putParcelableArrayListExtra("video_list.subtitles", subsList)
-intent.putExtra("start_index", 1) // start from "Movie 2"
 ```
 
 #### Playback Result

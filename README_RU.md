@@ -128,11 +128,11 @@ intent.putExtra("subs.name", subNames)
 | `video_list.filename` | String[] | Список имен файлов (используются как названия, если их нет). |
 | `video_list.thumbnail` | String[] | Список ссылок на постеры. |
 | `video_list.subtitles` | ArrayList&lt;Bundle&gt; | Список субтитров для каждого элемента плейлиста. |
-| `start_index` | Int | Индекс элемента, с которого начать (по умолчанию 0). |
+| `start_index` | Int | Запасной индекс стартового элемента: используется, только если data интента не совпала ни с одним элементом (иначе первый элемент). |
 | `headers` | String[] | HTTP заголовки для всех элементов. |
 | `position` | Long / Int / String | Позиция старта для элемента, URI которого совпадает с data интента. |
 
-Если data интента (`setData`) совпадает с одним из элементов плейлиста, воспроизведение начнется с него (приоритетнее `start_index`).
+**Стартовый элемент:** воспроизведение начинается с элемента, URI которого совпадает с data интента (`setDataAndType`). `start_index` — только запасной вариант, если data не задана или не найдена в списке; если нет ни того, ни другого, играет первый элемент.
 
 **Структура субтитров в плейлисте:**
 Параметр `video_list.subtitles` — это `ArrayList`, содержащий объекты `Bundle`. Каждый `Bundle` соответствует видео с тем же индексом в плейлисте.
@@ -157,10 +157,11 @@ val subsList = ArrayList<Bundle>()
 subsList.add(subs1)
 subsList.add(subs2)
 
+// Начать с "Фильм 2": стартовый элемент задается data интента
+intent.setDataAndType(videoUris[1], "video/*")
 intent.putExtra("video_list", videoUris)
 intent.putExtra("video_list.name", titles)
 intent.putParcelableArrayListExtra("video_list.subtitles", subsList)
-intent.putExtra("start_index", 1) // начать с "Фильм 2"
 ```
 
 #### Результат просмотра
