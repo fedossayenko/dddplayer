@@ -9,6 +9,7 @@ import androidx.media3.exoplayer.DefaultRenderersFactory
 import top.rootu.dddplayer.R
 import top.rootu.dddplayer.data.SettingsRepository
 import top.rootu.dddplayer.logic.AudioMixerLogic
+import top.rootu.dddplayer.model.AudioTrackStat
 
 /**
  * ViewModel для управления всеми глобальными настройками приложения.
@@ -130,12 +131,26 @@ class GlobalSettingsViewModel(application: Application) : AndroidViewModel(appli
         _isLiveModeEnabled.value = enabled
     }
 
-    private val _isRememberAudioTrack = MutableLiveData(repository.isRememberAudioTrackEnabled())
-    val isRememberAudioTrack: LiveData<Boolean> = _isRememberAudioTrack
+    private val _audioTrackMemoryMode = MutableLiveData(repository.getAudioTrackMemoryMode())
+    val audioTrackMemoryMode: LiveData<Int> = _audioTrackMemoryMode
 
-    fun toggleRememberAudioTrack(enabled: Boolean) {
-        repository.setRememberAudioTrackEnabled(enabled)
-        _isRememberAudioTrack.value = enabled
+    fun setAudioTrackMemoryMode(mode: Int) {
+        repository.setAudioTrackMemoryMode(mode)
+        _audioTrackMemoryMode.value = mode
+    }
+
+    // Список приоритетов аудиодорожек (наиболее используемые)
+    private val _audioTrackStats = MutableLiveData(repository.getAudioTrackStats())
+    val audioTrackStats: LiveData<List<AudioTrackStat>> = _audioTrackStats
+
+    fun moveAudioTrackStat(from: Int, to: Int) {
+        repository.moveAudioTrackStat(from, to)
+        _audioTrackStats.value = repository.getAudioTrackStats()
+    }
+
+    fun removeAudioTrackStat(index: Int) {
+        repository.removeAudioTrackStat(index)
+        _audioTrackStats.value = repository.getAudioTrackStats()
     }
 
     fun toggleShowInfoOnTrackChange(enabled: Boolean) {

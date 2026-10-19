@@ -253,6 +253,10 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
     // Аудиодорожку выбрал пользователь (запоминаем ее для других видео)
     private var audioChosenByUser = false
+    // Выбор пользователя еще не учтен в статистике дорожек (учитываем один раз на видео)
+    private var audioChoicePendingStat = false
+    // Дорожка, выбранная пользователем в текущем плейлисте (для следующих элементов)
+    private var sessionAudioSignature: String? = null
     // Дорожка для текущего видео уже определена (сохраненная, выбранная или найденная среди последних)
     private var audioTrackResolved = false
 
@@ -598,6 +602,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         pendingAudioId = null
         pendingSubtitleId = null
         audioChosenByUser = false
+        audioChoicePendingStat = false
         audioTrackResolved = false
 
         player?.let { p ->
@@ -888,10 +893,10 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                 audioTrackResolved = true
             }
         }
-        // Иначе ищем дорожку, которую пользователь недавно выбирал в других видео.
+        // Иначе ищем дорожку, выбранную в этом плейлисте, а затем (экспериментально) среди наиболее используемых.
         // Пока не нашли, пробуем при каждом обновлении: названия из метаданных файла приходят позже
-        if (!audioTrackResolved && !audioChosenByUser && repository.isRememberAudioTrackEnabled()) {
-            findRecentAudioTrackIndex()?.let { idx ->
+        if (!audioTrackResolved && !audioChosenByUser) {
+            findRememberedAudioTrackIndex()?.let { idx ->
                 audioTrackResolved = true
                 if (idx != finalAudioIdx) {
                     finalAudioIdx = idx
@@ -1023,6 +1028,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         val startItem = indexedItems.getOrNull(startIndex)
         var startPos = startItem?.startPositionMs ?: 0L
         pendingExternalPosition = null
+        sessionAudioSignature = null // Новый плейлист - выбор дорожки начинается заново
         isFirstItemLoaded = false // Продолжение просмотра - для первого элемента нового плейлиста
         if (startItem != null && startPos > 0 &&
             repository.getExternalPositionMode() == SettingsRepository.EXTERNAL_POSITION_ASK
@@ -1164,11 +1170,15 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         )
         viewModelScope.launch { repository.saveVideoSettings(settings) }
 
-        // Выбранную вручную дорожку запоминаем для других видео (сохраняем итоговый выбор,
-        // а не каждую дорожку при переборе в OSD)
-        if (audioChosenByUser && repository.isRememberAudioTrackEnabled()) {
-            _currentAudioTrack.value?.let { TrackLogic.audioTrackSignature(it) }
-                ?.let { repository.addRecentAudioTrack(it) }
+        // Выбранную вручную дорожку учитываем в статистике для других видео: один раз на видео
+        // и итоговый выбор, а не каждую дорожку при переборе в OSD
+        if (audioChoicePendingStat && repository.getAudioTrackMemoryMode() == SettingsRepository.AUDIO_MEMORY_ALL) {
+            _currentAudioTrack.value?.let { option ->
+                TrackLogic.audioTrackSignature(option)?.let { signature ->
+                    repository.recordAudioTrackChoice(signature, TrackLogic.buildTrackLabel(option, getApplication<Application>()))
+                }
+            }
+            audioChoicePendingStat = false
         }
 
         repository.saveGlobalDefaults(settings.outputMode, settings.anaglyphType)
@@ -1440,8 +1450,16 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
-    private fun findRecentAudioTrackIndex(): Int? {
-        for (signature in repository.getRecentAudioTracks()) {
+    private fun findRememberedAudioTrackIndex(): Int? {
+        val mode = repository.getAudioTrackMemoryMode()
+        if (mode == SettingsRepository.AUDIO_MEMORY_OFF) return null
+        val candidates = buildList {
+            sessionAudioSignature?.let { add(it) }
+            if (mode == SettingsRepository.AUDIO_MEMORY_ALL) {
+                addAll(repository.getAudioTrackStats().map { it.signature })
+            }
+        }
+        for (signature in candidates) {
             val idx = audioOptions.indexOfFirst { TrackLogic.audioTrackSignature(it) == signature }
             if (idx != -1) return idx
         }
@@ -1458,7 +1476,9 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             if (trackType == C.TRACK_TYPE_AUDIO) {
                 if (fromUser) {
                     audioChosenByUser = true
+                    audioChoicePendingStat = true
                     audioTrackResolved = true
+                    sessionAudioSignature = TrackLogic.audioTrackSignature(option)
                 }
                 currentAudioIndex = index
                 _currentAudioTrack.value = option

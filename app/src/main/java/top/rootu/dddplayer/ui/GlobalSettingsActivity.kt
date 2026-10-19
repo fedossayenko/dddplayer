@@ -20,6 +20,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.appcompat.widget.SwitchCompat
 import androidx.core.os.LocaleListCompat
+import androidx.core.view.isVisible
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import top.rootu.dddplayer.BuildConfig
@@ -113,7 +114,9 @@ class GlobalSettingsActivity : AppCompatActivity() {
     private lateinit var itemLiveMode: LinearLayout
     private lateinit var switchLiveMode: SwitchCompat
     private lateinit var itemRememberAudio: LinearLayout
-    private lateinit var switchRememberAudio: SwitchCompat
+    private lateinit var textRememberAudioValue: TextView
+    private lateinit var itemAudioPriority: LinearLayout
+    private lateinit var textAudioPriorityValue: TextView
     private lateinit var itemTrackChangeInfo: LinearLayout
     private lateinit var switchTrackChangeInfo: SwitchCompat
     private lateinit var itemBufferDisplay: LinearLayout
@@ -236,7 +239,9 @@ class GlobalSettingsActivity : AppCompatActivity() {
         itemLiveMode = findViewById(R.id.item_live_mode)
         switchLiveMode = findViewById(R.id.switch_live_mode)
         itemRememberAudio = findViewById(R.id.item_remember_audio)
-        switchRememberAudio = findViewById(R.id.switch_remember_audio)
+        textRememberAudioValue = findViewById(R.id.text_remember_audio_value)
+        itemAudioPriority = findViewById(R.id.item_audio_priority)
+        textAudioPriorityValue = findViewById(R.id.text_audio_priority_value)
         itemTrackChangeInfo = findViewById(R.id.item_track_change_info)
         switchTrackChangeInfo = findViewById(R.id.switch_track_change_info)
         itemBufferDisplay = findViewById(R.id.item_buffer_display)
@@ -386,7 +391,14 @@ class GlobalSettingsActivity : AppCompatActivity() {
 
         itemStartupPlaylist.setOnClickListener { showUrlInputDialog() }
         itemLiveMode.setOnClickListener { settingsViewModel.toggleLiveMode(!switchLiveMode.isChecked) }
-        itemRememberAudio.setOnClickListener { settingsViewModel.toggleRememberAudioTrack(!switchRememberAudio.isChecked) }
+        itemRememberAudio.setOnClickListener {
+            // Порядок пунктов совпадает с SettingsRepository.AUDIO_MEMORY_*
+            val options = listOf(getString(R.string.audio_memory_off), getString(R.string.audio_memory_playlist), getString(R.string.audio_memory_all))
+            showSingleChoiceDialog(getString(R.string.pref_remember_audio), options, settingsViewModel.audioTrackMemoryMode.value ?: SettingsRepository.AUDIO_MEMORY_OFF) {
+                settingsViewModel.setAudioTrackMemoryMode(it)
+            }
+        }
+        itemAudioPriority.setOnClickListener { showAudioPriorityDialog() }
         itemTrackChangeInfo.setOnClickListener { settingsViewModel.toggleShowInfoOnTrackChange(!switchTrackChangeInfo.isChecked) }
 
         itemBufferDisplay.setOnClickListener {
@@ -555,7 +567,18 @@ class GlobalSettingsActivity : AppCompatActivity() {
             textStartupPlaylistValue.text = if (uri.isNullOrEmpty()) getString(R.string.pref_startup_playlist_not_set) else uri
         }
         settingsViewModel.isLiveModeEnabled.observe(this) { switchLiveMode.isChecked = it }
-        settingsViewModel.isRememberAudioTrack.observe(this) { switchRememberAudio.isChecked = it }
+        settingsViewModel.audioTrackMemoryMode.observe(this) { mode ->
+            textRememberAudioValue.text = when (mode) {
+                SettingsRepository.AUDIO_MEMORY_PLAYLIST -> getString(R.string.audio_memory_playlist)
+                SettingsRepository.AUDIO_MEMORY_ALL -> getString(R.string.audio_memory_all)
+                else -> getString(R.string.audio_memory_off)
+            }
+            // Список приоритетов нужен только для запоминания между разными видео
+            itemAudioPriority.isVisible = mode == SettingsRepository.AUDIO_MEMORY_ALL
+        }
+        settingsViewModel.audioTrackStats.observe(this) { stats ->
+            textAudioPriorityValue.text = stats.size.toString()
+        }
         settingsViewModel.isShowInfoOnTrackChange.observe(this) { switchTrackChangeInfo.isChecked = it }
         settingsViewModel.bufferDisplayMode.observe(this) { mode ->
             textBufferDisplayValue.text = when (mode) {
@@ -595,6 +618,36 @@ class GlobalSettingsActivity : AppCompatActivity() {
 
         dialog.show()
         editUrl.requestFocus()
+    }
+
+    /**
+     * Список приоритетов аудиодорожек: выбор дорожки открывает действия (выше, ниже, в начало, удалить).
+     */
+    private fun showAudioPriorityDialog() {
+        val stats = settingsViewModel.audioTrackStats.value.orEmpty()
+        if (stats.isEmpty()) {
+            Toast.makeText(this, R.string.audio_priority_empty, Toast.LENGTH_LONG).show()
+            return
+        }
+        val items = stats.mapIndexed { i, stat -> getString(R.string.audio_priority_item, i + 1, stat.label, stat.count) }
+        showSingleChoiceDialog(getString(R.string.pref_audio_priority), items, -1) { index ->
+            val actions = listOf(
+                getString(R.string.audio_priority_top),
+                getString(R.string.audio_priority_up),
+                getString(R.string.audio_priority_down),
+                getString(R.string.audio_priority_remove)
+            )
+            showSingleChoiceDialog(stats[index].label, actions, -1) { action ->
+                when (action) {
+                    0 -> settingsViewModel.moveAudioTrackStat(index, 0)
+                    1 -> settingsViewModel.moveAudioTrackStat(index, index - 1)
+                    2 -> settingsViewModel.moveAudioTrackStat(index, index + 1)
+                    3 -> settingsViewModel.removeAudioTrackStat(index)
+                }
+                // Возвращаемся к обновленному списку
+                showAudioPriorityDialog()
+            }
+        }
     }
 
     private fun showSingleChoiceDialog(title: String, items: List<String>, currentIndex: Int, onSelected: (Int) -> Unit) {

@@ -286,7 +286,6 @@
     <string name="pref_app_language_desc">Изменить язык приложения. Изменение требует перезапуск приложения.</string>
 
     <string name="pref_remember_audio">Запоминать аудиодорожку</string>
-    <string name="pref_remember_audio_desc">Автоматически выбирать такую же дорожку (название, язык, кодек) в других видео</string>
     <string name="pref_dv_mode_desc">Воспроизводить Dolby Vision базовым слоем HDR10/HLG (HEVC). Авто — только если экран или декодер не поддерживают Dolby Vision. Всегда — помогает при черном экране (DV Profile 7).</string>
     <string name="dv_mode_off">Выкл (декодер Dolby Vision)</string>
     <string name="dv_mode_auto">Авто</string>
@@ -296,4 +295,16 @@
     <string name="subtitle_no_file_picker">На устройстве нет системного выбора файлов</string>
     <string name="pref_gesture_volume">Жесты громкости и яркости</string>
     <string name="pref_gesture_volume_desc">Свайп вверх/вниз справа меняет громкость, слева — яркость</string>
+    <string name="pref_remember_audio_desc">Автоматически выбирать такую же дорожку (название, язык, кодек)</string>
+    <string name="audio_memory_off">Выкл</string>
+    <string name="audio_memory_playlist">В пределах плейлиста</string>
+    <string name="audio_memory_all">Плейлист и все видео (экспериментально)</string>
+    <string name="pref_audio_priority">Приоритет аудиодорожек</string>
+    <string name="pref_audio_priority_desc">Наиболее используемые дорожки: чем выше в списке, тем выше приоритет</string>
+    <string name="audio_priority_empty">Список пуст: выбирайте аудиодорожки во время просмотра</string>
+    <string name="audio_priority_item">%1$d. %2$s (×%3$d)</string>
+    <string name="audio_priority_top">В начало</string>
+    <string name="audio_priority_up">Выше</string>
+    <string name="audio_priority_down">Ниже</string>
+    <string name="audio_priority_remove">Удалить</string>
 </resources>

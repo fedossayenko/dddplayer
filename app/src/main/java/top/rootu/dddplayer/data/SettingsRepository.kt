@@ -4,6 +4,10 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.core.content.edit
 import androidx.media3.exoplayer.DefaultRenderersFactory
+import org.json.JSONArray
+import org.json.JSONException
+import org.json.JSONObject
+import top.rootu.dddplayer.model.AudioTrackStat
 import top.rootu.dddplayer.model.StereoOutputMode
 import top.rootu.dddplayer.player.NetworkBufferLoadControl
 import top.rootu.dddplayer.renderer.StereoRenderer
@@ -46,7 +50,11 @@ class SettingsRepository private constructor(context: Context) {
         const val BUFFER_DISPLAY_CLOCK = 2 // Рядом с часами (одиночные часы и инфопанель)
 
         const val BUFFER_SIZE_AUTO = -1
-        const val MAX_RECENT_AUDIO_TRACKS = 10
+        // Запоминание аудиодорожки
+        const val AUDIO_MEMORY_OFF = 0
+        const val AUDIO_MEMORY_PLAYLIST = 1 // Выбранная дорожка - для следующих элементов плейлиста
+        const val AUDIO_MEMORY_ALL = 2 // + наиболее используемые дорожки для любых видео (экспериментально)
+        const val MAX_AUDIO_TRACK_STATS = 20
 
         // Совместимость с Dolby Vision: подмена декодера DV на HEVC (базовый слой HDR10/HLG)
         const val DV_MODE_OFF = 0 // Системный DV декодер
@@ -228,17 +236,79 @@ class SettingsRepository private constructor(context: Context) {
     fun getAppLanguage(): String = prefs.getString("app_language", LANG_SYSTEM_DEFAULT) ?: LANG_SYSTEM_DEFAULT
     fun setAppLanguage(langCode: String) = prefs.edit { putString("app_language", langCode) }
 
-    // Запоминание аудиодорожки между видео (по названию, языку и кодеку)
-    fun isRememberAudioTrackEnabled(): Boolean = prefs.getBoolean("remember_audio_track", false)
-    fun setRememberAudioTrackEnabled(enabled: Boolean) = prefs.edit { putBoolean("remember_audio_track", enabled) }
+    // Запоминание аудиодорожки (AUDIO_MEMORY_*): в плейлисте и (экспериментально) между разными видео
+    fun getAudioTrackMemoryMode(): Int = prefs.getInt("audio_track_memory", AUDIO_MEMORY_OFF)
+    fun setAudioTrackMemoryMode(mode: Int) = prefs.edit { putInt("audio_track_memory", mode) }
 
-    // Последние выбранные вручную аудиодорожки (подписи из TrackLogic.audioTrackSignature), новые - первыми
-    fun getRecentAudioTracks(): List<String> =
-        prefs.getString("recent_audio_tracks", null)?.split('\n')?.filter { it.isNotEmpty() } ?: emptyList()
+    /**
+     * Наиболее используемые аудиодорожки в порядке приоритета:
+     * сначала упорядоченные пользователем, затем по числу выборов.
+     */
+    fun getAudioTrackStats(): List<AudioTrackStat> {
+        val json = prefs.getString("audio_track_stats", null) ?: return emptyList()
+        return try {
+            val array = JSONArray(json)
+            (0 until array.length()).map { i ->
+                val obj = array.getJSONObject(i)
+                AudioTrackStat(
+                    signature = obj.getString("signature"),
+                    label = obj.optString("label"),
+                    count = obj.optInt("count", 1),
+                    pinned = obj.optBoolean("pinned", false)
+                )
+            }
+        } catch (e: JSONException) {
+            emptyList()
+        }
+    }
 
-    fun addRecentAudioTrack(signature: String) {
-        val list = listOf(signature) + getRecentAudioTracks().filter { it != signature }
-        prefs.edit { putString("recent_audio_tracks", list.take(MAX_RECENT_AUDIO_TRACKS).joinToString("\n")) }
+    private fun saveAudioTrackStats(stats: List<AudioTrackStat>) {
+        // Закрепленные - в заданном порядке, остальные - по числу выборов; лишние незакрепленные отбрасываем
+        val pinned = stats.filter { it.pinned }
+        val others = stats.filter { !it.pinned }.sortedByDescending { it.count }
+        val ordered = pinned + others.take((MAX_AUDIO_TRACK_STATS - pinned.size).coerceAtLeast(0))
+        val array = JSONArray()
+        ordered.forEach { stat ->
+            array.put(JSONObject().apply {
+                put("signature", stat.signature)
+                put("label", stat.label)
+                put("count", stat.count)
+                put("pinned", stat.pinned)
+            })
+        }
+        prefs.edit { putString("audio_track_stats", array.toString()) }
+    }
+
+    /** Учитывает выбор дорожки пользователем. */
+    fun recordAudioTrackChoice(signature: String, label: String) {
+        val stats = getAudioTrackStats().toMutableList()
+        val index = stats.indexOfFirst { it.signature == signature }
+        if (index != -1) {
+            stats[index] = stats[index].copy(label = label, count = stats[index].count + 1)
+        } else {
+            stats.add(AudioTrackStat(signature, label, 1))
+        }
+        saveAudioTrackStats(stats)
+    }
+
+    /**
+     * Перемещает дорожку в списке приоритетов. Дорожки до новой позиции включительно закрепляются,
+     * чтобы порядок, заданный пользователем, не менялся от счетчиков.
+     */
+    fun moveAudioTrackStat(from: Int, to: Int) {
+        val stats = getAudioTrackStats().toMutableList()
+        if (from !in stats.indices) return
+        val target = to.coerceIn(0, stats.lastIndex)
+        stats.add(target, stats.removeAt(from))
+        val pinUntil = maxOf(from, target)
+        saveAudioTrackStats(stats.mapIndexed { i, stat -> if (i <= pinUntil) stat.copy(pinned = true) else stat })
+    }
+
+    fun removeAudioTrackStat(index: Int) {
+        val stats = getAudioTrackStats().toMutableList()
+        if (index !in stats.indices) return
+        stats.removeAt(index)
+        saveAudioTrackStats(stats)
     }
 
     fun getResumeMode(): Int = prefs.getInt("resume_mode", RESUME_ASK)

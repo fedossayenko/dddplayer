@@ -272,7 +272,6 @@
     <string name="vr_config_error">读取 Cardboard 配置文件时出错。</string>
     <string name="pref_app_language_desc">切换应用语言。此更改需要重启应用。</string>
     <string name="pref_remember_audio">记住音轨</string>
-    <string name="pref_remember_audio_desc">在其他视频中自动选择相同的音轨（名称、语言、编码）</string>
     <string name="pref_dv_mode_desc">以 HDR10/HLG 基础层 (HEVC) 播放 Dolby Vision。自动：仅当屏幕或解码器不支持 Dolby Vision 时。始终：可解决黑屏问题（DV Profile 7）。</string>
     <string name="dv_mode_off">关闭（Dolby Vision 解码器）</string>
     <string name="dv_mode_auto">自动</string>
@@ -282,4 +281,16 @@
     <string name="subtitle_no_file_picker">此设备没有可用的文件选择器</string>
     <string name="pref_gesture_volume">音量和亮度手势</string>
     <string name="pref_gesture_volume_desc">在右侧上下滑动调节音量，在左侧调节亮度</string>
+    <string name="pref_remember_audio_desc">自动选择相同的音轨（名称、语言、编码）</string>
+    <string name="audio_memory_off">关闭</string>
+    <string name="audio_memory_playlist">在播放列表内</string>
+    <string name="audio_memory_all">播放列表和所有视频（实验性）</string>
+    <string name="pref_audio_priority">音轨优先级</string>
+    <string name="pref_audio_priority_desc">最常用的音轨：列表中越靠前，优先级越高</string>
+    <string name="audio_priority_empty">列表为空：请在播放时选择音轨</string>
+    <string name="audio_priority_item">%1$d. %2$s (×%3$d)</string>
+    <string name="audio_priority_top">移到顶部</string>
+    <string name="audio_priority_up">上移</string>
+    <string name="audio_priority_down">下移</string>
+    <string name="audio_priority_remove">删除</string>
 </resources>

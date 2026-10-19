@@ -289,7 +289,6 @@
     <string name="vr_config_success">Cardboard profile applied successfully!\n\nK1: %1$.3f\nK2: %2$.3f</string>
     <string name="vr_config_error">Error reading Cardboard profile.</string>
     <string name="pref_remember_audio">Remember audio track</string>
-    <string name="pref_remember_audio_desc">Automatically select the same audio track (name, language, codec) in other videos</string>
     <string name="pref_dv_mode_desc">Play Dolby Vision as the base HDR10/HLG layer (HEVC). Auto: only if the screen or decoder does not support Dolby Vision. Always: helps with a black screen (DV Profile 7).</string>
     <string name="dv_mode_off">Off (Dolby Vision decoder)</string>
     <string name="dv_mode_auto">Auto</string>
@@ -299,4 +298,16 @@
     <string name="subtitle_no_file_picker">No file picker available on this device</string>
     <string name="pref_gesture_volume">Volume and brightness gestures</string>
     <string name="pref_gesture_volume_desc">Swipe up/down on the right side for volume, on the left side for brightness</string>
+    <string name="pref_remember_audio_desc">Select the same audio track (name, language, codec) automatically</string>
+    <string name="audio_memory_off">Off</string>
+    <string name="audio_memory_playlist">Within playlist</string>
+    <string name="audio_memory_all">Playlist and all videos (experimental)</string>
+    <string name="pref_audio_priority">Audio track priority</string>
+    <string name="pref_audio_priority_desc">Most used tracks: the higher in the list, the higher the priority</string>
+    <string name="audio_priority_empty">The list is empty: choose audio tracks during playback</string>
+    <string name="audio_priority_item">%1$d. %2$s (×%3$d)</string>
+    <string name="audio_priority_top">Move to top</string>
+    <string name="audio_priority_up">Move up</string>
+    <string name="audio_priority_down">Move down</string>
+    <string name="audio_priority_remove">Remove</string>
 </resources>
