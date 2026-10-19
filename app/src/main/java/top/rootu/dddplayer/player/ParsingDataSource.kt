@@ -29,6 +29,23 @@ private const val PIPE_BUFFER_SIZE = 64 * 1024
 // чтобы не блокировать загрузку видео слишком долго.
 private const val MAX_BYTES_TO_PARSE = 50 * 1024 * 1024 // 50 MB
 
+// Одна сессия парсинга = свои пайпы и своя корутина.
+// Корутина работает только со своими потоками, поэтому завершение старой
+// сессии не может закрыть пайпы новой (при переоткрытии источника).
+private class ParseSession(
+    val pipedOut: PipedOutputStream,
+    val pipedIn: PipedInputStream,
+    val scope: CoroutineScope
+) {
+    var totalBytesWritten = 0L
+
+    fun close() {
+        scope.cancel()
+        try { pipedIn.close() } catch (_: Exception) {}
+        try { pipedOut.close() } catch (_: Exception) {}
+    }
+}
+
 class ParsingDataSource(
     private val upstream: DataSource,
     private val onMetadataParsed: (Map<Int, UnifiedMetadataReader.TrackInfo>) -> Unit,
@@ -36,38 +53,31 @@ class ParsingDataSource(
 ) : DataSource {
 
     private var teeDataSource: TeeDataSource? = null
-    private var parsingScope: CoroutineScope? = null
 
     private val pipeSink = object : DataSink {
-        private var pipedOut: PipedOutputStream? = null
-        private var pipedIn: PipedInputStream? = null
-        private var totalBytesWritten = 0L
-
-        // Флаг активности парсера. Если false, мы перестаем писать в пайп.
-        @Volatile private var isParsingActive = false
+        // Если null, мы не пишем в пайп.
+        @Volatile private var session: ParseSession? = null
 
         override fun open(dataSpec: DataSpec) {
             // Запускаем парсинг только если это начало файла и метаданные еще не были распарсены
             if (dataSpec.position == 0L && !isMetadataParsed()) {
-                closePipes() // Закрываем старые потоки на всякий случай
-                totalBytesWritten = 0
-                isParsingActive = true
+                stopParsing() // Закрываем старую сессию на всякий случай
 
-                try {
-                    pipedOut = PipedOutputStream()
-                    pipedIn = PipedInputStream(pipedOut!!, PIPE_BUFFER_SIZE)
+                val pipedOut = PipedOutputStream()
+                val pipedIn = try {
+                    PipedInputStream(pipedOut, PIPE_BUFFER_SIZE)
                 } catch (e: IOException) {
                     Log.e(TAG, "Failed to create pipes", e)
-                    isParsingActive = false
                     return
                 }
 
                 // Создаем новый scope для каждой задачи парсинга
-                parsingScope = CoroutineScope(Dispatchers.IO + Job())
-                parsingScope?.launch {
+                val newSession = ParseSession(pipedOut, pipedIn, CoroutineScope(Dispatchers.IO + Job()))
+                session = newSession
+                newSession.scope.launch {
                     try {
                         Log.d(TAG, "Start parsing metadata...")
-                        val metadata = UnifiedMetadataReader.parse(pipedIn!!)
+                        val metadata = UnifiedMetadataReader.parse(pipedIn)
                         Log.d(TAG, "Parsing finished. Found ${metadata.size} tracks.")
 
                         if (metadata.isNotEmpty()) {
@@ -80,20 +90,19 @@ class ParsingDataSource(
                         // Pipe closed, Interrupted, etc. - это нормальные сценарии завершения
                         Log.w(TAG, "Metadata parsing stopped: ${e.message}")
                     } finally {
-                        // Гарантированно закрываем потоки в конце
-                        isParsingActive = false
-                        closePipes()
+                        // Закрываем только потоки своей сессии
+                        try { pipedIn.close() } catch (_: Exception) {}
                     }
                 }
             }
         }
 
         override fun write(buffer: ByteArray, offset: Int, length: Int) {
-            if (!isParsingActive) return
+            val current = session ?: return
 
-            if (totalBytesWritten >= MAX_BYTES_TO_PARSE) {
+            if (current.totalBytesWritten >= MAX_BYTES_TO_PARSE) {
                 Log.w(TAG, "Max parse limit reached. Stopping parser.")
-                stopParsing()
+                stopParsing(current)
                 return
             }
 
@@ -102,11 +111,11 @@ class ParsingDataSource(
                 // пока парсер не прочитает/пропустит данные.
                 // Это создает естественное замедление загрузки (backpressure),
                 // необходимое для синхронизации.
-                pipedOut?.write(buffer, offset, length)
-                totalBytesWritten += length
+                current.pipedOut.write(buffer, offset, length)
+                current.totalBytesWritten += length
             } catch (e: IOException) {
                 // "Pipe closed" или "Pipe broken" - парсер закончил работу.
-                stopParsing()
+                stopParsing(current)
             }
         }
 
@@ -114,19 +123,10 @@ class ParsingDataSource(
             stopParsing()
         }
 
-        private fun stopParsing() {
-            if (isParsingActive) {
-                isParsingActive = false
-                parsingScope?.cancel() // Отменяем корутину
-                closePipes()
-            }
-        }
-
-        private fun closePipes() {
-            try { pipedIn?.close() } catch (_: Exception) {}
-            try { pipedOut?.close() } catch (_: Exception) {}
-            pipedIn = null
-            pipedOut = null
+        private fun stopParsing(expected: ParseSession? = session) {
+            val current = expected ?: return
+            if (session === current) session = null
+            current.close()
         }
     }
 
