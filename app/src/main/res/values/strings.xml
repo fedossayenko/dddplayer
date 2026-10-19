@@ -290,4 +290,6 @@
     <string name="vr_config_title">VR Setup</string>
     <string name="vr_config_success">Cardboard profile applied successfully!\n\nK1: %1$.3f\nK2: %2$.3f</string>
     <string name="vr_config_error">Error reading Cardboard profile.</string>
+    <string name="pref_remember_audio">Remember audio track</string>
+    <string name="pref_remember_audio_desc">Automatically select the same audio track (name, language, codec) in other videos</string>
 </resources>

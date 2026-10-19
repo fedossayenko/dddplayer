@@ -130,6 +130,14 @@ class GlobalSettingsViewModel(application: Application) : AndroidViewModel(appli
         _isLiveModeEnabled.value = enabled
     }
 
+    private val _isRememberAudioTrack = MutableLiveData(repository.isRememberAudioTrackEnabled())
+    val isRememberAudioTrack: LiveData<Boolean> = _isRememberAudioTrack
+
+    fun toggleRememberAudioTrack(enabled: Boolean) {
+        repository.setRememberAudioTrackEnabled(enabled)
+        _isRememberAudioTrack.value = enabled
+    }
+
     fun toggleShowInfoOnTrackChange(enabled: Boolean) {
         repository.setShowInfoOnTrackChange(enabled)
         _isShowInfoOnTrackChange.value = enabled

@@ -287,4 +287,6 @@
     <string name="vr_config_error">Ошибка чтения профиля Cardboard.</string>
     <string name="pref_app_language_desc">Изменить язык приложения. Изменение требует перезапуск приложения.</string>
 
+    <string name="pref_remember_audio">Запоминать аудиодорожку</string>
+    <string name="pref_remember_audio_desc">Автоматически выбирать такую же дорожку (название, язык, кодек) в других видео</string>
 </resources>

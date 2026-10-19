@@ -258,4 +258,6 @@
     <string name="vr_config_error">Памылка чытання профілю Cardboard.</string>
     <string name="pref_app_language_desc">Змяніць мову праграмы. Змена патрабуе перазапуску праграмы.</string>
     <string name="develop_tost">Выбачайце, гэтая функцыя яшчэ распрацоўваецца.</string>
+    <string name="pref_remember_audio">Запамінаць аўдыядарожку</string>
+    <string name="pref_remember_audio_desc">Аўтаматычна выбіраць такую ж дарожку (назва, мова, кодэк) у іншых відэа</string>
 </resources>

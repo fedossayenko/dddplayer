@@ -273,4 +273,6 @@
     <string name="vr_config_success">Cardboard 配置文件已成功应用！\n\nK1: %1$.3f\nK2: %2$.3f</string>
     <string name="vr_config_error">读取 Cardboard 配置文件时出错。</string>
     <string name="pref_app_language_desc">切换应用语言。此更改需要重启应用。</string>
+    <string name="pref_remember_audio">记住音轨</string>
+    <string name="pref_remember_audio_desc">在其他视频中自动选择相同的音轨（名称、语言、编码）</string>
 </resources>

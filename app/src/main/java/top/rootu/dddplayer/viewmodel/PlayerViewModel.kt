@@ -242,6 +242,11 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     private var pendingAudioId: String? = null
     private var pendingSubtitleId: String? = null
 
+    // Аудиодорожку выбрал пользователь (запоминаем ее для других видео)
+    private var audioChosenByUser = false
+    // Дорожка для текущего видео уже определена (сохраненная, выбранная или найденная среди последних)
+    private var audioTrackResolved = false
+
     // Internal
     private var audioOptions = listOf<TrackOption>()
     private var subtitleOptions = listOf<TrackOption>()
@@ -583,6 +588,8 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         // Сбрасываем отложенные ID дорожек при переходе на новое видео
         pendingAudioId = null
         pendingSubtitleId = null
+        audioChosenByUser = false
+        audioTrackResolved = false
 
         player?.let { p ->
             val title = mediaItem?.mediaMetadata?.title?.toString()
@@ -869,6 +876,18 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             if (foundIdx != -1) {
                 finalAudioIdx = foundIdx
                 selectTrackByIndex(C.TRACK_TYPE_AUDIO, foundIdx)
+                audioTrackResolved = true
+            }
+        }
+        // Иначе ищем дорожку, которую пользователь недавно выбирал в других видео.
+        // Пока не нашли, пробуем при каждом обновлении: названия из метаданных файла приходят позже
+        if (!audioTrackResolved && !audioChosenByUser && repository.isRememberAudioTrackEnabled()) {
+            findRecentAudioTrackIndex()?.let { idx ->
+                audioTrackResolved = true
+                if (idx != finalAudioIdx) {
+                    finalAudioIdx = idx
+                    selectTrackByIndex(C.TRACK_TYPE_AUDIO, idx)
+                }
             }
         }
         currentAudioIndex = finalAudioIdx
@@ -1123,6 +1142,13 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         )
         viewModelScope.launch { repository.saveVideoSettings(settings) }
 
+        // Выбранную вручную дорожку запоминаем для других видео (сохраняем итоговый выбор,
+        // а не каждую дорожку при переборе в OSD)
+        if (audioChosenByUser && repository.isRememberAudioTrackEnabled()) {
+            _currentAudioTrack.value?.let { TrackLogic.audioTrackSignature(it) }
+                ?.let { repository.addRecentAudioTrack(it) }
+        }
+
         repository.saveGlobalDefaults(settings.outputMode, settings.anaglyphType)
         repository.putGlobalFloat("global_screen_separation_pct", _screenSeparation.value!!)
         anaglyphDelegate.saveGlobalVrParams()
@@ -1356,13 +1382,26 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
-    fun selectTrackByIndex(trackType: Int, index: Int) {
+    private fun findRecentAudioTrackIndex(): Int? {
+        for (signature in repository.getRecentAudioTracks()) {
+            val idx = audioOptions.indexOfFirst { TrackLogic.audioTrackSignature(it) == signature }
+            if (idx != -1) return idx
+        }
+        return null
+    }
+
+    /** @param fromUser выбор из меню/OSD (запоминается для других видео) */
+    fun selectTrackByIndex(trackType: Int, index: Int, fromUser: Boolean = false) {
         val options = if (trackType == C.TRACK_TYPE_AUDIO) audioOptions else subtitleOptions
 
         if (index in options.indices) {
             val option = options[index]
 
             if (trackType == C.TRACK_TYPE_AUDIO) {
+                if (fromUser) {
+                    audioChosenByUser = true
+                    audioTrackResolved = true
+                }
                 currentAudioIndex = index
                 _currentAudioTrack.value = option
             } else {
@@ -1454,7 +1493,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                 val options = audioOptions
                 if (options.isNotEmpty()) {
                     val nextIndex = (currentAudioIndex + direction + options.size) % options.size
-                    selectTrackByIndex(C.TRACK_TYPE_AUDIO, nextIndex)
+                    selectTrackByIndex(C.TRACK_TYPE_AUDIO, nextIndex, fromUser = true)
                 }
             }
             SettingType.SUBTITLES -> {

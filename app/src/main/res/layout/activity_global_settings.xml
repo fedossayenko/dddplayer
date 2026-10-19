@@ -577,6 +577,15 @@
                     tools:text="Русский" />
             </LinearLayout>
 
+            <!-- Запоминание аудиодорожки -->
+            <LinearLayout android:id="@+id/item_remember_audio" style="@style/SettingsItemContainer">
+                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:duplicateParentState="true">
+                    <TextView style="@style/SettingsItemTitle" android:text="@string/pref_remember_audio" />
+                    <TextView style="@style/SettingsItemDesc" android:text="@string/pref_remember_audio_desc" />
+                </LinearLayout>
+                <androidx.appcompat.widget.SwitchCompat android:id="@+id/switch_remember_audio" android:layout_width="wrap_content" android:layout_height="wrap_content" android:clickable="false" android:focusable="false" />
+            </LinearLayout>
+
             <!-- Субтитры язык -->
             <LinearLayout
                 android:id="@+id/item_sub_lang"

@@ -649,7 +649,7 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
             if (selected == null) {
                 showMainMenu("audio")
             } else {
-                selected.id.toIntOrNull()?.let { viewModel.selectTrackByIndex(C.TRACK_TYPE_AUDIO, it) }
+                selected.id.toIntOrNull()?.let { viewModel.selectTrackByIndex(C.TRACK_TYPE_AUDIO, it, fromUser = true) }
                 sideMenuDialog?.dismiss()
             }
         }

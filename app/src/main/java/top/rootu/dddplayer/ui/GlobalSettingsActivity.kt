@@ -110,6 +110,8 @@ class GlobalSettingsActivity : AppCompatActivity() {
     private lateinit var textStartupPlaylistValue: TextView
     private lateinit var itemLiveMode: LinearLayout
     private lateinit var switchLiveMode: SwitchCompat
+    private lateinit var itemRememberAudio: LinearLayout
+    private lateinit var switchRememberAudio: SwitchCompat
     private lateinit var itemTrackChangeInfo: LinearLayout
     private lateinit var switchTrackChangeInfo: SwitchCompat
     private lateinit var itemBufferDisplay: LinearLayout
@@ -229,6 +231,8 @@ class GlobalSettingsActivity : AppCompatActivity() {
         textStartupPlaylistValue = findViewById(R.id.text_startup_playlist_value)
         itemLiveMode = findViewById(R.id.item_live_mode)
         switchLiveMode = findViewById(R.id.switch_live_mode)
+        itemRememberAudio = findViewById(R.id.item_remember_audio)
+        switchRememberAudio = findViewById(R.id.switch_remember_audio)
         itemTrackChangeInfo = findViewById(R.id.item_track_change_info)
         switchTrackChangeInfo = findViewById(R.id.switch_track_change_info)
         itemBufferDisplay = findViewById(R.id.item_buffer_display)
@@ -370,6 +374,7 @@ class GlobalSettingsActivity : AppCompatActivity() {
 
         itemStartupPlaylist.setOnClickListener { showUrlInputDialog() }
         itemLiveMode.setOnClickListener { settingsViewModel.toggleLiveMode(!switchLiveMode.isChecked) }
+        itemRememberAudio.setOnClickListener { settingsViewModel.toggleRememberAudioTrack(!switchRememberAudio.isChecked) }
         itemTrackChangeInfo.setOnClickListener { settingsViewModel.toggleShowInfoOnTrackChange(!switchTrackChangeInfo.isChecked) }
 
         itemBufferDisplay.setOnClickListener {
@@ -531,6 +536,7 @@ class GlobalSettingsActivity : AppCompatActivity() {
             textStartupPlaylistValue.text = if (uri.isNullOrEmpty()) getString(R.string.pref_startup_playlist_not_set) else uri
         }
         settingsViewModel.isLiveModeEnabled.observe(this) { switchLiveMode.isChecked = it }
+        settingsViewModel.isRememberAudioTrack.observe(this) { switchRememberAudio.isChecked = it }
         settingsViewModel.isShowInfoOnTrackChange.observe(this) { switchTrackChangeInfo.isChecked = it }
         settingsViewModel.bufferDisplayMode.observe(this) { mode ->
             textBufferDisplayValue.text = when (mode) {

@@ -131,6 +131,19 @@ object TrackLogic {
         return Pair(subList, selectedSubIdx)
     }
 
+    /**
+     * Подпись аудиодорожки для выбора такой же дорожки в других видео:
+     * название, язык, кодек и число каналов. null для пункта "Выкл".
+     */
+    fun audioTrackSignature(option: TrackOption): String? {
+        if (option.isOff) return null
+        val format = option.format ?: return null
+        val name = option.nameFromMeta?.trim()?.ifEmpty { null } ?: format.label?.trim().orEmpty()
+        return listOf(name, format.language ?: "und", format.sampleMimeType.orEmpty(), format.channelCount.toString())
+            .joinToString("|")
+            .replace('\n', ' ')
+    }
+
     fun buildTrackLabel(option: TrackOption, context: Context): String {
         if (option.isOff) return context.getString(R.string.track_off)
 

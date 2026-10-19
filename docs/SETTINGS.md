@@ -39,6 +39,7 @@
 | `map_dv_to_hevc` | true | Dolby Vision → HEVC |
 | `stereo_downmix`, `mix_*` | true, пресет 0 | Даунмикс многоканального звука в стерео и коэффициенты микшера |
 | `skip_silence`, `loudness_boost` | false, 0 | Пропуск тишины, усиление громкости |
+| `remember_audio_track`, `recent_audio_tracks` | false, — | Выбирать в других видео дорожку, недавно выбранную вручную (подпись: название, язык, кодек, каналы; до 10 последних) |
 | `pref_audio_lang`, `pref_sub_lang` | `""` | `""` — как в файле, `device` — язык системы, иначе код языка |
 | `frame_rate_matching`, `afr_*` | false, ... | AFR |
 | `app_language` | `system` | Язык интерфейса |

@@ -46,6 +46,7 @@ class SettingsRepository private constructor(context: Context) {
         const val BUFFER_DISPLAY_CLOCK = 2 // Рядом с часами (одиночные часы и инфопанель)
 
         const val BUFFER_SIZE_AUTO = -1
+        const val MAX_RECENT_AUDIO_TRACKS = 10
         const val RENDER_API_AUTO = 0
         const val RENDER_API_GLES2 = 1
 
@@ -209,6 +210,19 @@ class SettingsRepository private constructor(context: Context) {
 
     fun getAppLanguage(): String = prefs.getString("app_language", LANG_SYSTEM_DEFAULT) ?: LANG_SYSTEM_DEFAULT
     fun setAppLanguage(langCode: String) = prefs.edit { putString("app_language", langCode) }
+
+    // Запоминание аудиодорожки между видео (по названию, языку и кодеку)
+    fun isRememberAudioTrackEnabled(): Boolean = prefs.getBoolean("remember_audio_track", false)
+    fun setRememberAudioTrackEnabled(enabled: Boolean) = prefs.edit { putBoolean("remember_audio_track", enabled) }
+
+    // Последние выбранные вручную аудиодорожки (подписи из TrackLogic.audioTrackSignature), новые - первыми
+    fun getRecentAudioTracks(): List<String> =
+        prefs.getString("recent_audio_tracks", null)?.split('\n')?.filter { it.isNotEmpty() } ?: emptyList()
+
+    fun addRecentAudioTrack(signature: String) {
+        val list = listOf(signature) + getRecentAudioTracks().filter { it != signature }
+        prefs.edit { putString("recent_audio_tracks", list.take(MAX_RECENT_AUDIO_TRACKS).joinToString("\n")) }
+    }
 
     fun getResumeMode(): Int = prefs.getInt("resume_mode", RESUME_ASK)
     fun setResumeMode(mode: Int) = prefs.edit { putInt("resume_mode", mode) }
