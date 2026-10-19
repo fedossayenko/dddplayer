@@ -183,6 +183,10 @@
     <string name="dialog_input_url_title">Увядзіце спасылку на плэйліст</string>
     <string name="dialog_input_url_hint">http://...</string>
     <string name="save">Захаваць</string>
+    <string name="pref_live_mode">Кіраванне для эфіру</string>
+    <string name="pref_live_mode_desc">Для плэйлістаў з эфірам: ОК - спіс, Улева/Управа - каналы, Уверх - інфапанэль</string>
+    <string name="pref_track_change_info">Інфармацыя пры змене трэка</string>
+    <string name="pref_track_change_info_desc">Адлюстроўваць верхнюю інфапанэль пры змене трэка</string>
     <string name="pref_buffer_display">Адлюстраванне буфера</string>
     <string name="pref_buffer_display_desc">Дзе паказваць працэнт буферызацыі</string>
     <string name="buffer_off">Выкл</string>

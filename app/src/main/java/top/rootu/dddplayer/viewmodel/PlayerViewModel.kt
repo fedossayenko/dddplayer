@@ -73,6 +73,21 @@ data class VideoQualityOption(
     val isAuto: Boolean = false
 )
 
+// Обертка для одноразовых событий LiveData
+open class Event<out T>(private val content: T) {
+    var hasBeenHandled = false
+        private set
+
+    fun getContentIfNotHandled(): T? {
+        return if (hasBeenHandled) {
+            null
+        } else {
+            hasBeenHandled = true
+            content
+        }
+    }
+}
+
 // Состояние плейлиста для UI (фильтр по группе M3U)
 data class PlaylistUiState(
     val items: List<MediaItem> = emptyList(),
@@ -130,6 +145,18 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     private val _isM3uPlaylist = MutableLiveData(false)
     val isM3uPlaylist: LiveData<Boolean> = _isM3uPlaylist
     private var loadMediaJob: kotlinx.coroutines.Job? = null
+
+    // В текущем плейлисте уже играл live-поток (условие эфирного режима)
+    private val _isSessionLive = MutableLiveData(false)
+    val isSessionLive: LiveData<Boolean> = _isSessionLive
+
+    // Переключение каналов с задержкой: канал, который будет включен
+    private var zapJob: kotlinx.coroutines.Job? = null
+    private val _zapPreviewItem = MutableLiveData<MediaItem?>(null)
+    val zapPreviewItem: LiveData<MediaItem?> = _zapPreviewItem
+
+    private val _showInfoPanelEvent = MutableLiveData<Event<Unit>>()
+    val showInfoPanelEvent: LiveData<Event<Unit>> = _showInfoPanelEvent
     private val _currentWindowIndex = MutableLiveData(0)
     val currentWindowIndex: LiveData<Int> = _currentWindowIndex
     private val _playlistSize = MutableLiveData(0)
@@ -296,7 +323,9 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             }
             if (playbackState == Player.STATE_ENDED) _playbackEnded.value = true
             updateProgressUpdaterState()
-            _isLive.value = player?.isCurrentMediaItemLive ?: false
+            val isCurrentItemLive = player?.isCurrentMediaItemLive ?: false
+            _isLive.value = isCurrentItemLive
+            if (isCurrentItemLive) _isSessionLive.value = true
         }
 
         override fun onPlayerError(error: PlaybackException) {
@@ -563,6 +592,11 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
             if (_isM3uPlaylist.value == true && currentUri != null) {
                 repository.setLastPlayedChannelUri(currentUri)
+            }
+
+            // Инфопанель при смене элемента: по настройке или в эфирном режиме
+            if (p.mediaItemCount > 1 && (repository.isShowInfoOnTrackChange() || isOverallLiveMode())) {
+                _showInfoPanelEvent.value = Event(Unit)
             }
 
             if (currentUri != null) {
@@ -890,6 +924,8 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         val indexedItems = items.mapIndexed { index, item -> item.copy(absoluteIndex = index) }
         _currentPlaylist.value = indexedItems
         _isM3uPlaylist.value = isM3u
+        _isSessionLive.value = false
+        stopZap()
 
         val groups = indexedItems.mapNotNull { it.group }.distinct()
         val startGroup = if (groups.isEmpty()) null else indexedItems.getOrNull(startIndex)?.group
@@ -930,6 +966,63 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         if (state.availableGroups.isEmpty()) return
         val playingItem = getPlayingItem()
         selectGroup(playingItem?.group)
+    }
+
+    /**
+     * Эфирный режим: включен в настройках, в плейлисте больше одного элемента
+     * и в нем уже играл live-поток (M3U с эфиром или любой плейлист с эфиром).
+     */
+    fun isOverallLiveMode(): Boolean {
+        if (!repository.isLiveModeEnabled()) return false
+        if ((_currentPlaylist.value?.size ?: 0) <= 1) return false
+        return _isSessionLive.value == true
+    }
+
+    /** Элемент относительно текущего в пределах выбранной группы (по кругу). */
+    fun getRelativePlaylistItem(offset: Int): MediaItem? {
+        val items = _playlistUiState.value?.items ?: return null
+        if (items.isEmpty()) return null
+        val playingId = player?.currentMediaItem?.mediaId
+        val currentIdx = items.indexOfFirst { it.uuid == playingId }
+        if (currentIdx == -1) return null
+        return items[(currentIdx + offset + items.size) % items.size]
+    }
+
+    /**
+     * Переключение каналов Влево/Вправо: показываем выбранный канал и включаем его
+     * после паузы в нажатиях (можно пролистать несколько каналов).
+     */
+    fun zapChannel(direction: Int) {
+        val items = _playlistUiState.value?.items ?: return
+        if (items.isEmpty()) return
+
+        val fromId = _zapPreviewItem.value?.uuid ?: player?.currentMediaItem?.mediaId
+        val currentIdx = items.indexOfFirst { it.uuid == fromId }.coerceAtLeast(0)
+        val target = items[(currentIdx + direction + items.size) % items.size]
+        _zapPreviewItem.value = target
+
+        zapJob?.cancel()
+        zapJob = viewModelScope.launch {
+            kotlinx.coroutines.delay(1500)
+            _zapPreviewItem.value = null
+            playPlaylistItem(target.absoluteIndex)
+        }
+    }
+
+    /** Переключает на выбранный канал сразу. @return false, если канал не выбирали. */
+    fun confirmZap(): Boolean {
+        val target = _zapPreviewItem.value ?: return false
+        zapJob?.cancel()
+        zapJob = null
+        _zapPreviewItem.value = null
+        playPlaylistItem(target.absoluteIndex)
+        return true
+    }
+
+    fun stopZap() {
+        zapJob?.cancel()
+        zapJob = null
+        if (_zapPreviewItem.value != null) _zapPreviewItem.value = null
     }
 
     fun getPlayingItem(): MediaItem? {

@@ -95,6 +95,15 @@ class SettingsRepository private constructor(context: Context) {
     fun getLastPlayedChannelUri(): String? = prefs.getString("last_channel_uri", null)
     fun setLastPlayedChannelUri(uri: String?) = prefs.edit { putString("last_channel_uri", uri) }
 
+    // Эфирный режим (OK - плейлист, Влево/Вправо - переключение каналов) для плейлистов с live-потоком.
+    // По умолчанию выключен
+    fun isLiveModeEnabled(): Boolean = prefs.getBoolean("live_mode_control", false)
+    fun setLiveModeEnabled(enabled: Boolean) = prefs.edit { putBoolean("live_mode_control", enabled) }
+
+    // Показывать инфопанель при смене элемента плейлиста. По умолчанию выключено
+    fun isShowInfoOnTrackChange(): Boolean = prefs.getBoolean("show_info_on_change", false)
+    fun setShowInfoOnTrackChange(enabled: Boolean) = prefs.edit { putBoolean("show_info_on_change", enabled) }
+
     // --- Buffer Settings ---
     // Отображение процента буфера (BUFFER_DISPLAY_*)
     fun getBufferDisplayMode(): Int = prefs.getInt("buffer_display_mode", BUFFER_DISPLAY_OFF)

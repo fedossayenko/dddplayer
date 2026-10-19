@@ -14,6 +14,7 @@ import android.widget.ImageView
 import android.widget.ProgressBar
 import android.widget.SeekBar
 import android.widget.TextView
+import android.content.res.ColorStateList
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.toDrawable
 import androidx.core.graphics.toColorInt
@@ -182,6 +183,28 @@ class PlayerUiController(private val rootView: View) {
         standaloneClock.isVisible = clockTransparency != SettingsRepository.CLOCK_OFF && !topInfoPanel.isVisible
     }
 
+    private fun setSwipeIcon(icon: ImageView, posterUri: android.net.Uri?, iconRes: Int) {
+        if (posterUri != null) {
+            icon.imageTintList = null
+            icon.load(posterUri) { crossfade(true) }
+        } else {
+            icon.imageTintList = ColorStateList.valueOf(ContextCompat.getColor(rootView.context, R.color.tv_white))
+            icon.setImageResource(iconRes)
+        }
+    }
+
+    /**
+     * Инфопанель с данными выбранного (еще не включенного) канала. Не скрывается сама,
+     * пока идет выбор канала.
+     */
+    fun showInfoPanelWithData(item: MediaItem, playlistSize: Int, showIndex: Boolean) {
+        hideHandler.removeCallbacks(hideInfoPanelRunnable)
+        topInfoPanel.isVisible = true
+        updateClockVisibility()
+        videoTitleTextView.text = item.title ?: item.filename ?: item.uri.lastPathSegment
+        loadPoster(item.posterUri, item.absoluteIndex, playlistSize, showIndex)
+    }
+
     /**
      * Показывает только верхнюю инфопанель (без панели управления) и скрывает ее через 3 секунды.
      */
@@ -246,8 +269,9 @@ class PlayerUiController(private val rootView: View) {
      * @param screenWidth Ширина экрана
      * @param title Заголовок следующего/предыдущего видео (или "Выход")
      * @param isExitMode Если true, показываем иконку выхода
+     * @param posterUri Логотип канала вместо иконки (эфирный режим)
      */
-    fun updatePlaylistSwipe(offsetPx: Float, screenWidth: Int, title: String, isExitMode: Boolean) {
+    fun updatePlaylistSwipe(offsetPx: Float, screenWidth: Int, title: String, isExitMode: Boolean, posterUri: android.net.Uri? = null) {
         gestureContainer.isVisible = false
 
         // Порог срабатывания (50% экрана)
@@ -268,14 +292,13 @@ class PlayerUiController(private val rootView: View) {
             textPrevTitle.text = title
             textPrevHint.alpha = hintAlpha
 
+            setSwipeIcon(iconPrev, posterUri, if (isExitMode) R.drawable.ic_exit else R.drawable.ic_skip_previous)
             if (isExitMode) {
-                iconPrev.setImageResource(R.drawable.ic_exit)
                 textPrevHint.text = if (thresholdPassed)
                     context.getString(R.string.swipe_release_exit)
                 else
                     context.getString(R.string.swipe_pull_exit)
             } else {
-                iconPrev.setImageResource(R.drawable.ic_skip_previous)
                 textPrevHint.text = if (thresholdPassed)
                     context.getString(R.string.swipe_release_next)
                 else
@@ -293,14 +316,13 @@ class PlayerUiController(private val rootView: View) {
             textNextTitle.text = title
             textNextHint.alpha = hintAlpha
 
+            setSwipeIcon(iconNext, posterUri, if (isExitMode) R.drawable.ic_exit else R.drawable.ic_skip_next)
             if (isExitMode) {
-                iconNext.setImageResource(R.drawable.ic_exit)
                 textNextHint.text = if (thresholdPassed)
                     context.getString(R.string.swipe_release_exit)
                 else
                     context.getString(R.string.swipe_pull_exit)
             } else {
-                iconNext.setImageResource(R.drawable.ic_skip_next)
                 textNextHint.text = if (thresholdPassed)
                     context.getString(R.string.swipe_release_next)
                 else

@@ -192,6 +192,10 @@
     <string name="dialog_input_url_title">输入播放列表链接</string>
     <string name="dialog_input_url_hint">http://...</string>
     <string name="save">保存</string>
+    <string name="pref_live_mode">直播模式控制</string>
+    <string name="pref_live_mode_desc">适用于含直播流的播放列表：确定 - 列表，左右 - 切换频道，上 - 信息面板</string>
+    <string name="pref_track_change_info">切换曲目时显示信息</string>
+    <string name="pref_track_change_info_desc">切换曲目时显示顶部信息面板</string>
     <string name="pref_buffer_display">缓冲显示</string>
     <string name="pref_buffer_display_desc">在哪里显示缓冲百分比</string>
     <string name="buffer_off">关闭</string>

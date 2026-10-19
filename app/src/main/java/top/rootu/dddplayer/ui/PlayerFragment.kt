@@ -385,15 +385,19 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
             swipePlaylistAccumulator += deltaX
             isPlaylistSwipeActive = true
 
+            // В эфирном режиме листаем каналы текущей группы по кругу
+            val isLiveMode = viewModel.isOverallLiveMode()
+
             if (swipePlaylistAccumulator < 0) {
                 // Тянем ВЛЕВО -> NEXT
                 currentSwipeTargetIsNext = true
-                val nextTitle = viewModel.getNextTrackTitle()
+                val targetItem = if (isLiveMode) viewModel.getRelativePlaylistItem(1) else null
+                val nextTitle = targetItem?.title ?: viewModel.getNextTrackTitle()
 
                 if (nextTitle != null) {
                     currentSwipeIsExit = false
                     // Передаем название следующего видео
-                    ui.updatePlaylistSwipe(swipePlaylistAccumulator, screenWidth, nextTitle, false)
+                    ui.updatePlaylistSwipe(swipePlaylistAccumulator, screenWidth, nextTitle, false, targetItem?.posterUri)
                 } else {
                     currentSwipeIsExit = true
                     ui.updatePlaylistSwipe(swipePlaylistAccumulator, screenWidth, getString(R.string.action_exit), true)
@@ -401,12 +405,13 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
             } else {
                 // Тянем ВПРАВО -> PREV
                 currentSwipeTargetIsNext = false
-                val prevTitle = viewModel.getPrevTrackTitle()
+                val targetItem = if (isLiveMode) viewModel.getRelativePlaylistItem(-1) else null
+                val prevTitle = targetItem?.title ?: viewModel.getPrevTrackTitle()
 
                 if (prevTitle != null) {
                     currentSwipeIsExit = false
                     // Передаем название предыдущего видео
-                    ui.updatePlaylistSwipe(swipePlaylistAccumulator, screenWidth, prevTitle, false)
+                    ui.updatePlaylistSwipe(swipePlaylistAccumulator, screenWidth, prevTitle, false, targetItem?.posterUri)
                 } else {
                     currentSwipeIsExit = true
                     ui.updatePlaylistSwipe(swipePlaylistAccumulator, screenWidth, getString(R.string.action_exit), true)
@@ -447,7 +452,14 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
                         requireActivity().finish()
                     } else {
                         // Переключение трека
-                        if (isNext) viewModel.nextTrack() else viewModel.prevTrack()
+                        val liveTarget = if (viewModel.isOverallLiveMode()) {
+                            viewModel.getRelativePlaylistItem(if (isNext) 1 else -1)
+                        } else null
+                        when {
+                            liveTarget != null -> viewModel.playPlaylistItem(liveTarget.absoluteIndex)
+                            isNext -> viewModel.nextTrack()
+                            else -> viewModel.prevTrack()
+                        }
                     }
                 }
             } else {
@@ -482,6 +494,12 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
             val isOsdVisible = settingsViewModel.isSettingsPanelVisible.value == true
             val isSideMenuVisible = sideMenuDialog?.isShowing == true
             if (isOsdVisible || isSideMenuVisible) return@setOnClickListener
+
+            // В эфирном режиме верхняя зона открывает плейлист
+            if (viewModel.isOverallLiveMode()) {
+                showPlaylist()
+                return@setOnClickListener
+            }
 
             // Получаем текущую настройку действия кнопки "Вверх"
             val settingsRepo = SettingsRepository.getInstance(requireContext().applicationContext)
@@ -768,6 +786,7 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
         initialFocusId: String? = null,
         onItemSelected: (MenuItem?) -> Unit
     ) {
+        viewModel.stopZap()
         timerController.stopControlsTimer()
         ui.hideControls()
 
@@ -951,19 +970,27 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
                 updateTimeLabelsUI(position)
             }
         }
-        viewModel.videoTitle.observe(viewLifecycleOwner) { title ->
-            ui.videoTitleTextView.text = title
-            viewModel.player?.let { p ->
-                val posterUri = p.mediaMetadata.artworkUri
-                val index = p.currentMediaItemIndex
-                val size = p.mediaItemCount
+        viewModel.videoTitle.observe(viewLifecycleOwner) { refreshInfoPanelData() }
 
-                // Получаем настройку
-                val settingsRepo = SettingsRepository.getInstance(requireContext().applicationContext)
-                val showIndex = settingsRepo.isShowPlaylistIndexEnabled()
+        // Инфопанель при смене элемента (по настройке или в эфирном режиме)
+        viewModel.showInfoPanelEvent.observe(viewLifecycleOwner) { event ->
+            event.getContentIfNotHandled()?.let {
+                if (!ui.controlsView.isVisible) ui.showInfoPanelOnly()
+            }
+        }
 
-                // Передаем в UI
-                ui.loadPoster(posterUri, index, size, showIndex)
+        // Выбор канала Влево/Вправо в эфирном режиме
+        var hadZapPreview = false
+        viewModel.zapPreviewItem.observe(viewLifecycleOwner) { item ->
+            if (item != null) {
+                hadZapPreview = true
+                val showIndex = SettingsRepository.getInstance(requireContext().applicationContext).isShowPlaylistIndexEnabled()
+                ui.showInfoPanelWithData(item, viewModel.currentPlaylist.value?.size ?: 0, showIndex)
+            } else if (hadZapPreview) {
+                // Выбор закончен или отменен: возвращаем данные текущего элемента и скрываем панель
+                hadZapPreview = false
+                refreshInfoPanelData()
+                if (ui.controlsView.isVisible) ui.hideInfoPanel() else ui.showInfoPanelOnly()
             }
         }
 
@@ -1192,6 +1219,22 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
         }
     }
 
+    private fun refreshInfoPanelData() {
+        ui.videoTitleTextView.text = viewModel.videoTitle.value
+        viewModel.player?.let { p ->
+            val posterUri = p.mediaMetadata.artworkUri
+            val index = p.currentMediaItemIndex
+            val size = p.mediaItemCount
+
+            // Получаем настройку
+            val settingsRepo = SettingsRepository.getInstance(requireContext().applicationContext)
+            val showIndex = settingsRepo.isShowPlaylistIndexEnabled()
+
+            // Передаем в UI
+            ui.loadPoster(posterUri, index, size, showIndex)
+        }
+    }
+
     private fun updateTimeLabelsUI(currentPos: Long) {
         val player = viewModel.player ?: return
         val duration = viewModel.duration.value ?: 0L
@@ -1328,6 +1371,7 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
     }
 
     private fun showPlaylist() {
+        viewModel.stopZap()
         val initialState = viewModel.playlistUiState.value
         if (initialState == null || (viewModel.currentPlaylist.value ?: emptyList()).isEmpty()) {
             Toast.makeText(requireContext().applicationContext, getString(R.string.msg_playlist_empty), Toast.LENGTH_SHORT).show()

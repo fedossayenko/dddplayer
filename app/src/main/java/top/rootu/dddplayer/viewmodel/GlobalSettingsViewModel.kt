@@ -110,6 +110,22 @@ class GlobalSettingsViewModel(application: Application) : AndroidViewModel(appli
         _startupPlaylistUri.value = finalUri
     }
 
+    private val _isLiveModeEnabled = MutableLiveData(repository.isLiveModeEnabled())
+    val isLiveModeEnabled: LiveData<Boolean> = _isLiveModeEnabled
+
+    private val _isShowInfoOnTrackChange = MutableLiveData(repository.isShowInfoOnTrackChange())
+    val isShowInfoOnTrackChange: LiveData<Boolean> = _isShowInfoOnTrackChange
+
+    fun toggleLiveMode(enabled: Boolean) {
+        repository.setLiveModeEnabled(enabled)
+        _isLiveModeEnabled.value = enabled
+    }
+
+    fun toggleShowInfoOnTrackChange(enabled: Boolean) {
+        repository.setShowInfoOnTrackChange(enabled)
+        _isShowInfoOnTrackChange.value = enabled
+    }
+
     // --- Buffer Settings ---
     private val _bufferDisplayMode = MutableLiveData(repository.getBufferDisplayMode())
     val bufferDisplayMode: LiveData<Int> = _bufferDisplayMode

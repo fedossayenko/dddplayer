@@ -102,6 +102,10 @@ class GlobalSettingsActivity : AppCompatActivity() {
     private lateinit var textPauseDimValue: TextView
     private lateinit var itemStartupPlaylist: LinearLayout
     private lateinit var textStartupPlaylistValue: TextView
+    private lateinit var itemLiveMode: LinearLayout
+    private lateinit var switchLiveMode: SwitchCompat
+    private lateinit var itemTrackChangeInfo: LinearLayout
+    private lateinit var switchTrackChangeInfo: SwitchCompat
     private lateinit var itemBufferDisplay: LinearLayout
     private lateinit var textBufferDisplayValue: TextView
     private lateinit var itemBufferSize: LinearLayout
@@ -211,6 +215,10 @@ class GlobalSettingsActivity : AppCompatActivity() {
         textPauseDimValue = findViewById(R.id.text_pause_dim_value)
         itemStartupPlaylist = findViewById(R.id.item_startup_playlist)
         textStartupPlaylistValue = findViewById(R.id.text_startup_playlist_value)
+        itemLiveMode = findViewById(R.id.item_live_mode)
+        switchLiveMode = findViewById(R.id.switch_live_mode)
+        itemTrackChangeInfo = findViewById(R.id.item_track_change_info)
+        switchTrackChangeInfo = findViewById(R.id.switch_track_change_info)
         itemBufferDisplay = findViewById(R.id.item_buffer_display)
         textBufferDisplayValue = findViewById(R.id.text_buffer_display_value)
         itemBufferSize = findViewById(R.id.item_buffer_size)
@@ -336,6 +344,8 @@ class GlobalSettingsActivity : AppCompatActivity() {
         }
 
         itemStartupPlaylist.setOnClickListener { showUrlInputDialog() }
+        itemLiveMode.setOnClickListener { settingsViewModel.toggleLiveMode(!switchLiveMode.isChecked) }
+        itemTrackChangeInfo.setOnClickListener { settingsViewModel.toggleShowInfoOnTrackChange(!switchTrackChangeInfo.isChecked) }
 
         itemBufferDisplay.setOnClickListener {
             val options = listOf(getString(R.string.buffer_off), getString(R.string.buffer_panel), getString(R.string.buffer_clock))
@@ -488,6 +498,8 @@ class GlobalSettingsActivity : AppCompatActivity() {
         settingsViewModel.startupPlaylistUri.observe(this) { uri ->
             textStartupPlaylistValue.text = if (uri.isNullOrEmpty()) getString(R.string.pref_startup_playlist_not_set) else uri
         }
+        settingsViewModel.isLiveModeEnabled.observe(this) { switchLiveMode.isChecked = it }
+        settingsViewModel.isShowInfoOnTrackChange.observe(this) { switchTrackChangeInfo.isChecked = it }
         settingsViewModel.bufferDisplayMode.observe(this) { mode ->
             textBufferDisplayValue.text = when (mode) {
                 SettingsRepository.BUFFER_DISPLAY_PANEL -> getString(R.string.buffer_panel)
