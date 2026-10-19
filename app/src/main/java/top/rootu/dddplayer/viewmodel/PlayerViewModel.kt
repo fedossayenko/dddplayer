@@ -79,6 +79,11 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     private var ioRetryCount = 0
     private val MAX_IO_RETRIES = 3
 
+    // true, пока плейлист перезагружается для восстановления после ошибки.
+    // В этот момент onMediaItemTransition приходит с тем же видео, и сбрасывать
+    // счетчик повторов и настройки видео нельзя.
+    private var isRecoveringFromError = false
+
     private val repository = SettingsRepository.getInstance(application)
 
     // Делегат для 3D/VR настроек
@@ -198,6 +203,10 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     private var currentUri: String? = null
     private var lastVideoSize: VideoSize? = null
     var isUserInteracting = false
+
+    // Состояние воспроизведения при уходе с экрана (onPause), чтобы в onResume
+    // не запускать видео, которое пользователь сам поставил на паузу
+    var resumePlayWhenReady = true
     private val _playbackEnded = MutableLiveData<Boolean>()
     val playbackEnded: LiveData<Boolean> = _playbackEnded
 
@@ -279,6 +288,15 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         }
 
         override fun onMediaItemTransition(mediaItem: Media3MediaItem?, reason: Int) {
+            if (isRecoveringFromError) {
+                isRecoveringFromError = false
+                if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_PLAYLIST_CHANGED &&
+                    mediaItem?.localConfiguration?.uri?.toString() == currentUri
+                ) {
+                    // То же видео после перезагрузки плейлиста - ничего не сбрасываем
+                    return
+                }
+            }
             ioRetryCount = 0 // Сброс счетчика при смене видео
             handleMediaItemTransition(mediaItem)
         }
@@ -400,9 +418,8 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                 }
 
                 // Переподготавливаем плеер и возвращаем его на то же место
-                p.setMediaItems(newItems, currentIndex, currentPos)
-                p.prepare()
-                p.play()
+                isRecoveringFromError = true
+                playerManager.reloadMediaItems(newItems, currentIndex, currentPos)
                 return true
             }
         }
@@ -441,9 +458,8 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                     }
 
                     // Полностью перезагружаем плейлист в плеер
-                    p.setMediaItems(newItems, currentIndex, currentPos)
-                    p.prepare()
-                    p.play()
+                    isRecoveringFromError = true
+                    playerManager.reloadMediaItems(newItems, currentIndex, currentPos)
 
                     return true // Успешно перехватили и исправили
                 }
@@ -825,6 +841,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
     fun loadPlaylist(items: List<MediaItem>, startIndex: Int) {
         _currentPlaylist.value = items
+        resumePlayWhenReady = true // Новый плейлист всегда стартует
         val startPos = items.getOrNull(startIndex)?.startPositionMs ?: 0L
         playerManager.loadPlaylist(items, startIndex, startPos)
         viewModelScope.launch { repository.cleanupOldSettings() }
@@ -835,13 +852,13 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     private fun loadGlobalDefaults() {
         val outModeOrd = repository.getGlobalInt("def_output_mode", StereoOutputMode.ANAGLYPH.ordinal)
         val outputMode = StereoOutputMode.entries.getOrNull(outModeOrd) ?: StereoOutputMode.ANAGLYPH
-        _outputMode.postValue(outputMode)
+        _outputMode.value = outputMode
 
         val anaTypeOrd = repository.getGlobalInt("def_anaglyph_type", StereoRenderer.AnaglyphType.RC_DUBOIS.ordinal)
         val anaglyphType = StereoRenderer.AnaglyphType.entries.getOrNull(anaTypeOrd) ?: StereoRenderer.AnaglyphType.RC_DUBOIS
-        _anaglyphType.postValue(anaglyphType)
+        _anaglyphType.value = anaglyphType
 
-        _screenSeparation.postValue(repository.getGlobalFloat("global_screen_separation_pct", 0f))
+        _screenSeparation.value = repository.getGlobalFloat("global_screen_separation_pct", 0f)
         anaglyphDelegate.loadGlobalVrParams()
 
         if (AnaglyphLogic.isCustomType(anaglyphType)) anaglyphDelegate.loadCustomSettings(anaglyphType)
@@ -891,16 +908,18 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         anaglyphDelegate.loadGlobalVrParams()
     }
 
+    // Вызывается в главном потоке: значения выставляем синхронно,
+    // чтобы updateAvailableSettings() ниже видел уже новые настройки.
     private fun applySettings(s: VideoSettings) {
-        _inputType.postValue(s.inputType)
-        _outputMode.postValue(s.outputMode)
-        _anaglyphType.postValue(s.anaglyphType)
-        _swapEyes.postValue(s.swapEyes)
-        _depth.postValue(s.depth)
+        _inputType.value = s.inputType
+        _outputMode.value = s.outputMode
+        _anaglyphType.value = s.anaglyphType
+        _swapEyes.value = s.swapEyes
+        _depth.value = s.depth
 
         anaglyphDelegate.loadGlobalVrParams()
 
-        handler.post { lastVideoSize?.let { calculateFrameSize(s.inputType, it) } }
+        lastVideoSize?.let { calculateFrameSize(s.inputType, it) }
         if (AnaglyphLogic.isCustomType(s.anaglyphType)) anaglyphDelegate.loadCustomSettings(s.anaglyphType)
         updateAvailableSettings()
         anaglyphDelegate.updateAnaglyphMatrix(s.anaglyphType)
@@ -1010,7 +1029,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
      */
     fun playPlaylistItem(index: Int) {
         player?.let { p ->
-            val isVideoError = _videoDisabledError.value == null
+            val isVideoError = _videoDisabledError.value != null
             // Сбрасываем ошибку в UI немедленно
             _videoDisabledError.value = null
 
@@ -1379,7 +1398,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             restartPlayer()
             lastSettingsHash = currentHash
         } else {
-            playerManager.updateTrackSelectionParameters()
+            playerManager.applyLiveSettings()
         }
     }
 

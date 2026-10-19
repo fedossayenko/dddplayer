@@ -57,7 +57,7 @@ import javax.net.ssl.X509TrustManager
 import androidx.media3.common.MediaItem as Media3MediaItem
 
 class PlayerManager(
-    private val context: Context,
+    context: Context,
     listener: Player.Listener
 ) {
     private var playerListener: Player.Listener? = listener
@@ -74,8 +74,11 @@ class PlayerManager(
     private var currentWindowIndex = 0
     private var currentPosition = 0L
     private var currentMediaItems: List<Media3MediaItem> = emptyList()
+    private var currentHeaders: List<Map<String, String>> = emptyList()
     private var playWhenReady = true
 
+    // Пишется из IO-потока парсера, читается из потоков загрузки и главного потока
+    @Volatile
     private var currentTrackInfo: Map<Int, UnifiedMetadataReader.TrackInfo> = emptyMap()
     var onMetadataAvailable: (() -> Unit)? = null
     var onPlayerCreated: ((ExoPlayer) -> Unit)? = null
@@ -389,6 +392,11 @@ class PlayerManager(
             override fun onAudioSessionIdChanged(audioSessionId: Int) {
                 initLoudnessEnhancer(audioSessionId)
             }
+
+            override fun onMediaItemTransition(mediaItem: Media3MediaItem?, reason: Int) {
+                // Заголовки (Referer, Cookie и т.п.) у каждого элемента плейлиста свои
+                applyHeadersForIndex(player.currentMediaItemIndex)
+            }
         })
         if (player.audioSessionId != C.AUDIO_SESSION_ID_UNSET) {
             initLoudnessEnhancer(player.audioSessionId)
@@ -399,7 +407,7 @@ class PlayerManager(
         // --- MediaSession ---
         if (player.canAdvertiseSession()) {
             try {
-                mediaSession = MediaSession.Builder(context, player).build()
+                mediaSession = MediaSession.Builder(appContext, player).build()
             } catch (e: Exception) {
                 e.printStackTrace()
             }
@@ -434,6 +442,7 @@ class PlayerManager(
 
         // 6. Restore State
         if (currentMediaItems.isNotEmpty()) {
+            applyHeadersForIndex(currentWindowIndex)
             val sources = buildMediaSources(currentMediaItems)
             player.setMediaSources(sources, currentWindowIndex, currentPosition)
             player.playWhenReady = playWhenReady
@@ -487,6 +496,22 @@ class PlayerManager(
         }
     }
 
+    private fun applyHeadersForIndex(index: Int) {
+        baseHttpFactory.setDefaultRequestProperties(currentHeaders.getOrNull(index) ?: emptyMap())
+    }
+
+    /**
+     * Применяет настройки, которые не требуют пересоздания плеера.
+     */
+    fun applyLiveSettings() {
+        val player = exoPlayer ?: return
+        updateTrackSelectionParameters()
+        player.skipSilenceEnabled = settingsRepo.isSkipSilenceEnabled()
+        if (player.audioSessionId != C.AUDIO_SESSION_ID_UNSET) {
+            initLoudnessEnhancer(player.audioSessionId)
+        }
+    }
+
     fun updateTrackSelectionParameters() {
         val player = exoPlayer ?: return
         val audioPref = settingsRepo.getPreferredAudioLang()
@@ -526,9 +551,9 @@ class PlayerManager(
         currentTrackInfo = emptyMap()
         resolvedMediaTypes.clear() // Очищаем кэш типов при новой загрузке
 
-        if (items.isNotEmpty()) {
-            baseHttpFactory.setDefaultRequestProperties(items[startIndex].headers)
-        }
+        val safeStartIndex = if (items.isEmpty()) 0 else startIndex.coerceIn(0, items.lastIndex)
+        currentHeaders = items.map { it.headers }
+        applyHeadersForIndex(safeStartIndex)
 
         val exoItems = items.map { item ->
             val subConfigs = item.subtitles.map { sub ->
@@ -563,7 +588,7 @@ class PlayerManager(
         }
 
         currentMediaItems = exoItems
-        currentWindowIndex = startIndex
+        currentWindowIndex = safeStartIndex
         currentPosition = if (startPosMs <= 0L) C.TIME_UNSET else startPosMs
         playWhenReady = true
 
@@ -571,10 +596,25 @@ class PlayerManager(
             initializePlayer()
         } else {
             val sources = buildMediaSources(exoItems)
-            exoPlayer?.setMediaSources(sources, startIndex, currentPosition)
+            exoPlayer?.setMediaSources(sources, safeStartIndex, currentPosition)
             exoPlayer?.playWhenReady = true
             exoPlayer?.prepare()
         }
+    }
+
+    /**
+     * Перезагружает плейлист в текущий плеер (восстановление после ошибки).
+     * Источники собираются через [buildMediaSources], чтобы сохранить
+     * кастомные экстракторы и ParsingDataSource.
+     */
+    fun reloadMediaItems(items: List<Media3MediaItem>, index: Int, positionMs: Long) {
+        val player = exoPlayer ?: return
+        currentMediaItems = items
+        currentWindowIndex = index
+        currentPosition = positionMs
+        player.setMediaSources(buildMediaSources(items), index, positionMs)
+        player.prepare()
+        player.play()
     }
 
     fun releasePlayer(isFinalRelease: Boolean = false, saveState: Boolean = true) {
@@ -607,11 +647,29 @@ class PlayerManager(
     fun getTrackMetadata(): Map<Int, UnifiedMetadataReader.TrackInfo> = currentTrackInfo
 
     fun togglePlayPause() {
-        exoPlayer?.let { if (it.isPlaying) it.pause() else it.play() }
+        val player = exoPlayer ?: return
+        // Ориентируемся на playWhenReady, а не на isPlaying: во время буферизации
+        // isPlaying == false, но пользователь ожидает именно паузу.
+        val state = player.playbackState
+        if (player.playWhenReady && state != Player.STATE_ENDED && state != Player.STATE_IDLE) {
+            player.pause()
+        } else {
+            when (state) {
+                Player.STATE_ENDED -> player.seekToDefaultPosition()
+                Player.STATE_IDLE -> player.prepare()
+            }
+            player.play()
+        }
     }
 
     fun seekForward() {
-        exoPlayer?.let { it.seekTo((it.currentPosition + it.seekForwardIncrement).coerceAtMost(it.duration)) }
+        exoPlayer?.let {
+            val target = it.currentPosition + it.seekForwardIncrement
+            // Для потоков с неизвестной длительностью duration == C.TIME_UNSET,
+            // а seekTo(C.TIME_UNSET) означает переход в начало.
+            val duration = it.duration
+            it.seekTo(if (duration != C.TIME_UNSET) target.coerceAtMost(duration) else target)
+        }
     }
 
     fun seekBack() {
