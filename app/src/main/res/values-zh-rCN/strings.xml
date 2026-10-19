@@ -221,6 +221,10 @@
     <!-- Resume Playback -->
     <string name="pref_resume_mode">恢复播放</string>
     <string name="pref_resume_mode_desc">当存在保存的进度时如何操作</string>
+    <string name="pref_external_position">来自应用的进度</string>
+    <string name="pref_external_position_desc">其他应用（例如 Lampa）传入的播放位置</string>
+    <string name="external_position_apply">立即应用</string>
+    <string name="external_position_ask">询问</string>
     <string name="resume_mode_ask">询问</string>
     <string name="resume_mode_always">总是继续</string>
     <string name="resume_mode_never">总是从头开始</string>

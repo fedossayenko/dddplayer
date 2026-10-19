@@ -31,6 +31,13 @@ val gitVersionName: String by lazy {
     }
 }
 
+// Ключ подписи релиза из переменных окружения (CI, см. .github/workflows/release.yml).
+// Путь KEYSTORE_FILE - относительно модуля app (например, keystore/release.jks).
+// Без переменных релиз собирается неподписанным, как раньше.
+fun envOrNull(name: String): String? = System.getenv(name)?.takeIf { it.isNotBlank() }
+
+val releaseKeystorePath: String? = envOrNull("KEYSTORE_FILE")
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -58,8 +65,22 @@ android {
         viewBinding = false
     }
 
+    signingConfigs {
+        releaseKeystorePath?.let { path ->
+            create("release") {
+                storeFile = file(path)
+                storePassword = envOrNull("KEYSTORE_PASSWORD")
+                keyAlias = envOrNull("RELEASE_SIGN_KEY_ALIAS")
+                keyPassword = envOrNull("RELEASE_SIGN_KEY_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         release {
+            if (releaseKeystorePath != null) {
+                signingConfig = signingConfigs.getByName("release")
+            }
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),

@@ -1,3 +1,15 @@
+# Prebuilt Media3 decoder extensions
+
+This folder contains prebuilt AARs that `app/build.gradle.kts` picks up automatically (`fileTree("libs") { include("*.aar") }`):
+
+| File | Module | Purpose |
+| :--- | :--- | :--- |
+| `lib-decoder-ffmpeg-release.aar` | `androidx.media3:lib-decoder-ffmpeg` | Software audio decoders (AC3/E-AC3/DTS/TrueHD and more) |
+| `lib-decoder-av1-release.aar` | `androidx.media3:lib-decoder-av1` | Software AV1 video decoder (dav1d) |
+
+**The AARs must be built from the same Media3 version as `media3` in `gradle/libs.versions.toml` (currently `1.9.0`).**
+Rebuild them when Media3 is updated. Media3 1.9.0 requires NDK `27.0.12077973`, FFmpeg branch `release/6.0`.
+
 ## English version
 
 The binary ffmpeg extension was built with the following decoders:

@@ -734,6 +734,29 @@
                     tools:text="Спрашивать" />
             </LinearLayout>
 
+            <!-- External position (intent) -->
+            <LinearLayout
+                android:id="@+id/item_external_position"
+                style="@style/SettingsItemContainer">
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:duplicateParentState="true"
+                    android:orientation="vertical">
+                    <TextView
+                        style="@style/SettingsItemTitle"
+                        android:text="@string/pref_external_position" />
+                    <TextView
+                        style="@style/SettingsItemDesc"
+                        android:text="@string/pref_external_position_desc" />
+                </LinearLayout>
+                <TextView
+                    android:id="@+id/text_external_position_value"
+                    style="@style/SettingsItemValue"
+                    tools:text="Применять сразу" />
+            </LinearLayout>
+
             <!-- Show Clock -->
             <LinearLayout
                 android:id="@+id/item_show_clock"

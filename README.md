@@ -6,6 +6,9 @@
     <a href="LICENSE">
       <img src="https://img.shields.io/badge/License-GPLv3-blue.svg?style=flat-square" alt="License GPL v3"/>
     </a>
+    <a href="https://github.com/usmanec/dddplayer/actions/workflows/android-build.yml">
+      <img src="https://github.com/usmanec/dddplayer/actions/workflows/android-build.yml/badge.svg" alt="Android Build"/>
+    </a>
     <a href="README_RU.md">
       <img src="https://img.shields.io/badge/Lang-Русский-red.svg?style=flat-square" alt="Читать на русском"/>
     </a>
@@ -31,19 +34,35 @@ To experience the 3D effect, you will need **anaglyph glasses** (e.g., Red-Cyan)
     *   Top-Bottom (Over-Under)
     *   Interlaced
     *   3D(z) Tile Format (720p in 1080p)
+    *   Auto-detection from container metadata and file name markers (`sbs`, `ou`, `tb`, ...).
 *   **Output Modes**:
-    *   **Anaglyph**: High-quality Dubois algorithm with customizable color matrices (Red-Cyan, Green-Magenta, Yellow-Blue).
-    *   **VR / Cardboard**: Lens distortion correction for VR headsets.
+    *   **Anaglyph**: High-quality Dubois algorithm with customizable color matrices (Red-Cyan, Green-Magenta, Yellow-Blue, Red-Blue).
+    *   **VR / Cardboard**: Lens distortion correction for VR headsets, profile import from Cardboard QR codes.
     *   **Mono**: Watch 3D content in 2D (Left or Right eye only).
-*   **HDR Support**: Direct rendering via SurfaceView for native HDR playback on supported displays (when in 2D mode).
-*   **Audio Passthrough**: Supports AC3/DTS 5.1 passthrough to external receivers via HDMI/Optical.
-*   **Advanced Subtitles**: Correctly renders subtitles in 3D modes.
-*   **Playlist Support**: Built-in playlist manager with poster support.
+*   **Rendering**: OpenGL ES 3.0 shaders with linear-light anaglyph blending and automatic fallback to OpenGL ES 2.0 (can be forced in settings).
+*   **HDR Support**: Direct rendering via SurfaceView for native HDR / Dolby Vision playback on supported displays (when in 2D mode). Optional Dolby Vision → HEVC compatibility mode.
+*   **Audio**: AC3/DTS 5.1 passthrough to receivers via HDMI/Optical, built-in FFmpeg audio decoders, stereo downmix with an adjustable mixer, loudness boost, skip silence.
+*   **Advanced Subtitles**: Correctly renders subtitles in 3D modes, external subtitles via Intent.
+*   **Playlists & IPTV**:
+    *   Playlists passed by other apps (see Intent API) with posters and subtitles.
+    *   M3U / M3U8 playlists with groups (`group-title`, `#EXTGRP`), logos and per-channel HTTP headers (`#EXTVLCOPT`, `#EXTHTTP`). HLS streams are detected and played without a second request.
+    *   Startup playlist opened when the app is launched from the launcher; the last watched M3U channel is restored.
+    *   Optional **live mode** for playlists with live streams: OK opens the channel list, Left/Right switch channels, Up shows the info panel.
+*   **Playback**:
+    *   Resume playback (ask / always / never), optional prompt for a position passed by another app.
+    *   Configurable network buffer size in MB (limited to the available memory), buffer indicator.
+    *   Auto Frame Rate (AFR): switches the display refresh rate (and optionally resolution) to match the video.
+    *   Picture-in-Picture (optional auto PiP).
+    *   Forced aspect ratio (4:3, 16:9, 1.85, 2.35, 2.39), fit / crop / stretch / custom zoom modes.
+    *   Playback speed, audio and subtitle track selection with preferred languages.
+*   **TV-friendly UI**: remote-control navigation, configurable OK/Up buttons, on-screen clock, exit confirmation, pause dimming for OLED screens; touch gestures on phones (seek, volume, brightness, playlist swipe).
 *   **Customization**:
     *   Adjustable 3D depth (parallax).
     *   Swap Left/Right eyes.
     *   Custom anaglyph color tuning (Hue, Leakage).
     *   VR lens distortion parameters (K1, K2, Scale).
+*   **Built-in updates** from GitHub Releases.
+*   **Languages**: English, Russian, Ukrainian, Belarusian, Chinese (Simplified).
 
 ### Screenshots
 
@@ -63,21 +82,24 @@ You can launch DDD Player from external applications using `Intent.ACTION_VIEW`.
 ```kotlin
 val intent = Intent(Intent.ACTION_VIEW)
 intent.setDataAndType(Uri.parse("https://example.com/video.mp4"), "video/*")
+intent.setPackage("top.rootu.dddplayer") // optional: skip the app chooser
 intent.putExtra("title", "Big Buck Bunny")
-intent.putExtra("poster", "https://example.com/poster.jpg")
+intent.putExtra("thumbnail", "https://example.com/poster.jpg")
+intent.putExtra("position", 60_000L) // start at 1:00
 startActivity(intent)
 ```
+
+A single link to an `.m3u`/`.m3u8` file is checked automatically: an M3U channel list opens as a playlist, an HLS stream plays as a video.
 
 #### Supported Extras (Single Video)
 
 | Key | Type | Description |
 | :--- | :--- | :--- |
-| `title` | String | Video title displayed in the UI. |
-| `filename` | String | Fallback filename if title is missing. |
-| `thumbnail` | String | URL to the thumbnail image. |
-| `position` | Int/Long | Start position in milliseconds. |
-| `headers` | String[] | HTTP headers as array: `["Key1", "Val1", "Key2", "Val2"]`. |
-| `return_result`| Boolean | If true, returns playback position to calling app on finish. |
+| `title` | String | Video title displayed in the UI (`android.intent.extra.TITLE` is also accepted). If missing, the file name is used. |
+| `thumbnail` | String | URL of the poster image. |
+| `position` | Long / Int / String | Start position in milliseconds. Depending on the "Position from another app" setting it is applied immediately (default) or offered in the resume dialog. |
+| `headers` | String[] | HTTP headers as an array: `["Key1", "Val1", "Key2", "Val2"]`. |
+| `return_result`| Boolean | If true, the player returns the playback result to the calling app (see below). |
 
 #### Subtitles (Single Video)
 To add external subtitles to a single video, use the following extras:
@@ -101,11 +123,16 @@ To pass a playlist, use the `video_list` extra (ParcelableArray of URIs) along w
 
 | Key | Type | Description |
 | :--- | :--- | :--- |
-| `video_list` | Parcelable[] (Uri) | **Required.** List of video URLs. |
+| `video_list` | Parcelable[] (Uri) | **Required.** List of video URLs (an `ArrayList<String>` is also accepted). |
 | `video_list.name` | String[] | List of titles. |
-| `video_list.filename` | String[] | List of filenames. |
-| `video_list.thumbnail` | String[] | List of thumbnail URLs. |
+| `video_list.filename` | String[] | List of filenames (used as titles if names are missing). |
+| `video_list.thumbnail` | String[] | List of poster URLs. |
 | `video_list.subtitles` | ArrayList&lt;Bundle&gt; | List of subtitles for each video item. |
+| `start_index` | Int | Index of the item to start from (default 0). |
+| `headers` | String[] | HTTP headers applied to every item. |
+| `position` | Long / Int / String | Start position for the item whose URI equals the intent data. |
+
+If the intent data (`setData`) matches one of the playlist items, playback starts from that item (it overrides `start_index`).
 
 **Playlist Subtitles Structure:**
 The `video_list.subtitles` extra is an `ArrayList` where each `Bundle` corresponds to a video at the same index.
@@ -133,17 +160,39 @@ subsList.add(subs2)
 intent.putExtra("video_list", videoUris)
 intent.putExtra("video_list.name", titles)
 intent.putParcelableArrayListExtra("video_list.subtitles", subsList)
+intent.putExtra("start_index", 1) // start from "Movie 2"
 ```
+
+#### Playback Result
+When started with `startActivityForResult` and `return_result = true`, the player finishes with `RESULT_OK` and returns:
+
+| Key | Type | Description |
+| :--- | :--- | :--- |
+| `data` | Uri | URI of the current (last played) item. |
+| `position` | Long | Playback position in milliseconds (equals the duration when the video ended). |
+| `duration` | Long | Video duration in milliseconds. |
+| `end_by` | String | `completion` if the video finished (the player closes automatically), `user` if the user exited. |
 
 ### Tech Stack
 
 *   **Language**: Kotlin
-*   **Player Core**: Media3 (ExoPlayer)
-*   **Rendering**: OpenGL ES 2.0 (Custom Shaders for 3D/Anaglyph)
-*   **UI**: Android Views, ConstraintLayout
+*   **Player Core**: Media3 (ExoPlayer) 1.9 with HLS, DASH, SmoothStreaming and RTSP; FFmpeg audio and AV1 decoder extensions
+*   **Networking**: OkHttp
+*   **Rendering**: OpenGL ES 3.0 / 2.0 (custom shaders for 3D/Anaglyph/VR), SurfaceView for 2D/HDR
+*   **UI**: Android Views, ConstraintLayout, Leanback
 *   **Image Loading**: Coil
 *   **Database**: Room
-*   **Architecture**: MVVM
+*   **Architecture**: MVVM (ViewModel, LiveData, Coroutines)
+
+### Building
+
+*   Requirements: JDK 17, Android SDK (compileSdk 36). Min SDK 23.
+*   Debug build: `./gradlew assembleDebug`. The APK is written to `app/build/outputs/apk/debug/`.
+*   The version is taken from git (`versionCode` = commit count, `versionName` = `git describe --tags`), so clone with full history.
+*   Every push and pull request to `main` is built by [GitHub Actions](https://github.com/usmanec/dddplayer/actions/workflows/android-build.yml); the debug APK is attached to the run as an artifact.
+*   Releases are published by the [Release workflow](.github/workflows/release.yml) when a `vX.Y.Z` tag is pushed: it builds a signed `app-release.apk` and attaches it to a GitHub Release (used by the in-app updater). Signing reads `KEYSTORE_FILE` (relative to `app/`), `KEYSTORE_PASSWORD`, `RELEASE_SIGN_KEY_ALIAS` and `RELEASE_SIGN_KEY_PASSWORD` from the environment; without them the release build is unsigned.
+*   The FFmpeg and AV1 decoder AARs in `app/libs` are prebuilt; see [app/libs/README.md](app/libs/README.md) to rebuild them.
+*   Developer documentation: [AGENTS.md](AGENTS.md) and [docs/](docs/README.md) (in Russian).
 
 ### Contributing & Feedback
 

@@ -212,6 +212,10 @@
     <!-- Resume Playback -->
     <string name="pref_resume_mode">Аднаўленне прагляду</string>
     <string name="pref_resume_mode_desc">Як паводзіць сябе пры наяўнасці захаванага прагрэсу</string>
+    <string name="pref_external_position">Пазіцыя з праграмы</string>
+    <string name="pref_external_position_desc">Пазіцыя, перададзеная іншай праграмай (напрыклад, Лампай)</string>
+    <string name="external_position_apply">Ужываць адразу</string>
+    <string name="external_position_ask">Пытацца</string>
     <string name="resume_mode_ask">Пытацца</string>
     <string name="resume_mode_always">Заўсёды працягваць</string>
     <string name="resume_mode_never">Заўсёды спачатку</string>

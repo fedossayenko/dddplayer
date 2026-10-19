@@ -97,6 +97,9 @@ class GlobalSettingsViewModel(application: Application) : AndroidViewModel(appli
     private val _resumeModeAction = MutableLiveData(repository.getResumeMode())
     val resumeModeAction: LiveData<Int> = _resumeModeAction
 
+    private val _externalPositionMode = MutableLiveData(repository.getExternalPositionMode())
+    val externalPositionMode: LiveData<Int> = _externalPositionMode
+
     private val _upButtonAction = MutableLiveData(repository.getUpButtonAction())
     val upButtonAction: LiveData<Int> = _upButtonAction
 
@@ -276,6 +279,11 @@ class GlobalSettingsViewModel(application: Application) : AndroidViewModel(appli
     fun setAppLanguage(langCode: String) {
         repository.setAppLanguage(langCode)
         _appLanguage.value = langCode
+    }
+
+    fun setExternalPositionMode(mode: Int) {
+        repository.setExternalPositionMode(mode)
+        _externalPositionMode.value = mode
     }
 
     fun setResumeModeAction(action: Int) {

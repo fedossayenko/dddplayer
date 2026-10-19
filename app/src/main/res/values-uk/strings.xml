@@ -212,6 +212,10 @@
     <!-- Resume Playback -->
     <string name="pref_resume_mode">Відновлення перегляду</string>
     <string name="pref_resume_mode_desc">Як поводитися за наявності збереженого прогресу</string>
+    <string name="pref_external_position">Позиція з застосунку</string>
+    <string name="pref_external_position_desc">Позиція, передана іншим застосунком (наприклад, Лампою)</string>
+    <string name="external_position_apply">Застосовувати одразу</string>
+    <string name="external_position_ask">Питати</string>
     <string name="resume_mode_ask">Запитувати</string>
     <string name="resume_mode_always">Завжди продовжувати</string>
     <string name="resume_mode_never">Завжди спочатку</string>

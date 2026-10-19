@@ -1,0 +1,102 @@
+# Воспроизведение (`player/`)
+
+## PlayerManager
+
+`PlayerManager` владеет экземпляром ExoPlayer. Обращается к нему только `PlayerViewModel`.
+
+- `initializePlayer()` собирает плеер из текущих настроек:
+  - `MediaCodecSelector`: при `map_dv_to_hevc` запрос декодера Dolby Vision подменяется на HEVC;
+  - `DefaultTrackSelector`: туннелирование, предпочтительные языки аудио и субтитров (`""` — по умолчанию,
+    `device` — языки системы), `exceedRendererCapabilitiesIfNecessary`;
+  - `DefaultRenderersFactory`: приоритет декодеров-расширений (`decoder_priority`, ffmpeg и AV1 из AAR),
+    `enableDecoderFallback`. При `stereo_downmix` подключается свой `DefaultAudioSink` с
+    `ChannelMixingAudioProcessor` (матрицы из `AudioMixerLogic`) и аудиобуфером не больше 256 КБ,
+    чтобы не упасть по памяти. Без даунмикса используется стандартный sink, и passthrough работает;
+  - `NetworkBufferLoadControl` (см. ниже);
+  - `LoudnessEnhancer` по `audioSessionId` (`loudness_boost`), `skipSilence`, шаг перемотки 15 с.
+- `loadPlaylist(items, startIndex, startPosMs)` превращает `MediaItem` в `Media3MediaItem`
+  (`mediaId = uuid`, метаданные, внешние субтитры, `LiveConfiguration`: target offset 15 с,
+  max 30 с, ускорение до 1.05x) и делает `setMediaSources`.
+- `buildMediaSources` выбирает HLS-фабрику, если тип — `application/x-mpegURL`. Тип определяется
+  интерцептором OkHttp по Content-Type или расширению после редиректов, M3U-пробой или по расширению.
+  Для остального используется `DefaultMediaSourceFactory`. Обе фабрики работают через `ParsingDataSource`.
+- `reloadMediaItems` перезагружает источники с позиции при восстановлении после ошибки.
+- `releasePlayer(isFinalRelease, saveState)`: при `saveState` запоминаются индекс и позиция,
+  нужные для горячего перезапуска.
+- `applyLiveSettings()` применяет настройки, которым не нужен перезапуск: дорожки, skip silence, громкость.
+
+### Сеть
+
+- Один `OkHttpClient`: редиректы, повтор соединения, таймауты 60 с.
+- **TLS trust-all и `hostnameVerifier { true }` оставлены намеренно.** На старых Android устарели корневые
+  сертификаты, а открыть видео важнее, чем проверить сертификат. Не меняйте это.
+- Application-interceptor записывает MIME-тип HLS, DASH или SmoothStreaming по Content-Type и финальному URL
+  в `resolvedMediaTypes`. Так после редиректа выбирается правильная фабрика при повторной загрузке.
+- HTTP-заголовки элемента (`MediaItem.headers` из Intent `headers` или из M3U `#EXTVLCOPT`/`#EXTHTTP`)
+  применяются через `baseHttpFactory.setDefaultRequestProperties` при переходе на элемент
+  (`applyHeadersForIndex`). User-Agent по умолчанию — `App.USER_AGENT`.
+
+### Цепочка DataSource
+
+```
+ParsingDataSource → PrefetchingDataSource → DefaultDataSource (file/content/asset) → OkHttpDataSource
+```
+
+- **`PrefetchingDataSource` / `PrefetchStore`.** Если ответ уже скачан при M3U-пробе и оказался не M3U
+  (например, HLS), он отдается плееру без повторного запроса. Ответ одноразовый и живет 30 с. `getUri()`
+  возвращает URI после редиректов, чтобы относительные пути в HLS разрешались правильно.
+  Это важно для ссылок с одноразовыми токенами.
+- **`ParsingDataSource`** через `TeeDataSource` копирует первые байты в пайп (64 КБ, не больше 50 МБ)
+  и в отдельной корутине разбирает метаданные MKV/MP4 (`UnifiedMetadataReader`: названия и языки дорожек,
+  которые ExoPlayer не отдает). У каждой сессии свои пайпы, поэтому повторный `open` не ломает предыдущую.
+
+### Экстракторы
+
+- TS: HDMV DTS, non-IDR keyframes, detect access units, игнор splice info, расширенный поиск
+  timestamp. Это нужно для битых IPTV-потоков. HLS использует те же флаги (`DefaultHlsExtractorFactory`).
+- MP4: `FLAG_READ_WITHIN_GOP_SAMPLE_DEPENDENCIES(_H265)`. Для CBR включен seeking.
+- `DefaultLoadErrorHandlingPolicy`: не меньше 5 повторов загрузки.
+
+## Буфер: NetworkBufferLoadControl
+
+Наследник `DefaultLoadControl`, который вызывает его protected-конструктор.
+
+| Режим | Сеть | Локальные файлы |
+|:---|:---|:---|
+| «Авто» (`target_buffer_mb = -1`) | 15–50 с по времени (прежние параметры) | 15–50 с |
+| N МБ | целевой объем N МБ, лимит по времени снят | 15–50 с (по умолчанию) |
+
+- Старт воспроизведения начинается после 0.5 с буфера, после ребуфера — после 5 с.
+- В любом режиме объем ограничен `maxBufferBytesForHeap()`: резерв = `clamp(heap / 2, 64 МБ, 160 МБ)`,
+  буфер = `heap − резерв`, но не меньше 16 МБ. Примеры: куча 100 МБ → 36 МБ, 192 → 96, 512 → 352, 1024 → 864.
+  Без этого на ТВ с маленькой кучей 4K-ремуксы падали с `OutOfMemoryError`.
+- `prioritizeTimeOverSizeThresholds = false` во всех режимах: время не должно раздувать буфер сверх объема.
+- Варианты в настройках (`getTargetBufferOptions`) фильтруются по тому же лимиту. Если сохраненное значение
+  больше недоступно, `getTargetBufferCorrectMB()` возвращает «Авто».
+- Аудиобуфер при даунмиксе ограничен 256 КБ, и это ограничение остается.
+- Процент заполнения для UI возвращает `getNetworkBufferFillPercent()`. Где он отображается, задает
+  `buffer_display_mode`: выкл, в панели или рядом с часами (одиночные часы и инфопанель).
+
+## Восстановление после ошибок (`PlayerViewModel.tryRecoverFromError`)
+
+- `HlsPlaylistTracker.PlaylistStuckException`: для live плеер переходит на край, для VOD — на текущую позицию,
+  затем снова `prepare()`.
+- IO-ошибки (`IO_UNSPECIFIED`, `NETWORK_CONNECTION_FAILED/TIMEOUT`) повторяются до 3 раз с текущей позиции
+  через `reloadMediaItems`. Пока идет перезагрузка, `isRecoveringFromError = true`, и переход на тот же
+  элемент не сбрасывает счетчик и настройки.
+- `PARSING_CONTAINER_UNSUPPORTED` (за ссылкой скрыт HLS или DASH): если интерцептор узнал реальный тип,
+  проблемному элементу задается MIME-тип, и плейлист перезагружается.
+- Ошибка рендерера видео: видеодорожка отключается, звук продолжает играть (`videoDisabledError`
+  и тост). При переходе на другой элемент видео включается обратно.
+- Ошибка рендерера аудио: аудио выключается, тост подсказывает выбрать другую дорожку.
+
+## AFR и FPS
+
+- `utils/afr/*` переключает режим дисплея под частоту кадров видео (опционально и разрешение).
+  Есть коррекция 23.976/29.97, удвоение частоты, пропуск 24 Гц, пауза при переключении и пропуск коротких видео.
+- `RuntimeFpsDetector` измеряет FPS по рендеру, если в контейнере его нет.
+
+## Обновления
+
+`UpdateManager` читает `https://api.github.com/repos/usmanec/dddplayer/releases`, сравнивает версии,
+скачивает APK и запускает установку (`REQUEST_INSTALL_PACKAGES`, `FileProvider`).

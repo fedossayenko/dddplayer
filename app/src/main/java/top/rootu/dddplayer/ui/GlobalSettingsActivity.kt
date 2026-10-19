@@ -87,6 +87,8 @@ class GlobalSettingsActivity : AppCompatActivity() {
     private lateinit var textOkActionValue: TextView
     private lateinit var itemResumeAction: LinearLayout
     private lateinit var textResumeActionValue: TextView
+    private lateinit var itemExternalPosition: LinearLayout
+    private lateinit var textExternalPositionValue: TextView
     private lateinit var itemSwipeAction: LinearLayout
     private lateinit var textSwipeActionValue: TextView
     private lateinit var itemUpdate: LinearLayout
@@ -204,6 +206,8 @@ class GlobalSettingsActivity : AppCompatActivity() {
         textOkActionValue = findViewById(R.id.text_ok_action_value)
         itemResumeAction = findViewById(R.id.item_resume_mode)
         textResumeActionValue = findViewById(R.id.text_resume_mode_value)
+        itemExternalPosition = findViewById(R.id.item_external_position)
+        textExternalPositionValue = findViewById(R.id.text_external_position_value)
         itemSwipeAction = findViewById(R.id.item_swipe_action)
         textSwipeActionValue = findViewById(R.id.text_swipe_action_value)
         itemUpdate = findViewById(R.id.item_update)
@@ -327,6 +331,12 @@ class GlobalSettingsActivity : AppCompatActivity() {
             val options = listOf(getString(R.string.resume_mode_ask), getString(R.string.resume_mode_always), getString(R.string.resume_mode_never))
             showSingleChoiceDialog(getString(R.string.pref_resume_mode), options, settingsViewModel.resumeModeAction.value ?: 0) {
                 settingsViewModel.setResumeModeAction(it)
+            }
+        }
+        itemExternalPosition.setOnClickListener {
+            val options = listOf(getString(R.string.external_position_apply), getString(R.string.external_position_ask))
+            showSingleChoiceDialog(getString(R.string.pref_external_position), options, settingsViewModel.externalPositionMode.value ?: SettingsRepository.EXTERNAL_POSITION_APPLY) {
+                settingsViewModel.setExternalPositionMode(it)
             }
         }
         itemUpAction.setOnClickListener {
@@ -474,6 +484,11 @@ class GlobalSettingsActivity : AppCompatActivity() {
                 SettingsRepository.RESUME_ALWAYS -> getString(R.string.resume_mode_always)
                 else -> getString(R.string.resume_mode_ask)
             }
+        }
+
+        settingsViewModel.externalPositionMode.observe(this) { mode ->
+            textExternalPositionValue.text = if (mode == SettingsRepository.EXTERNAL_POSITION_ASK)
+                getString(R.string.external_position_ask) else getString(R.string.external_position_apply)
         }
 
         settingsViewModel.upButtonAction.observe(this) { action ->

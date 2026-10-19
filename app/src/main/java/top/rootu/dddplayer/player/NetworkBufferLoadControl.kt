@@ -17,7 +17,7 @@ import androidx.media3.exoplayer.upstream.DefaultAllocator
  * При заданном объеме для сети лимит по времени снимается: плеер грузит данные,
  * пока не заполнит указанный объем памяти.
  *
- * В любом режиме объем буфера ограничен доступной памятью приложения: буфер хранится в куче Java,
+ * В любом режиме объем буфера ограничен доступной памятью приложения (см. maxBufferBytesForHeap): буфер хранится в куче Java,
  * и на ТВ с маленькой кучей (192 МБ) высокобитрейтное 4K видео иначе падало с OutOfMemoryError
  * (минимальные 15 с буфера при ~100 Мбит/с - это ~190 МБ).
  */
@@ -80,17 +80,21 @@ class NetworkBufferLoadControl private constructor(
         // При заданном объеме буфера лимит по времени фактически снимается (~13 часов)
         private const val UNLIMITED_BUFFER_MS = 50_000_000
 
-        // Память, которую оставляем приложению (UI, постеры, декодеры субтитров и т.п.)
-        const val HEAP_RESERVE_MB = 96
+        // Память, которую оставляем приложению без буфера (UI, постеры, рендер и т.п.):
+        // половина кучи, но не меньше 64 МБ и не больше 160 МБ
+        private const val MIN_HEAP_RESERVE_BYTES = 64L * 1024 * 1024
+        private const val MAX_HEAP_RESERVE_BYTES = 160L * 1024 * 1024
         private const val MIN_BUFFER_BYTES = 16 * 1024 * 1024
 
-        /** Максимальный объем буфера, который помещается в кучу приложения. */
-        fun maxBufferBytesForHeap(): Int {
-            val maxHeap = Runtime.getRuntime().maxMemory()
-            val reserve = HEAP_RESERVE_MB * 1024L * 1024L
-            // Не больше 60% кучи и не меньше 16 МБ
-            val budget = minOf(maxHeap - reserve, maxHeap * 6 / 10)
-            return budget.coerceIn(MIN_BUFFER_BYTES.toLong(), Int.MAX_VALUE.toLong()).toInt()
+        /**
+         * Максимальный объем буфера, который помещается в кучу приложения.
+         * Куча 100 МБ -> 36 МБ, 192 МБ -> 96 МБ, 512 МБ -> 352 МБ, 1024 МБ -> 864 МБ.
+         */
+        fun maxBufferBytesForHeap(): Int = maxBufferBytesForHeap(Runtime.getRuntime().maxMemory())
+
+        internal fun maxBufferBytesForHeap(maxHeap: Long): Int {
+            val reserve = (maxHeap / 2).coerceIn(MIN_HEAP_RESERVE_BYTES, MAX_HEAP_RESERVE_BYTES)
+            return (maxHeap - reserve).coerceIn(MIN_BUFFER_BYTES.toLong(), Int.MAX_VALUE.toLong()).toInt()
         }
 
         /**
