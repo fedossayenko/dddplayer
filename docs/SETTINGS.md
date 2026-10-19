@@ -21,6 +21,7 @@
 | `up_button_action` | `UP_ACTION_MENU` (2) | 0 ничего, 1 OSD-настройки, 2 боковое меню, 3 инфопанель |
 | `ok_button_action` | `OK_ACTION_PAUSE_PANEL` (1) | 0 пауза, 1 пауза + панель, 2 панель |
 | `horizontal_swipe_action` | 2 | Действие горизонтального свайпа (телефон) |
+| `gesture_volume_brightness` | true | Вертикальные свайпы: громкость справа, яркость слева |
 | `confirm_exit` | true | Выход по второму нажатию «Назад» в течение 2 с |
 | `auto_pip` | false | Авто-PiP при уходе с экрана |
 | `live_mode_control` | false | Эфирный режим (см. [PLAYLISTS.md](PLAYLISTS.md)) |

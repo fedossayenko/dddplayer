@@ -297,4 +297,6 @@
     <string name="subtitle_load_file">Load from file…</string>
     <string name="subtitle_unsupported">Unsupported subtitle format</string>
     <string name="subtitle_no_file_picker">No file picker available on this device</string>
+    <string name="pref_gesture_volume">Volume and brightness gestures</string>
+    <string name="pref_gesture_volume_desc">Swipe up/down on the right side for volume, on the left side for brightness</string>
 </resources>

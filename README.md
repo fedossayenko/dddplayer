@@ -55,7 +55,7 @@ To experience the 3D effect, you will need **anaglyph glasses** (e.g., Red-Cyan)
     *   Picture-in-Picture (optional auto PiP).
     *   Forced aspect ratio (4:3, 16:9, 1.85, 2.35, 2.39), fit / crop / stretch / custom zoom modes.
     *   Playback speed, audio and subtitle track selection with preferred languages.
-*   **TV-friendly UI**: remote-control navigation, configurable OK/Up buttons, on-screen clock, exit confirmation, pause dimming for OLED screens; touch gestures on phones (seek, volume, brightness, playlist swipe).
+*   **TV-friendly UI**: remote-control navigation, configurable OK/Up buttons, on-screen clock, exit confirmation, pause dimming for OLED screens; touch gestures on phones (seek, volume, brightness, playlist swipe, pinch to zoom and move the picture).
 *   **Customization**:
     *   Adjustable 3D depth (parallax).
     *   Swap Left/Right eyes.

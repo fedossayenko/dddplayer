@@ -309,6 +309,14 @@ class GlobalSettingsViewModel(application: Application) : AndroidViewModel(appli
         _okButtonAction.value = action
     }
 
+    private val _isVolumeBrightnessGestures = MutableLiveData(repository.isVolumeBrightnessGesturesEnabled())
+    val isVolumeBrightnessGestures: LiveData<Boolean> = _isVolumeBrightnessGestures
+
+    fun toggleVolumeBrightnessGestures(enabled: Boolean) {
+        repository.setVolumeBrightnessGesturesEnabled(enabled)
+        _isVolumeBrightnessGestures.value = enabled
+    }
+
     fun setHorizontalSwipeAction(action: Int) {
         repository.setHorizontalSwipeAction(action)
         _horizontalSwipeAction.value = action

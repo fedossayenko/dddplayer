@@ -261,6 +261,10 @@ class SettingsRepository private constructor(context: Context) {
     fun getOkButtonAction(): Int = prefs.getInt("ok_button_action", OK_ACTION_PAUSE_PANEL)
     fun setOkButtonAction(action: Int) = prefs.edit { putInt("ok_button_action", action) }
     // Горизонтальный свайп ( 0 = None, 1 = Seek, 2 = Playlist)
+    // Жесты громкости (справа) и яркости (слева) вертикальным свайпом
+    fun isVolumeBrightnessGesturesEnabled(): Boolean = prefs.getBoolean("gesture_volume_brightness", true)
+    fun setVolumeBrightnessGesturesEnabled(enabled: Boolean) = prefs.edit { putBoolean("gesture_volume_brightness", enabled) }
+
     fun getHorizontalSwipeAction(): Int = prefs.getInt("horizontal_swipe_action", 2)
     fun setHorizontalSwipeAction(action: Int) = prefs.edit { putInt("horizontal_swipe_action", action) }
 

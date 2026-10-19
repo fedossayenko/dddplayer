@@ -915,6 +915,15 @@
                     tools:text="@string/swipe_action_none" />
             </LinearLayout>
 
+            <!-- Жесты громкости и яркости -->
+            <LinearLayout android:id="@+id/item_gesture_volume" style="@style/SettingsItemContainer">
+                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:duplicateParentState="true">
+                    <TextView style="@style/SettingsItemTitle" android:text="@string/pref_gesture_volume" />
+                    <TextView style="@style/SettingsItemDesc" android:text="@string/pref_gesture_volume_desc" />
+                </LinearLayout>
+                <androidx.appcompat.widget.SwitchCompat android:id="@+id/switch_gesture_volume" android:layout_width="wrap_content" android:layout_height="wrap_content" android:clickable="false" android:focusable="false" />
+            </LinearLayout>
+
             <!-- Обновление -->
             <LinearLayout
                 android:id="@+id/item_update"

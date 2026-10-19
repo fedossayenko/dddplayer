@@ -17,6 +17,7 @@ import android.view.Gravity
 import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.MotionEvent
+import android.view.ScaleGestureDetector
 import android.view.Surface
 import android.view.View
 import android.view.ViewGroup
@@ -70,6 +71,7 @@ import top.rootu.dddplayer.viewmodel.SettingType
 import top.rootu.dddplayer.viewmodel.SettingsViewModel
 import top.rootu.dddplayer.viewmodel.UpdateViewModel
 import kotlin.math.abs
+import kotlin.math.roundToInt
 
 class PlayerFragment : Fragment(), OnSurfaceReadyListener {
 
@@ -114,6 +116,11 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
 
     // Переменные для горизонтального свайпа
     private var swipeAction = 0 // 0=None, 1=Seek, 2=Playlist
+    private var verticalGesturesEnabled = true // Жесты громкости и яркости
+
+    // Масштабирование двумя пальцами (только 2D)
+    private lateinit var scaleDetector: ScaleGestureDetector
+    private var pinchZoom = 100f
     private var bufferDisplayMode = SettingsRepository.BUFFER_DISPLAY_OFF
     private var isSwipeSeeking = false
     private var swipeSeekStartPosition = 0L
@@ -168,6 +175,7 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
         )
 
         swipeAction = settingsRepo.getHorizontalSwipeAction()
+        verticalGesturesEnabled = settingsRepo.isVolumeBrightnessGesturesEnabled()
 
         // === ИНИЦИАЛИЗАЦИЯ ЖЕСТОВ ===
         val displayMetrics = resources.displayMetrics
@@ -205,10 +213,45 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
 
                 // Завершение горизонтального свайпа
                 finishHorizontalSwipe()
-            }
+            },
+            isVerticalGesturesEnabled = { verticalGesturesEnabled }
         )
 
         gestureDetector = GestureDetector(requireContext(), touchHandler)
+
+        // Двумя пальцами: развести/свести - масштаб (режим "Масштаб" 100-200%), двигать - сдвиг картинки
+        scaleDetector = ScaleGestureDetector(requireContext(), object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
+            private var lastFocusX = 0f
+            private var lastFocusY = 0f
+
+            override fun onScaleBegin(detector: ScaleGestureDetector): Boolean {
+                // Только 2D видео и если не начат свайп одним пальцем
+                if (viewModel.inputType.value != StereoInputType.NONE || touchHandler.isScrolling) return false
+                pinchZoom = if (viewModel.resizeMode.value == ResizeMode.SCALE) {
+                    (viewModel.zoomScale.value ?: 100).toFloat()
+                } else {
+                    100f
+                }
+                lastFocusX = detector.focusX
+                lastFocusY = detector.focusY
+                return true
+            }
+
+            override fun onScale(detector: ScaleGestureDetector): Boolean {
+                pinchZoom = (pinchZoom * detector.scaleFactor).coerceIn(100f, 200f)
+                val percent = pinchZoom.roundToInt()
+                if (percent != viewModel.zoomScale.value || viewModel.resizeMode.value != ResizeMode.SCALE) {
+                    viewModel.setZoomScale(percent)
+                }
+                ui.panVideo(detector.focusX - lastFocusX, detector.focusY - lastFocusY)
+                lastFocusX = detector.focusX
+                lastFocusY = detector.focusY
+                return true
+            }
+        }).apply {
+            // Двойной тап с протяжкой не масштабирует: двойной тап - перемотка
+            isQuickScaleEnabled = false
+        }
 
         // Вешаем слушатель на корневой контейнер
         view.findViewById<View>(R.id.root_container).setOnTouchListener { _, event ->
@@ -218,6 +261,10 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
             if (event.action == MotionEvent.ACTION_UP) {
                 touchHandler.onActionUp()
             }
+            if (event.actionMasked == MotionEvent.ACTION_POINTER_DOWN && !touchHandler.isScrolling) {
+                touchHandler.onMultiTouch()
+            }
+            scaleDetector.onTouchEvent(event)
             gestureDetector.onTouchEvent(event)
             true // Поглощаем событие
         }
@@ -1563,6 +1610,7 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
         // Обновляем настройку свайпа при возврате на экран
         val settingsRepo = SettingsRepository.getInstance(requireContext().applicationContext)
         swipeAction = settingsRepo.getHorizontalSwipeAction()
+        verticalGesturesEnabled = settingsRepo.isVolumeBrightnessGesturesEnabled()
 
         // Обновляем видимость часов (на случай, если изменили в настройках)
         ui.updateClockTransparency(settingsRepo.getClockTransparency())

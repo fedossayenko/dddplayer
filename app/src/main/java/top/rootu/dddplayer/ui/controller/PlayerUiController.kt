@@ -615,6 +615,17 @@ class PlayerUiController(private val rootView: View) {
             aspectRatioFrame.scaleX = 1.0f
             aspectRatioFrame.scaleY = 1.0f
         }
+        // Сдвиг картинки возможен только в пределах увеличения (без увеличения - сброс)
+        panVideo(0f, 0f)
+    }
+
+    /** Сдвигает увеличенную картинку (жест двумя пальцами), не выходя за края увеличения. */
+    fun panVideo(dx: Float, dy: Float) {
+        val scale = aspectRatioFrame.scaleX
+        val maxX = (aspectRatioFrame.width * (scale - 1f) / 2f).coerceAtLeast(0f)
+        val maxY = (aspectRatioFrame.height * (scale - 1f) / 2f).coerceAtLeast(0f)
+        aspectRatioFrame.translationX = (aspectRatioFrame.translationX + dx).coerceIn(-maxX, maxX)
+        aspectRatioFrame.translationY = (aspectRatioFrame.translationY + dy).coerceIn(-maxY, maxY)
     }
 
     fun showControls(focusOnSeekBar: Boolean = false) {

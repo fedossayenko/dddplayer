@@ -265,4 +265,6 @@
     <string name="subtitle_load_file">Загрузіць з файла…</string>
     <string name="subtitle_unsupported">Непадтрымліваемы фармат субтытраў</string>
     <string name="subtitle_no_file_picker">На прыладзе няма сістэмнага выбару файлаў</string>
+    <string name="pref_gesture_volume">Жэсты гучнасці і яркасці</string>
+    <string name="pref_gesture_volume_desc">Свайп уверх/уніз справа мяняе гучнасць, злева — яркасць</string>
 </resources>

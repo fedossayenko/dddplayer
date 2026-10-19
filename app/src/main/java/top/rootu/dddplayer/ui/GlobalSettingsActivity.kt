@@ -89,6 +89,8 @@ class GlobalSettingsActivity : AppCompatActivity() {
     private lateinit var textResumeActionValue: TextView
     private lateinit var itemExternalPosition: LinearLayout
     private lateinit var textExternalPositionValue: TextView
+    private lateinit var itemGestureVolume: LinearLayout
+    private lateinit var switchGestureVolume: SwitchCompat
     private lateinit var itemSwipeAction: LinearLayout
     private lateinit var textSwipeActionValue: TextView
     private lateinit var itemUpdate: LinearLayout
@@ -210,6 +212,8 @@ class GlobalSettingsActivity : AppCompatActivity() {
         textResumeActionValue = findViewById(R.id.text_resume_mode_value)
         itemExternalPosition = findViewById(R.id.item_external_position)
         textExternalPositionValue = findViewById(R.id.text_external_position_value)
+        itemGestureVolume = findViewById(R.id.item_gesture_volume)
+        switchGestureVolume = findViewById(R.id.switch_gesture_volume)
         itemSwipeAction = findViewById(R.id.item_swipe_action)
         textSwipeActionValue = findViewById(R.id.text_swipe_action_value)
         itemUpdate = findViewById(R.id.item_update)
@@ -359,6 +363,10 @@ class GlobalSettingsActivity : AppCompatActivity() {
                 settingsViewModel.setOkButtonAction(it)
             }
         }
+        itemGestureVolume.setOnClickListener {
+            settingsViewModel.toggleVolumeBrightnessGestures(!switchGestureVolume.isChecked)
+        }
+
         itemSwipeAction.setOnClickListener {
             val options = listOf(getString(R.string.swipe_action_none), getString(R.string.swipe_action_seek), getString(R.string.swipe_action_playlist))
             showSingleChoiceDialog(getString(R.string.pref_swipe_horizontal), options, settingsViewModel.horizontalSwipeAction.value ?: 2) {
@@ -523,6 +531,7 @@ class GlobalSettingsActivity : AppCompatActivity() {
             }
         }
 
+        settingsViewModel.isVolumeBrightnessGestures.observe(this) { switchGestureVolume.isChecked = it }
         settingsViewModel.horizontalSwipeAction.observe(this) { action ->
             textSwipeActionValue.text = when (action) {
                 1 -> getString(R.string.swipe_action_seek)
