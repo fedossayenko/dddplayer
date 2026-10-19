@@ -23,6 +23,8 @@
     <!-- Playback Controls -->
     <string name="playback_speed">Speed</string>
     <string name="playback_zoom">Zoom</string>
+    <string name="aspect_ratio">Aspect ratio</string>
+    <string name="aspect_ratio_auto">Original</string>
     <string name="playback_zoom_percent">Zoom: %d%%</string>
     <string name="playback_zoom_scale">Scale %d%%</string>
     <string name="picture_in_picture">Picture-in-picture</string>
@@ -106,6 +108,8 @@
     <string name="msg_playlist_empty">Playlist is empty</string>
     <string name="msg_auto_detect">Auto-detect: %s</string>
     <string name="press_back_exit">Press BACK to exit</string>
+    <string name="pref_confirm_exit">Confirm exit</string>
+    <string name="pref_confirm_exit_desc">Press BACK twice to close the player</string>
 
     <!-- Global Settings -->
     <string name="pref_title">Settings</string>

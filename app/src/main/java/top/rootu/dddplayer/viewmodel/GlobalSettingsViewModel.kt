@@ -88,6 +88,9 @@ class GlobalSettingsViewModel(application: Application) : AndroidViewModel(appli
     private val _isShowPlaylistIndexEnabled = MutableLiveData(repository.isShowPlaylistIndexEnabled())
     val isShowPlaylistIndexEnabled: LiveData<Boolean> = _isShowPlaylistIndexEnabled
 
+    private val _isConfirmExitEnabled = MutableLiveData(repository.isConfirmExitEnabled())
+    val isConfirmExitEnabled: LiveData<Boolean> = _isConfirmExitEnabled
+
     private val _clockTransparency = MutableLiveData(repository.getClockTransparency())
     val clockTransparency: LiveData<Int> = _clockTransparency
 
@@ -155,6 +158,11 @@ class GlobalSettingsViewModel(application: Application) : AndroidViewModel(appli
     fun toggleRememberZoom(enabled: Boolean) {
         repository.setRememberZoomEnabled(enabled)
         _isRememberZoomEnabled.value = enabled
+    }
+
+    fun toggleConfirmExit(enabled: Boolean) {
+        repository.setConfirmExitEnabled(enabled)
+        _isConfirmExitEnabled.value = enabled
     }
 
     fun toggleShowPlaylistIndex(enabled: Boolean) {

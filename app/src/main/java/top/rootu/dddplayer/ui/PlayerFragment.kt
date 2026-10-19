@@ -9,6 +9,7 @@ import android.opengl.GLSurfaceView
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.view.ContextThemeWrapper
 import android.view.GestureDetector
 import android.view.Gravity
@@ -40,6 +41,7 @@ import top.rootu.dddplayer.R
 import top.rootu.dddplayer.data.SettingsRepository
 import top.rootu.dddplayer.logic.AnaglyphLogic
 import top.rootu.dddplayer.logic.TrackLogic
+import top.rootu.dddplayer.model.AspectRatioMode
 import top.rootu.dddplayer.model.MenuItem
 import top.rootu.dddplayer.model.PlaybackSpeed
 import top.rootu.dddplayer.model.ResizeMode
@@ -68,6 +70,9 @@ import kotlin.math.abs
 class PlayerFragment : Fragment(), OnSurfaceReadyListener {
 
     private var dimJob: Job? = null
+
+    // Время первого нажатия "Назад" для подтверждения выхода
+    private var lastExitBackPressMs = 0L
     private var zoomDialog: Dialog? = null
     private var inPictureInPicture = false
     private val viewModel: PlayerViewModel by activityViewModels()
@@ -617,6 +622,7 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
                 "subtitles" -> showSubtitlesMenu()
                 "speed" -> showPlaybackSpeedMenu()
                 "resize" -> showResizeMenu()
+                "aspect" -> showAspectRatioMenu()
                 "quick_settings" -> {
                     sideMenuDialog?.dismiss()
                     viewModel.prepareSettingsPanel()
@@ -678,6 +684,21 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
                 val speedValue = selected.id.toFloatOrNull()
                 if (speedValue != null) {
                     viewModel.setPlaybackSpeed(PlaybackSpeed.fromValue(speedValue))
+                }
+                sideMenuDialog?.dismiss()
+            }
+        }
+    }
+
+    private fun showAspectRatioMenu() {
+        val menuItems = viewModel.getAspectRatioMenuItems(requireContext())
+
+        showSideMenu(getString(R.string.aspect_ratio), menuItems) { selected ->
+            if (selected == null) {
+                showMainMenu("aspect")
+            } else {
+                AspectRatioMode.entries.firstOrNull { it.name == selected.id }?.let {
+                    viewModel.setAspectRatioMode(it)
                 }
                 sideMenuDialog?.dismiss()
             }
@@ -1478,6 +1499,12 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
         popup.show()
     }
 
+    private fun shouldAskExitConfirmation(): Boolean {
+        val settingsRepo = SettingsRepository.getInstance(requireContext().applicationContext)
+        if (!settingsRepo.isConfirmExitEnabled()) return false
+        return SystemClock.elapsedRealtime() - lastExitBackPressMs > EXIT_CONFIRM_WINDOW_MS
+    }
+
     private fun setupBackPressedHandler() {
         requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
@@ -1486,6 +1513,10 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
                     viewModel.restoreSettings()
                 } else if (ui.controlsView.isVisible) {
                     ui.hideControls()
+                } else if (shouldAskExitConfirmation()) {
+                    // Первое нажатие только предупреждает, выход - повторным нажатием
+                    lastExitBackPressMs = SystemClock.elapsedRealtime()
+                    Toast.makeText(requireContext().applicationContext, R.string.press_back_exit, Toast.LENGTH_SHORT).show()
                 } else {
                     isEnabled = false
                     requireActivity().onBackPressedDispatcher.onBackPressed()
@@ -1589,6 +1620,8 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
     }
 
     companion object {
+        private const val EXIT_CONFIRM_WINDOW_MS = 2000L
+
         fun newInstance() = PlayerFragment()
     }
 }

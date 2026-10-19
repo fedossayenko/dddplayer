@@ -11,6 +11,18 @@ enum class ResizeMode {
 }
 
 /**
+ * Соотношение сторон кадра. AUTO - как в видео, остальные - принудительно (для 2D).
+ */
+enum class AspectRatioMode(val ratio: Float?, val label: String?) {
+    AUTO(null, null),
+    R4_3(4f / 3f, "4:3"),
+    R16_9(16f / 9f, "16:9"),
+    R1_85(1.85f, "1.85:1"),
+    R2_35(2.35f, "2.35:1"),
+    R2_39(2.39f, "2.39:1")
+}
+
+/**
  * Доступные скорости воспроизведения.
  */
 enum class PlaybackSpeed(val value: Float, val label: String) {

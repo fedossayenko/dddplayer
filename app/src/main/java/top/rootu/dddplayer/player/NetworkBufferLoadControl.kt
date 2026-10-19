@@ -12,10 +12,14 @@ import androidx.media3.exoplayer.upstream.DefaultAllocator
  * LoadControl с буфером, заданным пользователем в мегабайтах, только для сетевого видео.
  *
  * Локальные файлы (file://, content:// и т.п.) и режим "Авто" (targetBufferBytes == C.LENGTH_UNSET)
- * используют прежние параметры буферизации плеера.
+ * используют прежние параметры буферизации плеера по времени.
  *
  * При заданном объеме для сети лимит по времени снимается: плеер грузит данные,
  * пока не заполнит указанный объем памяти.
+ *
+ * В любом режиме объем буфера ограничен доступной памятью приложения: буфер хранится в куче Java,
+ * и на ТВ с маленькой кучей (192 МБ) высокобитрейтное 4K видео иначе падало с OutOfMemoryError
+ * (минимальные 15 с буфера при ~100 Мбит/с - это ~190 МБ).
  */
 class NetworkBufferLoadControl private constructor(
     val bufferAllocator: DefaultAllocator,
@@ -35,7 +39,8 @@ class NetworkBufferLoadControl private constructor(
     BUFFER_FOR_PLAYBACK_AFTER_REBUFFER_MS,
     C.LENGTH_UNSET,
     streamingPrioritizeTime,
-    true,
+    // Время не приоритетнее объема: иначе буфер растет до 15 с, даже если не помещается в память
+    false,
     DefaultLoadControl.DEFAULT_BACK_BUFFER_DURATION_MS,
     DefaultLoadControl.DEFAULT_RETAIN_BACK_BUFFER_FROM_KEYFRAME,
     emptyMap()
@@ -47,10 +52,12 @@ class NetworkBufferLoadControl private constructor(
         parameters: LoadControl.Parameters,
         trackSelectionArray: Array<out ExoTrackSelection?>
     ): Int {
-        if (networkTargetBufferBytes != C.LENGTH_UNSET && !isLocalPlayback(parameters)) {
-            return networkTargetBufferBytes
+        val target = if (networkTargetBufferBytes != C.LENGTH_UNSET && !isLocalPlayback(parameters)) {
+            networkTargetBufferBytes
+        } else {
+            super.calculateTargetBufferBytes(parameters, trackSelectionArray)
         }
-        return super.calculateTargetBufferBytes(parameters, trackSelectionArray)
+        return target.coerceAtMost(maxBufferBytesForHeap())
     }
 
     // Повторяет логику DefaultLoadControl.isLocalPlayback (она private)
@@ -73,11 +80,27 @@ class NetworkBufferLoadControl private constructor(
         // При заданном объеме буфера лимит по времени фактически снимается (~13 часов)
         private const val UNLIMITED_BUFFER_MS = 50_000_000
 
+        // Память, которую оставляем приложению (UI, постеры, декодеры субтитров и т.п.)
+        const val HEAP_RESERVE_MB = 96
+        private const val MIN_BUFFER_BYTES = 16 * 1024 * 1024
+
+        /** Максимальный объем буфера, который помещается в кучу приложения. */
+        fun maxBufferBytesForHeap(): Int {
+            val maxHeap = Runtime.getRuntime().maxMemory()
+            val reserve = HEAP_RESERVE_MB * 1024L * 1024L
+            // Не больше 60% кучи и не меньше 16 МБ
+            val budget = minOf(maxHeap - reserve, maxHeap * 6 / 10)
+            return budget.coerceIn(MIN_BUFFER_BYTES.toLong(), Int.MAX_VALUE.toLong()).toInt()
+        }
+
         /**
          * @param networkBufferMB объем буфера для сетевого видео в МБ, или -1 для режима "Авто".
          */
         fun create(networkBufferMB: Int): NetworkBufferLoadControl {
             val allocator = DefaultAllocator(true, C.DEFAULT_BUFFER_SEGMENT_SIZE)
+            // Приоритет времени над объемом выключен в обоих режимах: целевой объем ограничен
+            // памятью (maxBufferBytesForHeap), и для обычных битрейтов 15-50 с в него помещаются,
+            // так что поведение не меняется, а для 4K ремуксов буфер больше не переполняет кучу
             return if (networkBufferMB > 0) {
                 NetworkBufferLoadControl(
                     allocator,
@@ -92,7 +115,7 @@ class NetworkBufferLoadControl private constructor(
                     C.LENGTH_UNSET,
                     MIN_BUFFER_MS,
                     MAX_BUFFER_MS,
-                    streamingPrioritizeTime = true
+                    streamingPrioritizeTime = false
                 )
             }
         }

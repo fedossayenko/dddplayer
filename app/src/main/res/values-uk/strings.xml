@@ -17,6 +17,8 @@
     <!-- Керування відтворенням -->
     <string name="playback_speed">Швидкість</string>
     <string name="playback_zoom">Масштаб</string>
+    <string name="aspect_ratio">Співвідношення сторін</string>
+    <string name="aspect_ratio_auto">Як у відео</string>
     <string name="playback_zoom_scale">Збільшення %d%%</string>
     <string name="picture_in_picture">Картинка в картинці</string>
     <string name="playback_zoom_percent">Масштаб: %d%%</string>
@@ -92,6 +94,8 @@
     <string name="msg_playlist_empty">Плейлист порожній</string>
     <string name="msg_auto_detect">Автовизначення: %s</string>
     <string name="press_back_exit">Натисніть НАЗАД для виходу</string>
+    <string name="pref_confirm_exit">Підтверджувати вихід</string>
+    <string name="pref_confirm_exit_desc">Закривати плеєр повторним натисканням НАЗАД</string>
 
     <!-- Глобальні налаштування -->
     <string name="pref_title">Налаштування</string>
