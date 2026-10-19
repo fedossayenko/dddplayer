@@ -77,11 +77,30 @@ class PlayerInputHandler(
         // 2. Навигация в плеере
         if (ui.controlsView.isVisible) onResetHideTimer()
 
+        // Эфирный режим: OK - плейлист, Влево/Вправо - каналы, Вверх - инфопанель
+        val isLiveMode = viewModel.isOverallLiveMode()
+        val isOkKey = event.keyCode == KeyEvent.KEYCODE_DPAD_CENTER || event.keyCode == KeyEvent.KEYCODE_ENTER
+        // OK во время выбора канала - переключаем сразу
+        if (isOkKey && viewModel.confirmZap()) return true
+        if (event.keyCode != KeyEvent.KEYCODE_DPAD_LEFT && event.keyCode != KeyEvent.KEYCODE_DPAD_RIGHT) {
+            viewModel.stopZap()
+        }
+
         when (event.keyCode) {
             KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> {
+                if (!ui.controlsView.isVisible && isLiveMode) {
+                    onShowPlaylist()
+                    return true
+                }
                 if (!ui.controlsView.isVisible) {
-                    viewModel.togglePlayPause()
-                    onShowControls()
+                    when (repo.getOkButtonAction()) {
+                        SettingsRepository.OK_ACTION_PAUSE -> viewModel.togglePlayPause()
+                        SettingsRepository.OK_ACTION_PANEL -> onShowControls()
+                        else -> { // OK_ACTION_PAUSE_PANEL (по умолчанию)
+                            viewModel.togglePlayPause()
+                            onShowControls()
+                        }
+                    }
                     return true
                 }
             }
@@ -107,19 +126,32 @@ class PlayerInputHandler(
                     onHideControls()
                     return true
                 } else if (!ui.controlsView.isVisible) {
-                    when (repo.getUpButtonAction()) {
-                        1 -> { // OSD
+                    val action = if (isLiveMode) SettingsRepository.UP_ACTION_INFO else repo.getUpButtonAction()
+                    when (action) {
+                        SettingsRepository.UP_ACTION_OSD -> {
                             viewModel.prepareSettingsPanel()
                             settingsViewModel.openPanel(viewModel.availableSettings.value ?: emptyList())
                         }
-                        2 -> onShowMainMenu() // Боковое меню
-                        // 0 -> Ничего
+                        SettingsRepository.UP_ACTION_MENU -> onShowMainMenu() // Боковое меню
+                        SettingsRepository.UP_ACTION_INFO -> {
+                            if (ui.topInfoPanel.isVisible) {
+                                // Если панель уже есть, то показываем боковое меню
+                                onShowMainMenu()
+                            } else {
+                                // Показать только инфопанель
+                                ui.showInfoPanelOnly()
+                            }
+                        }
                     }
                     return true
                 }
             }
 
             KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                if (!ui.controlsView.isVisible && isLiveMode) {
+                    viewModel.zapChannel(if (event.keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) 1 else -1)
+                    return true
+                }
                 if (!ui.controlsView.isVisible) {
                     // Показываем контролы и фокусируемся на сикбаре
                     ui.showControls(focusOnSeekBar = true)

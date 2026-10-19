@@ -2,12 +2,23 @@ package top.rootu.dddplayer.ui
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.app.PendingIntent
+import android.app.PictureInPictureParams
+import android.app.RemoteAction
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
+import android.content.res.Configuration
+import android.graphics.Rect
+import android.graphics.drawable.Icon
 import android.os.Build
 import android.os.Bundle
+import android.util.Rational
 import android.view.KeyEvent
+import android.view.View
 import android.view.WindowManager
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
@@ -18,11 +29,15 @@ import androidx.core.net.toUri
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import top.rootu.dddplayer.BuildConfig
 import top.rootu.dddplayer.R
+import top.rootu.dddplayer.data.SettingsRepository
 import top.rootu.dddplayer.utils.IntentUtils
 import top.rootu.dddplayer.viewmodel.PlayerViewModel
+
+private const val ACTION_PIP_PLAY_PAUSE = "top.rootu.dddplayer.action.PIP_PLAY_PAUSE"
 
 @UnstableApi
 class PlayerActivity : AppCompatActivity() {
@@ -33,6 +48,136 @@ class PlayerActivity : AppCompatActivity() {
     private var isCompleted = false
     // Сохраняем Intent, чтобы обработать его после получения разрешения
     private var pendingIntent: Intent? = null
+    private var pipPlayer: Player? = null
+    private val pipListener = object : Player.Listener {
+        override fun onEvents(player: Player, events: Player.Events) {
+            // Параметры PiP зависят только от состояния воспроизведения и размера видео
+            if (events.containsAny(
+                    Player.EVENT_PLAY_WHEN_READY_CHANGED,
+                    Player.EVENT_PLAYBACK_STATE_CHANGED,
+                    Player.EVENT_VIDEO_SIZE_CHANGED,
+                    Player.EVENT_PLAYER_ERROR,
+                    Player.EVENT_MEDIA_ITEM_TRANSITION
+                )
+            ) {
+                updatePictureInPictureParams()
+            }
+        }
+    }
+
+    // Последняя область видео, переданная в PiP (чтобы не обновлять параметры на каждый layout)
+    private val lastPipSourceRect = Rect()
+
+    private var pipReceiverRegistered = false
+
+    // Кнопка "Пауза/Воспроизведение" в окне PiP
+    private val pipControlReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            if (intent.action == ACTION_PIP_PLAY_PAUSE) viewModel.togglePlayPause()
+        }
+    }
+
+    val supportsPictureInPicture: Boolean
+        get() = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
+            packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE)
+
+    private fun canEnterPictureInPicture(): Boolean {
+        val player = viewModel.player ?: return false
+        return supportsPictureInPicture && !isFinishing && player.currentMediaItem != null &&
+            player.playerError == null && player.playbackState != Player.STATE_IDLE &&
+            player.playbackState != Player.STATE_ENDED
+    }
+
+    @androidx.annotation.RequiresApi(Build.VERSION_CODES.O)
+    private fun buildPictureInPictureParams(): PictureInPictureParams {
+        val stereoView = findViewById<View>(R.id.gl_surface_view)
+        val frame = if (stereoView?.visibility == View.VISIBLE) stereoView
+            else findViewById<View>(R.id.aspect_ratio_frame)
+        val rect = Rect()
+        val builder = PictureInPictureParams.Builder()
+        if (frame != null && frame.getGlobalVisibleRect(rect) && rect.width() > 0 && rect.height() > 0) {
+            val ratio = (rect.width().toFloat() / rect.height()).coerceIn(0.42f, 2.39f)
+            builder.setAspectRatio(Rational((ratio * 1000).toInt(), 1000))
+            builder.setSourceRectHint(rect)
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            builder.setAutoEnterEnabled(shouldAutoEnterPictureInPicture())
+        }
+        builder.setActions(buildPictureInPictureActions())
+        return builder.build()
+    }
+
+    @androidx.annotation.RequiresApi(Build.VERSION_CODES.O)
+    private fun buildPictureInPictureActions(): List<RemoteAction> {
+        val isPlaying = viewModel.player?.playWhenReady == true
+        val title = getString(if (isPlaying) R.string.pip_action_pause else R.string.pip_action_play)
+        val icon = Icon.createWithResource(this, if (isPlaying) R.drawable.ic_pause else R.drawable.ic_play_arrow)
+        val intent = PendingIntent.getBroadcast(
+            this,
+            0,
+            Intent(ACTION_PIP_PLAY_PAUSE).setPackage(packageName),
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
+        return listOf(RemoteAction(icon, title, title, intent))
+    }
+
+    private fun updatePictureInPictureParams() {
+        if (!supportsPictureInPicture || Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
+        if (isInPictureInPictureMode) {
+            // В окне PiP обновляем только кнопки (параметры объединяются с прежними)
+            setPictureInPictureParams(
+                PictureInPictureParams.Builder().setActions(buildPictureInPictureActions()).build()
+            )
+        } else {
+            setPictureInPictureParams(buildPictureInPictureParams())
+        }
+    }
+
+    private fun onVideoLayoutChanged() {
+        val stereoView = findViewById<View>(R.id.gl_surface_view)
+        val frame = if (stereoView?.visibility == View.VISIBLE) stereoView
+            else findViewById<View>(R.id.aspect_ratio_frame)
+        val rect = Rect()
+        if (frame == null || !frame.getGlobalVisibleRect(rect) || rect == lastPipSourceRect) return
+        lastPipSourceRect.set(rect)
+        updatePictureInPictureParams()
+    }
+
+    fun enterPlayerPictureInPicture(showError: Boolean = false) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O || isInPictureInPictureMode) return
+        val entered = if (canEnterPictureInPicture()) {
+            try {
+                enterPictureInPictureMode(buildPictureInPictureParams())
+            } catch (_: IllegalStateException) {
+                false
+            }
+        } else false
+        if (!entered && showError) {
+            Toast.makeText(applicationContext, R.string.pip_unavailable, Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    override fun onUserLeaveHint() {
+        super.onUserLeaveHint()
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S && shouldAutoEnterPictureInPicture()) {
+            enterPlayerPictureInPicture()
+        }
+    }
+
+    private fun shouldAutoEnterPictureInPicture(): Boolean =
+        SettingsRepository.getInstance(applicationContext).isAutoPipEnabled() &&
+            canEnterPictureInPicture() && viewModel.player?.playWhenReady == true
+
+    override fun onResume() {
+        super.onResume()
+        updatePictureInPictureParams()
+    }
+
+    override fun onPictureInPictureModeChanged(inPip: Boolean, newConfig: Configuration) {
+        super.onPictureInPictureModeChanged(inPip, newConfig)
+        playerFragment?.setPictureInPictureMode(inPip)
+        if (!inPip) updatePictureInPictureParams()
+    }
 
     // Регистрация коллбека для запроса разрешений
     private val requestPermissionLauncher = registerForActivityResult(
@@ -54,9 +199,12 @@ class PlayerActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        val settingsRepo = SettingsRepository.getInstance(this)
+        val startupUri = settingsRepo.getStartupPlaylistUri()
+
         // Проверяем, как запущено приложение
-        if (!BuildConfig.DEBUG && isLaunchedFromLauncher(intent)) {
-            // Запуск из лаунчера -> Идем в настройки
+        if (isLaunchedFromLauncher(intent) && startupUri.isNullOrEmpty() && !BuildConfig.DEBUG) {
+            // Запуск из лаунчера, плейлист НЕ задан, и это РЕЛИЗ -> Идем в настройки
             val settingsIntent = Intent(this, GlobalSettingsActivity::class.java)
             startActivity(settingsIntent)
             finish()
@@ -106,6 +254,36 @@ class PlayerActivity : AppCompatActivity() {
             playerFragment =
                 supportFragmentManager.findFragmentById(R.id.container) as? PlayerFragment
         }
+        viewModel.playerRecreatedEvent.observe(this) { player ->
+            pipPlayer?.removeListener(pipListener)
+            pipPlayer = player
+            player.addListener(pipListener)
+            updatePictureInPictureParams()
+        }
+        pipPlayer = viewModel.player
+        pipPlayer?.addListener(pipListener)
+        if (supportsPictureInPicture) {
+            ContextCompat.registerReceiver(
+                this, pipControlReceiver, IntentFilter(ACTION_PIP_PLAY_PAUSE), ContextCompat.RECEIVER_NOT_EXPORTED
+            )
+            pipReceiverRegistered = true
+        }
+        listOf(R.id.aspect_ratio_frame, R.id.gl_surface_view).forEach { id ->
+            findViewById<View>(id)?.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
+                onVideoLayoutChanged()
+            }
+        }
+        updatePictureInPictureParams()
+    }
+
+    override fun onDestroy() {
+        if (pipReceiverRegistered) {
+            unregisterReceiver(pipControlReceiver)
+            pipReceiverRegistered = false
+        }
+        pipPlayer?.removeListener(pipListener)
+        pipPlayer = null
+        super.onDestroy()
     }
 
     private fun isLaunchedFromLauncher(intent: Intent): Boolean {
@@ -163,21 +341,29 @@ class PlayerActivity : AppCompatActivity() {
         shouldReturnResult = intent.getBooleanExtra("return_result", false)
 
         val (playlist, startIndex) = IntentUtils.parseIntent(this, intent)
-        when {
-            playlist.isNotEmpty() -> {
-                viewModel.loadPlaylist(playlist, startIndex)
-            }
-            BuildConfig.DEBUG -> {
+
+        if (playlist.isNotEmpty()) {
+            viewModel.loadMedia(playlist, startIndex)
+        } else {
+            // Если интент пустой, проверяем настройку стартового плейлиста
+            val settingsRepo = SettingsRepository.getInstance(this)
+            val startupUri = settingsRepo.getStartupPlaylistUri()
+
+            if (!startupUri.isNullOrEmpty()) {
+                // Ссылка на плейлист может быть без расширения .m3u (например, get.php?...)
+                viewModel.loadMedia(
+                    listOf(top.rootu.dddplayer.model.MediaItem(startupUri.toUri())),
+                    0,
+                    forceM3uProbe = true
+                )
+            } else if (BuildConfig.DEBUG) {
                 // Дефолтное видео для теста (только в DEBUG)
                 val defaultUri = "http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
 //                val defaultUri = "http://devstreaming-cdn.apple.com/videos/streaming/examples/img_bipbop_adv_example_fmp4/master.m3u8"
-                viewModel.loadPlaylist(
+                viewModel.loadMedia(
                     listOf(top.rootu.dddplayer.model.MediaItem(defaultUri.toUri())),
                     0
                 )
-            }
-            else -> {
-                // В релизе, если нет данных, ничего не делаем.
             }
         }
     }
@@ -204,6 +390,9 @@ class PlayerActivity : AppCompatActivity() {
      */
     @SuppressLint("RestrictedApi")
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && isInPictureInPictureMode) {
+            return super.dispatchKeyEvent(event)
+        }
         // Передаем событие во фрагмент для обработки.
         // Если фрагмент его обработал (вернул true), то мы прекращаем дальнейшее распространение.
         if (playerFragment?.handleKeyEvent(event) == true) {

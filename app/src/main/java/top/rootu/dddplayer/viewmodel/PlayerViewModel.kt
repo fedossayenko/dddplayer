@@ -47,7 +47,7 @@ import androidx.media3.common.MediaItem as Media3MediaItem
 
 // --- Enums & Data Classes ---
 enum class SettingType {
-    VIDEO_TYPE, OUTPUT_FORMAT, GLASSES_TYPE, FILTER_MODE,
+    VIDEO_TYPE, OUTPUT_FORMAT, GLASSES_TYPE, RENDER_API, FILTER_MODE,
     CUSTOM_HUE_L, CUSTOM_HUE_R, CUSTOM_LEAK_L, CUSTOM_LEAK_R, CUSTOM_SPACE,
     SWAP_EYES, DEPTH_3D, SCREEN_SEPARATION, VR_DISTORTION, VR_ZOOM, AUDIO_TRACK, SUBTITLES
 }
@@ -73,11 +73,38 @@ data class VideoQualityOption(
     val isAuto: Boolean = false
 )
 
+// Обертка для одноразовых событий LiveData
+open class Event<out T>(private val content: T) {
+    var hasBeenHandled = false
+        private set
+
+    fun getContentIfNotHandled(): T? {
+        return if (hasBeenHandled) {
+            null
+        } else {
+            hasBeenHandled = true
+            content
+        }
+    }
+}
+
+// Состояние плейлиста для UI (фильтр по группе M3U)
+data class PlaylistUiState(
+    val items: List<MediaItem> = emptyList(),
+    val groupName: String? = null, // null = все группы
+    val availableGroups: List<String> = emptyList() // Пусто, если в плейлисте нет групп
+)
+
 @UnstableApi
 class PlayerViewModel(application: Application) : AndroidViewModel(application) {
 
     private var ioRetryCount = 0
     private val MAX_IO_RETRIES = 3
+
+    // true, пока плейлист перезагружается для восстановления после ошибки.
+    // В этот момент onMediaItemTransition приходит с тем же видео, и сбрасывать
+    // счетчик повторов и настройки видео нельзя.
+    private var isRecoveringFromError = false
 
     private val repository = SettingsRepository.getInstance(application)
 
@@ -111,6 +138,25 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     // Playlist State
     private val _currentPlaylist = MutableLiveData<List<MediaItem>>()
     val currentPlaylist: LiveData<List<MediaItem>> = _currentPlaylist
+    private val _playlistUiState = MutableLiveData(PlaylistUiState())
+    val playlistUiState: LiveData<PlaylistUiState> = _playlistUiState
+
+    // Плейлист загружен из M3U файла/ссылки
+    private val _isM3uPlaylist = MutableLiveData(false)
+    val isM3uPlaylist: LiveData<Boolean> = _isM3uPlaylist
+    private var loadMediaJob: kotlinx.coroutines.Job? = null
+
+    // В текущем плейлисте уже играл live-поток (условие эфирного режима)
+    private val _isSessionLive = MutableLiveData(false)
+    val isSessionLive: LiveData<Boolean> = _isSessionLive
+
+    // Переключение каналов с задержкой: канал, который будет включен
+    private var zapJob: kotlinx.coroutines.Job? = null
+    private val _zapPreviewItem = MutableLiveData<MediaItem?>(null)
+    val zapPreviewItem: LiveData<MediaItem?> = _zapPreviewItem
+
+    private val _showInfoPanelEvent = MutableLiveData<Event<Unit>>()
+    val showInfoPanelEvent: LiveData<Event<Unit>> = _showInfoPanelEvent
     private val _currentWindowIndex = MutableLiveData(0)
     val currentWindowIndex: LiveData<Int> = _currentWindowIndex
     private val _playlistSize = MutableLiveData(0)
@@ -131,6 +177,9 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     val currentQualityName: LiveData<String> = _currentQualityName
 
     // Renderer Settings
+    private var deviceSupportsEs3 = false
+    private val _renderApiMode = MutableLiveData(repository.getRenderApiMode())
+    val renderApiMode: LiveData<Int> = _renderApiMode
     private val _inputType = MutableLiveData(StereoInputType.NONE)
     val inputType: LiveData<StereoInputType> = _inputType
     private val _outputMode = MutableLiveData(StereoOutputMode.ANAGLYPH)
@@ -198,6 +247,10 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     private var currentUri: String? = null
     private var lastVideoSize: VideoSize? = null
     var isUserInteracting = false
+
+    // Состояние воспроизведения при уходе с экрана (onPause), чтобы в onResume
+    // не запускать видео, которое пользователь сам поставил на паузу
+    var resumePlayWhenReady = true
     private val _playbackEnded = MutableLiveData<Boolean>()
     val playbackEnded: LiveData<Boolean> = _playbackEnded
 
@@ -233,10 +286,13 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                 // Логика расчета процента буферизации вперед
                 // (ExoPlayer.bufferedPercentage не подходит,
                 // т.к. он показывает % буфера на прогрессе, а не заполненность буфера)
-                val bufferedDuration = p.bufferedPosition - p.currentPosition
-                val targetBuffer = if (bufferedDuration > 6_000L) 50_000L else 5_000L
-                val maxPercent = if (targetBuffer == 5_000L) 99 else 100
-                val percent = ((bufferedDuration * 101) / targetBuffer).toInt().coerceIn(0, maxPercent)
+                // Если для сетевого видео задан размер буфера в МБ - считаем по объему
+                val percent = playerManager.getNetworkBufferFillPercent() ?: run {
+                    val bufferedDuration = p.bufferedPosition - p.currentPosition
+                    val targetBuffer = if (bufferedDuration > 6_000L) 50_000L else 5_000L
+                    val maxPercent = if (targetBuffer == 5_000L) 99 else 100
+                    ((bufferedDuration * 101) / targetBuffer).toInt().coerceIn(0, maxPercent)
+                }
                 _bufferedPercentage.value = percent
 
                 // Если AFR еще не сработал, проверяем формат
@@ -267,7 +323,9 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             }
             if (playbackState == Player.STATE_ENDED) _playbackEnded.value = true
             updateProgressUpdaterState()
-            _isLive.value = player?.isCurrentMediaItemLive ?: false
+            val isCurrentItemLive = player?.isCurrentMediaItemLive ?: false
+            _isLive.value = isCurrentItemLive
+            if (isCurrentItemLive) _isSessionLive.value = true
         }
 
         override fun onPlayerError(error: PlaybackException) {
@@ -279,6 +337,15 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         }
 
         override fun onMediaItemTransition(mediaItem: Media3MediaItem?, reason: Int) {
+            if (isRecoveringFromError) {
+                isRecoveringFromError = false
+                if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_PLAYLIST_CHANGED &&
+                    mediaItem?.localConfiguration?.uri?.toString() == currentUri
+                ) {
+                    // То же видео после перезагрузки плейлиста - ничего не сбрасываем
+                    return
+                }
+            }
             ioRetryCount = 0 // Сброс счетчика при смене видео
             handleMediaItemTransition(mediaItem)
         }
@@ -400,9 +467,8 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                 }
 
                 // Переподготавливаем плеер и возвращаем его на то же место
-                p.setMediaItems(newItems, currentIndex, currentPos)
-                p.prepare()
-                p.play()
+                isRecoveringFromError = true
+                playerManager.reloadMediaItems(newItems, currentIndex, currentPos)
                 return true
             }
         }
@@ -441,9 +507,8 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                     }
 
                     // Полностью перезагружаем плейлист в плеер
-                    p.setMediaItems(newItems, currentIndex, currentPos)
-                    p.prepare()
-                    p.play()
+                    isRecoveringFromError = true
+                    playerManager.reloadMediaItems(newItems, currentIndex, currentPos)
 
                     return true // Успешно перехватили и исправили
                 }
@@ -524,6 +589,15 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                 .setTrackTypeDisabled(C.TRACK_TYPE_VIDEO, false)
                 .build()
             p.trackSelectionParameters = params
+
+            if (_isM3uPlaylist.value == true && currentUri != null) {
+                repository.setLastPlayedChannelUri(currentUri)
+            }
+
+            // Инфопанель при смене элемента: по настройке или в эфирном режиме
+            if (p.mediaItemCount > 1 && (repository.isShowInfoOnTrackChange() || isOverallLiveMode())) {
+                _showInfoPanelEvent.value = Event(Unit)
+            }
 
             if (currentUri != null) {
                 viewModelScope.launch {
@@ -823,11 +897,137 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
-    fun loadPlaylist(items: List<MediaItem>, startIndex: Int) {
-        _currentPlaylist.value = items
-        val startPos = items.getOrNull(startIndex)?.startPositionMs ?: 0L
-        playerManager.loadPlaylist(items, startIndex, startPos)
+    /**
+     * Загружает медиа из интента/настроек. Одна ссылка на .m3u/.m3u8 проверяется на плейлист M3U
+     * (без повторного запроса для HLS), остальное загружается как раньше, сразу.
+     */
+    fun loadMedia(items: List<MediaItem>, startIndex: Int, forceM3uProbe: Boolean = false) {
+        loadMediaJob?.cancel()
+        if (items.size != 1 || (!forceM3uProbe && !playerManager.isM3uCandidate(items))) {
+            loadPlaylist(items, startIndex)
+            return
+        }
+        loadMediaJob = viewModelScope.launch {
+            val expanded = playerManager.expandM3u(items, forceM3uProbe)
+            if (expanded != null) {
+                // Последний канал восстанавливаем только по точному URI
+                val lastUri = repository.getLastPlayedChannelUri()
+                val lastIndex = if (lastUri != null) expanded.indexOfFirst { it.uri.toString() == lastUri } else -1
+                loadPlaylist(expanded, lastIndex.coerceAtLeast(0), isM3u = true)
+            } else {
+                loadPlaylist(items, startIndex)
+            }
+        }
+    }
+
+    fun loadPlaylist(items: List<MediaItem>, startIndex: Int, isM3u: Boolean = false) {
+        val indexedItems = items.mapIndexed { index, item -> item.copy(absoluteIndex = index) }
+        _currentPlaylist.value = indexedItems
+        _isM3uPlaylist.value = isM3u
+        _isSessionLive.value = false
+        stopZap()
+
+        val groups = indexedItems.mapNotNull { it.group }.distinct()
+        val startGroup = if (groups.isEmpty()) null else indexedItems.getOrNull(startIndex)?.group
+        _playlistUiState.value = PlaylistUiState(
+            items = filterByGroup(indexedItems, startGroup),
+            groupName = startGroup,
+            availableGroups = groups
+        )
+
+        resumePlayWhenReady = true // Новый плейлист всегда стартует
+        val startPos = indexedItems.getOrNull(startIndex)?.startPositionMs ?: 0L
+        playerManager.loadPlaylist(indexedItems, startIndex, startPos)
         viewModelScope.launch { repository.cleanupOldSettings() }
+    }
+
+    private fun filterByGroup(items: List<MediaItem>, group: String?): List<MediaItem> =
+        if (group == null) items else items.filter { it.group == group }
+
+    /** Показывает в плейлисте элементы группы (null = все). */
+    fun selectGroup(groupName: String?) {
+        val state = _playlistUiState.value ?: return
+        val all = _currentPlaylist.value ?: return
+        _playlistUiState.value = state.copy(items = filterByGroup(all, groupName), groupName = groupName)
+    }
+
+    /** Переключает группу в плейлисте (вместе с пунктом "Все"). */
+    fun cycleGroup(direction: Int) {
+        val state = _playlistUiState.value ?: return
+        if (state.availableGroups.isEmpty()) return
+        val options = listOf<String?>(null) + state.availableGroups
+        val currentIndex = options.indexOf(state.groupName).coerceAtLeast(0)
+        selectGroup(options[(currentIndex + direction + options.size) % options.size])
+    }
+
+    /** Возвращает в плейлисте группу текущего элемента (если группу сменили, но ничего не выбрали). */
+    fun revertToPlayingGroup() {
+        val state = _playlistUiState.value ?: return
+        if (state.availableGroups.isEmpty()) return
+        val playingItem = getPlayingItem()
+        selectGroup(playingItem?.group)
+    }
+
+    /**
+     * Эфирный режим: включен в настройках, в плейлисте больше одного элемента
+     * и в нем уже играл live-поток (M3U с эфиром или любой плейлист с эфиром).
+     */
+    fun isOverallLiveMode(): Boolean {
+        if (!repository.isLiveModeEnabled()) return false
+        if ((_currentPlaylist.value?.size ?: 0) <= 1) return false
+        return _isSessionLive.value == true
+    }
+
+    /** Элемент относительно текущего в пределах выбранной группы (по кругу). */
+    fun getRelativePlaylistItem(offset: Int): MediaItem? {
+        val items = _playlistUiState.value?.items ?: return null
+        if (items.isEmpty()) return null
+        val playingId = player?.currentMediaItem?.mediaId
+        val currentIdx = items.indexOfFirst { it.uuid == playingId }
+        if (currentIdx == -1) return null
+        return items[(currentIdx + offset + items.size) % items.size]
+    }
+
+    /**
+     * Переключение каналов Влево/Вправо: показываем выбранный канал и включаем его
+     * после паузы в нажатиях (можно пролистать несколько каналов).
+     */
+    fun zapChannel(direction: Int) {
+        val items = _playlistUiState.value?.items ?: return
+        if (items.isEmpty()) return
+
+        val fromId = _zapPreviewItem.value?.uuid ?: player?.currentMediaItem?.mediaId
+        val currentIdx = items.indexOfFirst { it.uuid == fromId }.coerceAtLeast(0)
+        val target = items[(currentIdx + direction + items.size) % items.size]
+        _zapPreviewItem.value = target
+
+        zapJob?.cancel()
+        zapJob = viewModelScope.launch {
+            kotlinx.coroutines.delay(1500)
+            _zapPreviewItem.value = null
+            playPlaylistItem(target.absoluteIndex)
+        }
+    }
+
+    /** Переключает на выбранный канал сразу. @return false, если канал не выбирали. */
+    fun confirmZap(): Boolean {
+        val target = _zapPreviewItem.value ?: return false
+        zapJob?.cancel()
+        zapJob = null
+        _zapPreviewItem.value = null
+        playPlaylistItem(target.absoluteIndex)
+        return true
+    }
+
+    fun stopZap() {
+        zapJob?.cancel()
+        zapJob = null
+        if (_zapPreviewItem.value != null) _zapPreviewItem.value = null
+    }
+
+    fun getPlayingItem(): MediaItem? {
+        val playingId = player?.currentMediaItem?.mediaId ?: return null
+        return _currentPlaylist.value?.find { it.uuid == playingId }
     }
 
     // --- Settings Logic ---
@@ -835,13 +1035,13 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     private fun loadGlobalDefaults() {
         val outModeOrd = repository.getGlobalInt("def_output_mode", StereoOutputMode.ANAGLYPH.ordinal)
         val outputMode = StereoOutputMode.entries.getOrNull(outModeOrd) ?: StereoOutputMode.ANAGLYPH
-        _outputMode.postValue(outputMode)
+        _outputMode.value = outputMode
 
         val anaTypeOrd = repository.getGlobalInt("def_anaglyph_type", StereoRenderer.AnaglyphType.RC_DUBOIS.ordinal)
         val anaglyphType = StereoRenderer.AnaglyphType.entries.getOrNull(anaTypeOrd) ?: StereoRenderer.AnaglyphType.RC_DUBOIS
-        _anaglyphType.postValue(anaglyphType)
+        _anaglyphType.value = anaglyphType
 
-        _screenSeparation.postValue(repository.getGlobalFloat("global_screen_separation_pct", 0f))
+        _screenSeparation.value = repository.getGlobalFloat("global_screen_separation_pct", 0f)
         anaglyphDelegate.loadGlobalVrParams()
 
         if (AnaglyphLogic.isCustomType(anaglyphType)) anaglyphDelegate.loadCustomSettings(anaglyphType)
@@ -891,16 +1091,18 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         anaglyphDelegate.loadGlobalVrParams()
     }
 
+    // Вызывается в главном потоке: значения выставляем синхронно,
+    // чтобы updateAvailableSettings() ниже видел уже новые настройки.
     private fun applySettings(s: VideoSettings) {
-        _inputType.postValue(s.inputType)
-        _outputMode.postValue(s.outputMode)
-        _anaglyphType.postValue(s.anaglyphType)
-        _swapEyes.postValue(s.swapEyes)
-        _depth.postValue(s.depth)
+        _inputType.value = s.inputType
+        _outputMode.value = s.outputMode
+        _anaglyphType.value = s.anaglyphType
+        _swapEyes.value = s.swapEyes
+        _depth.value = s.depth
 
         anaglyphDelegate.loadGlobalVrParams()
 
-        handler.post { lastVideoSize?.let { calculateFrameSize(s.inputType, it) } }
+        lastVideoSize?.let { calculateFrameSize(s.inputType, it) }
         if (AnaglyphLogic.isCustomType(s.anaglyphType)) anaglyphDelegate.loadCustomSettings(s.anaglyphType)
         updateAvailableSettings()
         anaglyphDelegate.updateAnaglyphMatrix(s.anaglyphType)
@@ -1010,7 +1212,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
      */
     fun playPlaylistItem(index: Int) {
         player?.let { p ->
-            val isVideoError = _videoDisabledError.value == null
+            val isVideoError = _videoDisabledError.value != null
             // Сбрасываем ошибку в UI немедленно
             _videoDisabledError.value = null
 
@@ -1158,6 +1360,13 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                 anaglyphDelegate.setCustomSpaceLms(!anaglyphDelegate.customSpaceLms.value!!)
                 anaglyphDelegate.saveCustomSettings(_anaglyphType.value!!)
             }
+            SettingType.RENDER_API -> {
+                val current = _renderApiMode.value ?: SettingsRepository.RENDER_API_AUTO
+                val next = if (current == SettingsRepository.RENDER_API_AUTO) SettingsRepository.RENDER_API_GLES2
+                else SettingsRepository.RENDER_API_AUTO
+                repository.setRenderApiMode(next)
+                _renderApiMode.value = next
+            }
             SettingType.SWAP_EYES -> _swapEyes.value = !_swapEyes.value!!
             SettingType.DEPTH_3D -> _depth.value = SettingsMutator.modifyInt(_depth.value!!, direction, 1, -50, 50)
             SettingType.SCREEN_SEPARATION -> _screenSeparation.value = SettingsMutator.modifyFloat(_screenSeparation.value!!, direction, 0.005f, -0.15f, 0.15f)
@@ -1238,6 +1447,13 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                 val index = filters.indexOf(_anaglyphType.value!!)
                 Pair(list, index)
             }
+            SettingType.RENDER_API -> {
+                val list = listOf(
+                    context.getString(R.string.api_gles3), // 0
+                    context.getString(R.string.api_gles2)  // 1
+                )
+                Pair(list, _renderApiMode.value ?: SettingsRepository.RENDER_API_AUTO)
+            }
             SettingType.AUDIO_TRACK -> {
                 if (audioOptions.isNotEmpty()) {
                     // Генерируем строки "здесь и сейчас" используя актуальный контекст
@@ -1302,6 +1518,11 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                     list.add(SettingType.CUSTOM_HUE_R); list.add(SettingType.CUSTOM_LEAK_R)
                     list.add(SettingType.CUSTOM_SPACE)
                 }
+            }
+            // Влияет на все 3D режимы: в ES 3.0 текстурные координаты считаются в highp
+            // (mediump на части GPU дает ступенчатость на 4K), в анаглифе - еще и смешивание цветов
+            if (deviceSupportsEs3) {
+                list.add(SettingType.RENDER_API)
             }
             list.add(SettingType.SWAP_EYES)
             list.add(SettingType.DEPTH_3D)
@@ -1370,6 +1591,11 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         return AnaglyphLogic.getFiltersForGroup(group).first()
     }
 
+    fun setDeviceSupportsEs3(supported: Boolean) {
+        deviceSupportsEs3 = supported
+        updateAvailableSettings()
+    }
+
     // --- Hot Restart Logic ---
 
     fun checkSettingsAndRestart() {
@@ -1379,7 +1605,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             restartPlayer()
             lastSettingsHash = currentHash
         } else {
-            playerManager.updateTrackSelectionParameters()
+            playerManager.applyLiveSettings()
         }
     }
 

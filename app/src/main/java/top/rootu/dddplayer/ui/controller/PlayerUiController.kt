@@ -13,8 +13,8 @@ import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.ProgressBar
 import android.widget.SeekBar
-import android.widget.TextClock
 import android.widget.TextView
+import android.content.res.ColorStateList
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.toDrawable
 import androidx.core.graphics.toColorInt
@@ -22,11 +22,11 @@ import androidx.core.view.isVisible
 import androidx.media3.common.PlaybackException
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.SubtitleView
-import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.LinearSmoothScroller
 import androidx.recyclerview.widget.RecyclerView
 import coil.load
 import top.rootu.dddplayer.R
+import top.rootu.dddplayer.data.SettingsRepository
 import top.rootu.dddplayer.model.MediaItem
 import top.rootu.dddplayer.model.ResizeMode
 import top.rootu.dddplayer.model.StereoInputType
@@ -34,7 +34,8 @@ import top.rootu.dddplayer.model.StereoOutputMode
 import top.rootu.dddplayer.renderer.StereoGLSurfaceView
 import top.rootu.dddplayer.ui.adapter.OptionsAdapter
 import top.rootu.dddplayer.ui.adapter.PlaylistAdapter
-import top.rootu.dddplayer.ui.widget.OutlineTextClock
+import top.rootu.dddplayer.ui.widget.CenterLayoutManager
+import top.rootu.dddplayer.ui.widget.OutlineTextView
 import top.rootu.dddplayer.viewmodel.SettingType
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -55,7 +56,7 @@ class PlayerUiController(private val rootView: View) {
     val subtitleSplitContainer: View = rootView.findViewById(R.id.subtitle_split_container)
     val subtitleViewLeft: SubtitleView = rootView.findViewById(R.id.subtitle_view_left)
     val subtitleViewRight: SubtitleView = rootView.findViewById(R.id.subtitle_view_right)
-    val standaloneClock: OutlineTextClock = rootView.findViewById(R.id.standalone_clock)
+    val standaloneClock: OutlineTextView = rootView.findViewById(R.id.standalone_clock)
 
     // Buffering
     val bufferingSplitContainer: View = rootView.findViewById(R.id.buffering_split_container)
@@ -74,7 +75,7 @@ class PlayerUiController(private val rootView: View) {
     val videoPoster: ImageView = topInfoPanel.findViewById(R.id.video_poster)
     val posterPlaceholderText: TextView = topInfoPanel.findViewById(R.id.poster_placeholder_text)
     val posterNumberBadge: TextView = topInfoPanel.findViewById(R.id.poster_number_badge)
-    val textClock: TextClock = topInfoPanel.findViewById(R.id.text_clock)
+    val textClock: TextView = topInfoPanel.findViewById(R.id.text_clock)
     val textEndsAt: TextView = topInfoPanel.findViewById(R.id.text_ends_at)
     val iconInputMode: ImageView = topInfoPanel.findViewById(R.id.icon_input_mode)
     val iconSwapEyes: ImageView = topInfoPanel.findViewById(R.id.icon_swap_eyes)
@@ -89,11 +90,13 @@ class PlayerUiController(private val rootView: View) {
     val prevButton: ImageButton = controlsView.findViewById(R.id.button_prev)
     val nextButton: ImageButton = controlsView.findViewById(R.id.button_next)
     val seekBar: SeekBar = controlsView.findViewById(R.id.seek_bar)
+    val bufferingValueTextView: TextView = controlsView.findViewById(R.id.buffering_value)
     val timeCurrentTextView: TextView = controlsView.findViewById(R.id.time_current)
     val timeDurationTextView: TextView = controlsView.findViewById(R.id.time_duration)
     val buttonQuality: TextView = controlsView.findViewById(R.id.button_quality)
     val buttonSpeed: TextView = controlsView.findViewById(R.id.button_speed)
     val buttonResize: ImageButton = controlsView.findViewById(R.id.button_resize)
+    val buttonPip: ImageButton = controlsView.findViewById(R.id.button_pip)
     val buttonPlaylist: ImageButton = controlsView.findViewById(R.id.button_playlist)
     val buttonAudio: ImageButton = controlsView.findViewById(R.id.button_audio)
     val buttonSubs: ImageButton = controlsView.findViewById(R.id.button_subs)
@@ -151,8 +154,33 @@ class PlayerUiController(private val rootView: View) {
     private val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
     private val timeFormatSeconds = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
 
-    // Состояние из настроек (показываем ли часы)
-    private var isStandaloneClockEnabled: Boolean = false
+    // Прозрачность одиночных часов из настроек (CLOCK_OFF = часы выключены)
+    private var clockTransparency: Int = SettingsRepository.CLOCK_OFF
+
+    // Автоскрытие инфопанели, показанной без панели управления
+    private val hideInfoPanelRunnable = Runnable { hideInfoPanel() }
+
+    private var inPictureInPicture = false
+
+    fun setPictureInPictureMode(enabled: Boolean) {
+        inPictureInPicture = enabled
+        if (enabled) {
+            playlistDialog?.dismiss()
+            hideControls()
+            topSettingsPanel.isVisible = false
+            hideHandler.removeCallbacks(hideGestureRunnable)
+            hideHandler.removeCallbacks(hideInfoPanelRunnable)
+            topInfoPanel.isVisible = false
+            listOf(seekOverlay, gestureContainer, rewindOverlay, ffwdOverlay,
+                overlayPrev, overlayNext, dimOverlay).forEach {
+                it.animate().cancel()
+                it.isVisible = false
+            }
+        } else {
+            showControls()
+        }
+        updateClockVisibility()
+    }
 
     init {
         // Настройка ленты
@@ -166,13 +194,61 @@ class PlayerUiController(private val rootView: View) {
         optionsRecycler.itemAnimator = null
     }
 
-    fun setStandaloneClockEnabled(enabled: Boolean) {
-        isStandaloneClockEnabled = enabled
+    fun updateClockTransparency(transparency: Int) {
+        clockTransparency = transparency
+        if (transparency != SettingsRepository.CLOCK_OFF) {
+            standaloneClock.alpha = (100 - transparency) / 100f
+        }
         updateClockVisibility()
     }
 
     private fun updateClockVisibility() {
-        standaloneClock.isVisible = isStandaloneClockEnabled && !topInfoPanel.isVisible
+        standaloneClock.isVisible = !inPictureInPicture &&
+            clockTransparency != SettingsRepository.CLOCK_OFF && !topInfoPanel.isVisible
+    }
+
+    private fun setSwipeIcon(icon: ImageView, posterUri: android.net.Uri?, iconRes: Int) {
+        if (posterUri != null) {
+            icon.imageTintList = null
+            icon.load(posterUri) { crossfade(true) }
+        } else {
+            icon.imageTintList = ColorStateList.valueOf(ContextCompat.getColor(rootView.context, R.color.tv_white))
+            icon.setImageResource(iconRes)
+        }
+    }
+
+    /**
+     * Инфопанель с данными выбранного (еще не включенного) канала. Не скрывается сама,
+     * пока идет выбор канала.
+     */
+    fun showInfoPanelWithData(item: MediaItem, playlistSize: Int, showIndex: Boolean) {
+        if (inPictureInPicture) return
+        hideHandler.removeCallbacks(hideInfoPanelRunnable)
+        topInfoPanel.isVisible = true
+        updateClockVisibility()
+        videoTitleTextView.text = item.title ?: item.filename ?: item.uri.lastPathSegment
+        loadPoster(item.posterUri, item.absoluteIndex, playlistSize, showIndex)
+    }
+
+    /**
+     * Показывает только верхнюю инфопанель (без панели управления) и скрывает ее через 3 секунды.
+     */
+    fun showInfoPanelOnly() {
+        if (inPictureInPicture) return
+        topInfoPanel.isVisible = true
+        updateClockVisibility()
+        hideHandler.removeCallbacks(hideInfoPanelRunnable)
+        if (!controlsView.isVisible) {
+            hideHandler.postDelayed(hideInfoPanelRunnable, 3000)
+        }
+    }
+
+    fun hideInfoPanel() {
+        hideHandler.removeCallbacks(hideInfoPanelRunnable)
+        if (!controlsView.isVisible) {
+            topInfoPanel.isVisible = false
+            updateClockVisibility()
+        }
     }
 
     fun showVolumeIndicator(percent: Int) {
@@ -219,8 +295,9 @@ class PlayerUiController(private val rootView: View) {
      * @param screenWidth Ширина экрана
      * @param title Заголовок следующего/предыдущего видео (или "Выход")
      * @param isExitMode Если true, показываем иконку выхода
+     * @param posterUri Логотип канала вместо иконки (эфирный режим)
      */
-    fun updatePlaylistSwipe(offsetPx: Float, screenWidth: Int, title: String, isExitMode: Boolean) {
+    fun updatePlaylistSwipe(offsetPx: Float, screenWidth: Int, title: String, isExitMode: Boolean, posterUri: android.net.Uri? = null) {
         gestureContainer.isVisible = false
 
         // Порог срабатывания (50% экрана)
@@ -241,14 +318,13 @@ class PlayerUiController(private val rootView: View) {
             textPrevTitle.text = title
             textPrevHint.alpha = hintAlpha
 
+            setSwipeIcon(iconPrev, posterUri, if (isExitMode) R.drawable.ic_exit else R.drawable.ic_skip_previous)
             if (isExitMode) {
-                iconPrev.setImageResource(R.drawable.ic_exit)
                 textPrevHint.text = if (thresholdPassed)
                     context.getString(R.string.swipe_release_exit)
                 else
                     context.getString(R.string.swipe_pull_exit)
             } else {
-                iconPrev.setImageResource(R.drawable.ic_skip_previous)
                 textPrevHint.text = if (thresholdPassed)
                     context.getString(R.string.swipe_release_next)
                 else
@@ -266,14 +342,13 @@ class PlayerUiController(private val rootView: View) {
             textNextTitle.text = title
             textNextHint.alpha = hintAlpha
 
+            setSwipeIcon(iconNext, posterUri, if (isExitMode) R.drawable.ic_exit else R.drawable.ic_skip_next)
             if (isExitMode) {
-                iconNext.setImageResource(R.drawable.ic_exit)
                 textNextHint.text = if (thresholdPassed)
                     context.getString(R.string.swipe_release_exit)
                 else
                     context.getString(R.string.swipe_pull_exit)
             } else {
-                iconNext.setImageResource(R.drawable.ic_skip_next)
                 textNextHint.text = if (thresholdPassed)
                     context.getString(R.string.swipe_release_next)
                 else
@@ -543,6 +618,7 @@ class PlayerUiController(private val rootView: View) {
     }
 
     fun showControls(focusOnSeekBar: Boolean = false) {
+        if (inPictureInPicture) return
         controlsView.visibility = View.VISIBLE
         topInfoPanel.visibility = View.VISIBLE
         updateClockVisibility() // Скрываем одиночные часы, т.к. показана панель
@@ -597,14 +673,26 @@ class PlayerUiController(private val rootView: View) {
         }
     }
 
+    // Колбэки текущего показа плейлиста (диалог переиспользуется между показами)
+    private var playlistOnItemSelected: ((Int) -> Unit)? = null
+    private var playlistOnDismiss: (() -> Unit)? = null
+
+    /**
+     * @param items элементы для показа (может быть отфильтрованный по группе список)
+     * @param onItemSelected позиция в [items]
+     */
     fun showPlaylistDialog(
         items: List<MediaItem>,
-        currentIndex: Int,
+        playingUuid: String?,
         showIndexBadge: Boolean,
+        shouldLoop: Boolean,
+        fitPosters: Boolean,
         onItemSelected: (Int) -> Unit,
         onDismiss: () -> Unit
     ) {
         val context = rootView.context
+        playlistOnItemSelected = onItemSelected
+        playlistOnDismiss = onDismiss
         if (playlistDialog == null) {
             playlistDialog = Dialog(context, android.R.style.Theme_Translucent_NoTitleBar)
             playlistDialog?.setContentView(R.layout.dialog_playlist)
@@ -616,35 +704,63 @@ class PlayerUiController(private val rootView: View) {
             }
 
             val recycler = playlistDialog?.findViewById<RecyclerView>(R.id.playlist_recycler)
-            recycler?.layoutManager = LinearLayoutManager(context)
-            playlistAdapter = PlaylistAdapter { index ->
-                onItemSelected(index)
-                playlistDialog?.dismiss()
-            }
+            recycler?.layoutManager = CenterLayoutManager(context)
+            playlistAdapter = PlaylistAdapter(
+                onLoopRequest = { targetPos ->
+                    recycler?.scrollToPosition(targetPos)
+                    recycler?.postDelayed({
+                        recycler.findViewHolderForAdapterPosition(targetPos)?.itemView?.requestFocus()
+                    }, 50)
+                },
+                onItemClick = { index ->
+                    playlistOnItemSelected?.invoke(index)
+                    playlistDialog?.dismiss()
+                }
+            )
             recycler?.adapter = playlistAdapter
-            playlistDialog?.setOnDismissListener { onDismiss() }
+            playlistDialog?.setOnDismissListener { playlistOnDismiss?.invoke() }
         }
 
+        playlistAdapter?.shouldLoop = shouldLoop
+        playlistAdapter?.fitPosters = fitPosters
         playlistAdapter?.setShowIndexBadge(showIndexBadge)
+        updatePlaylistItems(items, playingUuid)
+        playlistDialog?.show()
+    }
 
+    val isPlaylistDialogShowing: Boolean
+        get() = playlistDialog?.isShowing == true
+
+    fun setPlaylistKeyListener(listener: (keyCode: Int, event: android.view.KeyEvent) -> Boolean) {
+        playlistDialog?.setOnKeyListener { _, keyCode, event -> listener(keyCode, event) }
+    }
+
+    fun setPlaylistHeaderClickListener(listener: (() -> Unit)?) {
+        playlistDialog?.findViewById<View>(R.id.playlist_header)?.apply {
+            setOnClickListener(listener?.let { l -> View.OnClickListener { l() } })
+            isClickable = listener != null
+        }
+    }
+
+    fun updatePlaylistHeader(text: String) {
+        playlistDialog?.findViewById<TextView>(R.id.playlist_header)?.text = text
+    }
+
+    fun updatePlaylistItems(items: List<MediaItem>, playingUuid: String?) {
+        playlistAdapter?.setPlayingItemUuid(playingUuid)
         playlistAdapter?.submitList(items) {
-            playlistAdapter?.setCurrentIndex(currentIndex)
+            val recycler = playlistDialog?.findViewById<RecyclerView>(R.id.playlist_recycler) ?: return@submitList
+            val targetIdx = items.indexOfFirst { it.uuid == playingUuid }.coerceAtLeast(0)
 
-            // Скроллим к текущему элементу (ВСЕГДА, даже если диалог переиспользован)
-            val recycler = playlistDialog?.findViewById<RecyclerView>(R.id.playlist_recycler)
             // Используем post, чтобы скролл сработал после того, как RecyclerView обновит лейаут
-            recycler?.post {
-                recycler.scrollToPosition(currentIndex)
-
+            recycler.post {
+                recycler.scrollToPosition(targetIdx)
                 // Ждем, пока скролл завершится и элемент появится, затем фокусируемся
                 recycler.postDelayed({
-                    val holder = recycler.findViewHolderForAdapterPosition(currentIndex)
-                    holder?.itemView?.requestFocus()
+                    recycler.findViewHolderForAdapterPosition(targetIdx)?.itemView?.requestFocus()
                 }, 50)
             }
         }
-
-        playlistDialog?.show()
     }
 
     fun updateSettingsText(
@@ -673,6 +789,7 @@ class PlayerUiController(private val rootView: View) {
             SettingType.CUSTOM_LEAK_L -> context.getString(R.string.setting_leak_l)
             SettingType.CUSTOM_LEAK_R -> context.getString(R.string.setting_leak_r)
             SettingType.CUSTOM_SPACE -> context.getString(R.string.setting_space)
+            SettingType.RENDER_API -> context.getString(R.string.setting_render_api)
             SettingType.SWAP_EYES -> context.getString(R.string.setting_swap_eyes)
             SettingType.DEPTH_3D -> context.getString(R.string.setting_depth)
             SettingType.SCREEN_SEPARATION -> context.getString(R.string.setting_screen_separation)
@@ -696,6 +813,18 @@ class PlayerUiController(private val rootView: View) {
         } else {
             bufferingContainer.isVisible = false
             bufferingSplitContainer.isVisible = false
+        }
+    }
+
+    /**
+     * Процент буфера под полосой перемотки (режим BUFFER_DISPLAY_PANEL).
+     */
+    fun updateBufferDisplay(percent: Int, displayMode: Int) {
+        if (displayMode == SettingsRepository.BUFFER_DISPLAY_PANEL) {
+            bufferingValueTextView.isVisible = true
+            bufferingValueTextView.text = rootView.context.getString(R.string.buffer_percentage, percent)
+        } else {
+            bufferingValueTextView.isVisible = false
         }
     }
 

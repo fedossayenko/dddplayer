@@ -30,6 +30,7 @@ import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.media3.common.C
 import androidx.media3.common.Player
+import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -46,6 +47,7 @@ import top.rootu.dddplayer.model.StereoInputType
 import top.rootu.dddplayer.model.StereoOutputMode
 import top.rootu.dddplayer.renderer.OnSurfaceReadyListener
 import top.rootu.dddplayer.renderer.StereoRenderer
+import top.rootu.dddplayer.ui.adapter.ChoiceAdapter
 import top.rootu.dddplayer.ui.adapter.SideMenuAdapter
 import top.rootu.dddplayer.ui.controller.PlayerInputHandler
 import top.rootu.dddplayer.ui.controller.PlayerTimerController
@@ -57,6 +59,7 @@ import top.rootu.dddplayer.utils.afr.DisplayHolder
 import top.rootu.dddplayer.utils.afr.DisplaySyncHelper
 import top.rootu.dddplayer.utils.afr.TvQuickActions
 import top.rootu.dddplayer.viewmodel.PlayerViewModel
+import top.rootu.dddplayer.viewmodel.PlaylistUiState
 import top.rootu.dddplayer.viewmodel.SettingType
 import top.rootu.dddplayer.viewmodel.SettingsViewModel
 import top.rootu.dddplayer.viewmodel.UpdateViewModel
@@ -66,6 +69,7 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
 
     private var dimJob: Job? = null
     private var zoomDialog: Dialog? = null
+    private var inPictureInPicture = false
     private val viewModel: PlayerViewModel by activityViewModels()
     private val settingsViewModel: SettingsViewModel by viewModels()
     private val updateViewModel: UpdateViewModel by viewModels()
@@ -101,6 +105,7 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
 
     // Переменные для горизонтального свайпа
     private var swipeAction = 0 // 0=None, 1=Seek, 2=Playlist
+    private var bufferDisplayMode = SettingsRepository.BUFFER_DISPLAY_OFF
     private var isSwipeSeeking = false
     private var swipeSeekStartPosition = 0L
     private var swipeSeekCurrentPosition = 0L
@@ -133,14 +138,15 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
                     view.findViewById<View>(R.id.root_container)?.requestFocus()
                 }
             },
-            clockView = ui.textClock
+            clockViews = listOf(ui.standaloneClock, ui.textClock)
         )
 
         // Используем Application Context для репозитория, чтобы избежать утечек
         val settingsRepo = SettingsRepository.getInstance(requireContext().applicationContext)
 
         // Устанавливаем видимость часов на основе настроек
-        ui.setStandaloneClockEnabled(settingsRepo.isShowClock())
+        ui.updateClockTransparency(settingsRepo.getClockTransparency())
+        applyBufferDisplayMode(settingsRepo.getBufferDisplayMode())
 
         inputHandler = PlayerInputHandler(
             viewModel, settingsViewModel, ui,
@@ -207,11 +213,29 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
             true // Поглощаем событие
         }
 
-        // Настройка GL Surface
-        ui.glSurfaceView.setEGLContextClientVersion(2)
+        // ==========================================
+        // НАСТРОЙКА OPENGL ES (Детекция GLES 3.0)
+        // ==========================================
+        val activityManager = requireContext().getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager
+        val configurationInfo = activityManager.deviceConfigurationInfo
+        // Проверяем поддержку OpenGL ES 3.0 (0x30000)
+        val supportsEs3 = configurationInfo.reqGlEsVersion >= 0x30000
+        viewModel.setDeviceSupportsEs3(supportsEs3)
+
+        // При принудительном GLES 2.0 создаем и контекст ES 2.0: это обходит и проблемы
+        // самого ES 3.0 драйвера, а не только шейдеров
+        val preferEs3 = viewModel.renderApiMode.value != SettingsRepository.RENDER_API_GLES2
+        val contextIsEs3 = supportsEs3 && preferEs3
+        ui.glSurfaceView.setEGLContextClientVersion(if (contextIsEs3) 3 else 2)
+
         ui.glSurfaceView.setEGLConfigChooser(8, 8, 8, 8, 16, 0)
 
-        stereoRenderer = StereoRenderer(ui.glSurfaceView, this)
+        stereoRenderer = StereoRenderer(ui.glSurfaceView, this, contextIsEs3, preferEs3).apply {
+            onEs3ShadersUnavailable = {
+                // Вызывается в GL потоке
+                activity?.runOnUiThread { viewModel.setDeviceSupportsEs3(false) }
+            }
+        }
         ui.glSurfaceView.setRenderer(stereoRenderer)
         ui.glSurfaceView.renderMode = GLSurfaceView.RENDERMODE_WHEN_DIRTY
 
@@ -362,15 +386,19 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
             swipePlaylistAccumulator += deltaX
             isPlaylistSwipeActive = true
 
+            // В эфирном режиме листаем каналы текущей группы по кругу
+            val isLiveMode = viewModel.isOverallLiveMode()
+
             if (swipePlaylistAccumulator < 0) {
                 // Тянем ВЛЕВО -> NEXT
                 currentSwipeTargetIsNext = true
-                val nextTitle = viewModel.getNextTrackTitle()
+                val targetItem = if (isLiveMode) viewModel.getRelativePlaylistItem(1) else null
+                val nextTitle = targetItem?.title ?: viewModel.getNextTrackTitle()
 
                 if (nextTitle != null) {
                     currentSwipeIsExit = false
                     // Передаем название следующего видео
-                    ui.updatePlaylistSwipe(swipePlaylistAccumulator, screenWidth, nextTitle, false)
+                    ui.updatePlaylistSwipe(swipePlaylistAccumulator, screenWidth, nextTitle, false, targetItem?.posterUri)
                 } else {
                     currentSwipeIsExit = true
                     ui.updatePlaylistSwipe(swipePlaylistAccumulator, screenWidth, getString(R.string.action_exit), true)
@@ -378,12 +406,13 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
             } else {
                 // Тянем ВПРАВО -> PREV
                 currentSwipeTargetIsNext = false
-                val prevTitle = viewModel.getPrevTrackTitle()
+                val targetItem = if (isLiveMode) viewModel.getRelativePlaylistItem(-1) else null
+                val prevTitle = targetItem?.title ?: viewModel.getPrevTrackTitle()
 
                 if (prevTitle != null) {
                     currentSwipeIsExit = false
                     // Передаем название предыдущего видео
-                    ui.updatePlaylistSwipe(swipePlaylistAccumulator, screenWidth, prevTitle, false)
+                    ui.updatePlaylistSwipe(swipePlaylistAccumulator, screenWidth, prevTitle, false, targetItem?.posterUri)
                 } else {
                     currentSwipeIsExit = true
                     ui.updatePlaylistSwipe(swipePlaylistAccumulator, screenWidth, getString(R.string.action_exit), true)
@@ -424,7 +453,14 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
                         requireActivity().finish()
                     } else {
                         // Переключение трека
-                        if (isNext) viewModel.nextTrack() else viewModel.prevTrack()
+                        val liveTarget = if (viewModel.isOverallLiveMode()) {
+                            viewModel.getRelativePlaylistItem(if (isNext) 1 else -1)
+                        } else null
+                        when {
+                            liveTarget != null -> viewModel.playPlaylistItem(liveTarget.absoluteIndex)
+                            isNext -> viewModel.nextTrack()
+                            else -> viewModel.prevTrack()
+                        }
                     }
                 }
             } else {
@@ -439,6 +475,10 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
         }
     }
     private fun setupControls() {
+        ui.buttonPip.isVisible = (activity as? PlayerActivity)?.supportsPictureInPicture == true
+        ui.buttonPip.setOnClickListener {
+            (activity as? PlayerActivity)?.enterPlayerPictureInPicture(showError = true)
+        }
         // Навигация в настройках
         ui.btnSettingsPrev.setOnClickListener {
             viewModel.changeSettingValue(settingsViewModel.currentSettingType.value!!, -1)
@@ -460,19 +500,34 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
             val isSideMenuVisible = sideMenuDialog?.isShowing == true
             if (isOsdVisible || isSideMenuVisible) return@setOnClickListener
 
+            // В эфирном режиме верхняя зона открывает плейлист
+            if (viewModel.isOverallLiveMode()) {
+                showPlaylist()
+                return@setOnClickListener
+            }
+
             // Получаем текущую настройку действия кнопки "Вверх"
             val settingsRepo = SettingsRepository.getInstance(requireContext().applicationContext)
 
             when (settingsRepo.getUpButtonAction()) {
-                1 -> { // OSD (Быстрые настройки)
+                SettingsRepository.UP_ACTION_OSD -> { // Быстрые настройки
                     viewModel.prepareSettingsPanel()
                     settingsViewModel.openPanel(viewModel.availableSettings.value ?: emptyList())
                 }
-                2 -> { // Боковое меню
+                SettingsRepository.UP_ACTION_MENU -> { // Боковое меню
                     ui.hideControls()
                     showMainMenu()
                 }
-                // 0 -> Ничего не делать
+                SettingsRepository.UP_ACTION_INFO -> {
+                    if (ui.topInfoPanel.isVisible) {
+                        // Если панель уже есть, то показываем боковое меню
+                        ui.hideControls()
+                        showMainMenu()
+                    } else {
+                        ui.showInfoPanelOnly()
+                    }
+                }
+                // UP_ACTION_NONE -> Ничего не делать
             }
         }
 
@@ -588,7 +643,7 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
             if (selected == null) {
                 showMainMenu("audio")
             } else {
-                viewModel.selectTrackByIndex(C.TRACK_TYPE_AUDIO, selected.id.toInt())
+                selected.id.toIntOrNull()?.let { viewModel.selectTrackByIndex(C.TRACK_TYPE_AUDIO, it) }
                 sideMenuDialog?.dismiss()
             }
         }
@@ -607,7 +662,7 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
             if (selected == null) {
                 showMainMenu("subtitles")
             } else {
-                viewModel.selectTrackByIndex(C.TRACK_TYPE_TEXT, selected.id.toInt())
+                selected.id.toIntOrNull()?.let { viewModel.selectTrackByIndex(C.TRACK_TYPE_TEXT, it) }
                 sideMenuDialog?.dismiss()
             }
         }
@@ -736,6 +791,7 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
         initialFocusId: String? = null,
         onItemSelected: (MenuItem?) -> Unit
     ) {
+        viewModel.stopZap()
         timerController.stopControlsTimer()
         ui.hideControls()
 
@@ -766,17 +822,20 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
         header?.text = title
 
         val recycler = sideMenuDialog?.findViewById<RecyclerView>(R.id.menu_recycler)
-        if (sideMenuAdapter == null) {
-            sideMenuAdapter = SideMenuAdapter { item ->
+        val onItemClick: (MenuItem) -> Unit = { item ->
+            // DiffUtil применяет новый список асинхронно, а обработчик меняется сразу.
+            // Клик, пришедший в этот промежуток, относится к элементу предыдущего меню
+            // (например, "audio" из главного меню) - игнорируем его.
+            if (items.any { it === item }) {
                 isSelectionMade = true
                 onItemSelected(item)
             }
+        }
+        if (sideMenuAdapter == null) {
+            sideMenuAdapter = SideMenuAdapter(onItemClick)
             recycler?.adapter = sideMenuAdapter
         } else {
-            sideMenuAdapter?.onItemClick = { item ->
-                isSelectionMade = true
-                onItemSelected(item)
-            }
+            sideMenuAdapter?.onItemClick = onItemClick
         }
 
         sideMenuAdapter?.submitList(items) {
@@ -804,12 +863,27 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
         sideMenuDialog?.show()
     }
 
+    private fun applyBufferDisplayMode(mode: Int) {
+        bufferDisplayMode = mode
+        updateBufferDisplay(viewModel.bufferedPercentage.value ?: 0)
+    }
+
+    private fun updateBufferDisplay(percent: Int) {
+        ui.updateBufferDisplay(percent, bufferDisplayMode)
+        // Рядом с часами: и в одиночных часах, и в часах инфопанели
+        timerController.bufferText =
+            if (bufferDisplayMode == SettingsRepository.BUFFER_DISPLAY_CLOCK) "$percent%" else ""
+    }
+
     private fun resetDimTimer() {
         dimJob?.cancel()
+        if (inPictureInPicture) return
         ui.animateDimming(0f) // Сразу осветляем экран при любой активности
 
-        val isPlaying = viewModel.isPlaying.value == true
-        if (!isPlaying) {
+        // Затемняем только при паузе пользователем. Во время буферизации,
+        // после ошибки или в конце видео playWhenReady остается true.
+        val isPausedByUser = viewModel.player?.playWhenReady == false
+        if (isPausedByUser) {
             val dimLevel = SettingsRepository.getInstance(requireContext()).getPauseDimLevel()
             if (dimLevel > 0) {
                 dimJob = viewLifecycleOwner.lifecycleScope.launch {
@@ -902,19 +976,27 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
                 updateTimeLabelsUI(position)
             }
         }
-        viewModel.videoTitle.observe(viewLifecycleOwner) { title ->
-            ui.videoTitleTextView.text = title
-            viewModel.player?.let { p ->
-                val posterUri = p.mediaMetadata.artworkUri
-                val index = p.currentMediaItemIndex
-                val size = p.mediaItemCount
+        viewModel.videoTitle.observe(viewLifecycleOwner) { refreshInfoPanelData() }
 
-                // Получаем настройку
-                val settingsRepo = SettingsRepository.getInstance(requireContext().applicationContext)
-                val showIndex = settingsRepo.isShowPlaylistIndexEnabled()
+        // Инфопанель при смене элемента (по настройке или в эфирном режиме)
+        viewModel.showInfoPanelEvent.observe(viewLifecycleOwner) { event ->
+            event.getContentIfNotHandled()?.let {
+                if (!ui.controlsView.isVisible) ui.showInfoPanelOnly()
+            }
+        }
 
-                // Передаем в UI
-                ui.loadPoster(posterUri, index, size, showIndex)
+        // Выбор канала Влево/Вправо в эфирном режиме
+        var hadZapPreview = false
+        viewModel.zapPreviewItem.observe(viewLifecycleOwner) { item ->
+            if (item != null) {
+                hadZapPreview = true
+                val showIndex = SettingsRepository.getInstance(requireContext().applicationContext).isShowPlaylistIndexEnabled()
+                ui.showInfoPanelWithData(item, viewModel.currentPlaylist.value?.size ?: 0, showIndex)
+            } else if (hadZapPreview) {
+                // Выбор закончен или отменен: возвращаем данные текущего элемента и скрываем панель
+                hadZapPreview = false
+                refreshInfoPanelData()
+                if (ui.controlsView.isVisible) ui.hideInfoPanel() else ui.showInfoPanelOnly()
             }
         }
 
@@ -966,6 +1048,7 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
             if (viewModel.isBuffering.value == true) {
                 ui.updateBufferingState(true, viewModel.outputMode.value, percent)
             }
+            updateBufferDisplay(percent)
         }
 
         viewModel.bufferedPosition.observe(viewLifecycleOwner) { bufferedPos ->
@@ -1001,6 +1084,19 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
             ui.updateStereoLayout(mode, viewModel.screenSeparation.value ?: 0f)
         }
         viewModel.anaglyphType.observe(viewLifecycleOwner) { stereoRenderer?.setAnaglyphType(it) }
+        viewModel.renderApiMode.observe(viewLifecycleOwner) { mode ->
+            val forceLegacy = (mode == SettingsRepository.RENDER_API_GLES2)
+            val applied = stereoRenderer?.setRenderApi(forceLegacy) ?: true
+            if (!applied && settingsViewModel.isSettingsPanelVisible.value == true) {
+                // Контекст ES 2.0 нельзя переключить на лету
+                Toast.makeText(requireContext(), R.string.msg_render_api_restart, Toast.LENGTH_SHORT).show()
+            }
+
+            // Обновляем текст в OSD
+            if (settingsViewModel.currentSettingType.value == SettingType.RENDER_API) {
+                updateSettingsText()
+            }
+        }
         viewModel.singleFrameSize.observe(viewLifecycleOwner) { (w, h) -> stereoRenderer?.setSingleFrameDimensions(w, h) }
         viewModel.depth.observe(viewLifecycleOwner) { stereoRenderer?.setDepth(it) }
         viewModel.screenSeparation.observe(viewLifecycleOwner) {
@@ -1115,10 +1211,33 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
             updateTimeLabelsUI(pos)
         }
 
+        viewModel.playlistUiState.observe(viewLifecycleOwner) { state ->
+            if (ui.isPlaylistDialogShowing) {
+                updatePlaylistHeader(state)
+                ui.updatePlaylistItems(state.items, viewModel.player?.currentMediaItem?.mediaId)
+            }
+        }
+
         viewModel.showResumeDialogEvent.observe(viewLifecycleOwner) { data ->
             if (data != null) {
                 showResumeDialog(data.first, data.second)
             }
+        }
+    }
+
+    private fun refreshInfoPanelData() {
+        ui.videoTitleTextView.text = viewModel.videoTitle.value
+        viewModel.player?.let { p ->
+            val posterUri = p.mediaMetadata.artworkUri
+            val index = p.currentMediaItemIndex
+            val size = p.mediaItemCount
+
+            // Получаем настройку
+            val settingsRepo = SettingsRepository.getInstance(requireContext().applicationContext)
+            val showIndex = settingsRepo.isShowPlaylistIndexEnabled()
+
+            // Передаем в UI
+            ui.loadPoster(posterUri, index, size, showIndex)
         }
     }
 
@@ -1199,6 +1318,10 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
                 val group = AnaglyphLogic.getGlassesGroup(viewModel.anaglyphType.value!!)
                 viewModel.getOptionsForSetting(type, context)?.first?.getOrNull(group.ordinal) ?: group.name.replace("_", " ")
             }
+            SettingType.RENDER_API -> {
+                if (viewModel.renderApiMode.value == SettingsRepository.RENDER_API_GLES2) getString(R.string.api_gles2)
+                else getString(R.string.api_gles3)
+            }
             SettingType.FILTER_MODE -> {
                 val name = viewModel.anaglyphType.value?.name ?: ""
                 if (name.endsWith("_CUSTOM")) getString(R.string.val_custom) else name
@@ -1254,8 +1377,9 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
     }
 
     private fun showPlaylist() {
-        val playlist = viewModel.currentPlaylist.value ?: emptyList()
-        if (playlist.isEmpty()) {
+        viewModel.stopZap()
+        val initialState = viewModel.playlistUiState.value
+        if (initialState == null || (viewModel.currentPlaylist.value ?: emptyList()).isEmpty()) {
             Toast.makeText(requireContext().applicationContext, getString(R.string.msg_playlist_empty), Toast.LENGTH_SHORT).show()
             return
         }
@@ -1265,18 +1389,77 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
 
         val settingsRepo = SettingsRepository.getInstance(requireContext().applicationContext)
         val showIndex = settingsRepo.isShowPlaylistIndexEnabled()
+        val isM3u = viewModel.isM3uPlaylist.value == true
+        var isSelectionMade = false
 
         ui.showPlaylistDialog(
-            items = playlist,
-            currentIndex = viewModel.player?.currentMediaItemIndex ?: 0,
+            items = initialState.items,
+            playingUuid = viewModel.player?.currentMediaItem?.mediaId,
             showIndexBadge = showIndex,
-            onItemSelected = { index ->
-                viewModel.playPlaylistItem(index)
+            shouldLoop = isM3u || viewModel.isLive.value == true,
+            fitPosters = isM3u,
+            onItemSelected = { indexInList ->
+                val item = viewModel.playlistUiState.value?.items?.getOrNull(indexInList)
+                if (item != null) {
+                    isSelectionMade = true
+                    viewModel.playPlaylistItem(item.absoluteIndex)
+                }
             },
             onDismiss = {
+                // Группу сменили, но ничего не выбрали - возвращаем группу текущего элемента
+                if (!isSelectionMade) viewModel.revertToPlayingGroup()
                 timerController.resetControlsTimer()
             }
         )
+
+        val hasGroups = initialState.availableGroups.isNotEmpty()
+        updatePlaylistHeader(initialState)
+        // Выбор группы: клик по заголовку или Влево/Вправо в списке
+        ui.setPlaylistHeaderClickListener(if (hasGroups) ({ showGroupSelectionDialog() }) else null)
+        ui.setPlaylistKeyListener { keyCode, event ->
+            if (hasGroups && event.action == KeyEvent.ACTION_DOWN) {
+                when (keyCode) {
+                    KeyEvent.KEYCODE_DPAD_LEFT -> { viewModel.cycleGroup(-1); return@setPlaylistKeyListener true }
+                    KeyEvent.KEYCODE_DPAD_RIGHT -> { viewModel.cycleGroup(1); return@setPlaylistKeyListener true }
+                }
+            }
+            false
+        }
+    }
+
+    private fun updatePlaylistHeader(state: PlaylistUiState) {
+        if (state.availableGroups.isEmpty()) {
+            ui.updatePlaylistHeader(getString(R.string.playlist))
+        } else {
+            val groupName = state.groupName ?: getString(R.string.group_all)
+            ui.updatePlaylistHeader("$groupName [${state.items.size}]")
+        }
+    }
+
+    private fun showGroupSelectionDialog() {
+        val state = viewModel.playlistUiState.value ?: return
+        if (state.availableGroups.isEmpty()) return
+
+        val groups = listOf<String?>(null) + state.availableGroups // null = Все
+        val currentIndex = groups.indexOf(state.groupName).coerceAtLeast(0)
+        val displayGroups = groups.map { it ?: getString(R.string.group_all) }
+
+        val dialog = Dialog(requireContext(), R.style.Theme_App_Dialog)
+        dialog.setContentView(R.layout.dialog_list_choice)
+        dialog.findViewById<TextView>(R.id.dialog_title).text = getString(R.string.select_group)
+
+        val recycler = dialog.findViewById<RecyclerView>(R.id.dialog_recycler_view)
+        recycler.layoutManager = LinearLayoutManager(requireContext())
+        recycler.adapter = ChoiceAdapter(displayGroups, currentIndex) { selectedIdx ->
+            viewModel.selectGroup(groups[selectedIdx])
+            dialog.dismiss()
+        }
+        dialog.show()
+
+        recycler.post {
+            (recycler.layoutManager as? LinearLayoutManager)?.scrollToPositionWithOffset(currentIndex, 0)
+            recycler.postDelayed({ recycler.findViewHolderForAdapterPosition(currentIndex)?.itemView?.requestFocus() }, 50)
+        }
     }
 
     private fun showQualityPopup() {
@@ -1327,11 +1510,20 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
         swipeAction = settingsRepo.getHorizontalSwipeAction()
 
         // Обновляем видимость часов (на случай, если изменили в настройках)
-        ui.setStandaloneClockEnabled(settingsRepo.isShowClock())
+        ui.updateClockTransparency(settingsRepo.getClockTransparency())
+        applyBufferDisplayMode(settingsRepo.getBufferDisplayMode())
 
         // Проверяем, нужно ли перезапустить плеер из-за смены настроек
         viewModel.checkSettingsAndRestart()
-        viewModel.player?.playWhenReady = true
+    }
+
+    override fun onStart() {
+        super.onStart()
+        // Возобновляем, только если видео играло при уходе с экрана (или это новый плейлист).
+        // Пауза снимается в onStop, а не в onPause, чтобы видео продолжало играть в PiP.
+        if (viewModel.resumePlayWhenReady) {
+            viewModel.player?.play()
+        }
         if (viewModel.inputType.value != StereoInputType.NONE) {
             ui.glSurfaceView.onResume()
         }
@@ -1340,8 +1532,33 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
     override fun onPause() {
         super.onPause()
         viewModel.saveCurrentSettings()
-        viewModel.player?.playWhenReady = false
+    }
+
+    override fun onStop() {
+        viewModel.player?.let { player ->
+            viewModel.resumePlayWhenReady = player.playWhenReady
+            player.pause()
+        }
+        viewModel.saveCurrentSettings()
         ui.glSurfaceView.onPause()
+        super.onStop()
+    }
+
+    fun setPictureInPictureMode(enabled: Boolean) {
+        inPictureInPicture = enabled
+        if (_ui == null) return
+        if (enabled) {
+            dimJob?.cancel()
+            timerController.stopControlsTimer()
+            settingsViewModel.closePanel()
+            sideMenuDialog?.dismiss()
+            zoomDialog?.dismiss()
+        }
+        ui.setPictureInPictureMode(enabled)
+        if (!enabled) {
+            resetDimTimer()
+            timerController.resetControlsTimer()
+        }
     }
 
     override fun onDestroyView() {

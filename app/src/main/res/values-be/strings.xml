@@ -18,6 +18,7 @@
     <string name="playback_speed">Хуткасць</string>
     <string name="playback_zoom">Маштаб</string>
     <string name="playback_zoom_scale">Павялічыць на %d%%</string>
+    <string name="picture_in_picture">Відарыс у відарысе</string>
     <string name="playback_zoom_percent">Маштаб: %d%%</string>
 
     <!-- Рэжымы маштабавання -->
@@ -61,6 +62,8 @@
     <string name="setting_leak_l">Уцечка (Левае)</string>
     <string name="setting_leak_r">Уцечка (Правае)</string>
     <string name="setting_space">Прастора</string>
+    <string name="setting_render_api">Рэндэр</string>
+    <string name="msg_render_api_restart">OpenGL ES 3.0 будзе выкарыстаны пасля паўторнага адкрыцця плэера</string>
 
     <!-- Значэнні налад OSD -->
     <string name="val_custom">Карыст.</string>
@@ -83,6 +86,9 @@
     <string name="error_video_decoder">Памылка відэадэкодэра.\nПрайграваецца толькі аўдыя.</string>
     <string name="error_audio_disabled">Памылка аўдыя. Гук адключаны.\n%s</string>
     <string name="error_audio_disabled_hint">Памылка аўдыя. Гук адключаны.\nПаспрабуйце іншую дарожку.\n%s</string>
+    <string name="pip_unavailable">Не ўдалося адкрыць PiP. Запусціце відэа і дазвольце рэжым «Відарыс у відарысе» ў наладах сістэмы.</string>
+    <string name="pip_action_play">Прайграць</string>
+    <string name="pip_action_pause">Паўза</string>
     <string name="msg_playlist_empty">Плэйліст пусты</string>
     <string name="msg_auto_detect">Аўтавызначэнне: %s</string>
     <string name="press_back_exit">Націсніце НАЗАД для выхаду</string>
@@ -96,6 +102,7 @@
     <string name="pref_decoder_priority_prefer_device">Аддаваць перавагу дэкодэрам прылады (па змаўчанні) HW+SW</string>
     <string name="pref_decoder_priority_prefer_app">Аддаваць перавагу дэкодэрам праграмы (AV1 + FFmpeg) SW+HW</string>
     <string name="pref_decoder_priority_only_device">Толькі дэкодэры прылады</string>
+    <string name="pref_auto_pip_desc">Аўтаматычна адкрываць невялікае акно з відэа пры згортванні падчас прайгравання.</string>
     <string name="pref_downmix">Downmix у стэрэа</string>
     <string name="pref_downmix_desc">Пры выкарыстанні SW дэкодэра, дазваляе пераўтварыць шматканальны гук у правільна¹ зміксаванае стэрэа, што вырашае праблему з адсутнасцю голасу/перакладу (звычайна на цэнтральным канале).\n¹ - Матрыцы для downmix разлічаны аналагічна RFC 7845 (Section 5.1.1.5).</string>
     <string name="pref_downmix_config">Карэкцыя Downmix</string>
@@ -147,11 +154,17 @@
     <string name="pref_up_action_desc">Што адкрываць пры націску \'Уверх\' у плэеры</string>
     <string name="pref_up_action_osd">Панэль налад</string>
     <string name="pref_up_action_menu">Меню налад (Бакавое)</string>
+    <string name="pref_up_action_info">Інфо-панэль</string>
     <string name="pref_up_action_none">Нічога</string>
+    <string name="pref_ok_action">Дзеянне кнопкі \'OK\'</string>
+    <string name="pref_ok_action_desc">Што рабіць пры націску \'OK\' у плэеры</string>
+    <string name="pref_ok_action_pause">Пераключыць паўзу</string>
+    <string name="pref_ok_action_pause_panel">Паўза + Панэль</string>
+    <string name="pref_ok_action_panel">Паказаць панэль</string>
     <string name="pref_remember_zoom">Запамінаць маштаб</string>
     <string name="pref_remember_zoom_desc">Ужываць апошні выбраны рэжым маштабавання да ўсіх відэа</string>
-    <string name="pref_show_clock">Паказваць гадзіннік</string>
-    <string name="pref_show_clock_desc">Паказваць гадзіннік у правым верхнім куце (паверх відэа)</string>
+    <string name="pref_show_clock">Гадзіннік і празрыстасць</string>
+    <string name="pref_show_clock_desc">Можна ўключыць гадзіннік у правым верхнім куце і задаць яго празрыстасць</string>
     <string name="pref_show_playlist_index">Нумар у плэйлісце</string>
     <string name="pref_show_playlist_index_desc">Паказваць парадкавы нумар паверх мініяцюры відэа</string>
     <string name="pref_swipe_horizontal">Гарызантальны свайп</string>
@@ -169,6 +182,28 @@
     <string name="swipe_release_exit">Адпусціце для выхаду</string>
     <string name="pref_pause_dim">Зацьмняць экран на паўзе</string>
     <string name="pref_pause_dim_desc">Абараняе OLED экраны ад выгарання</string>
+    <string name="pref_startup_playlist">Плэйліст пры запуску</string>
+    <string name="pref_startup_playlist_desc">Спасылка на M3U плэйліст</string>
+    <string name="pref_startup_playlist_not_set">Не зададзены</string>
+    <string name="dialog_input_url_title">Увядзіце спасылку на плэйліст</string>
+    <string name="dialog_input_url_hint">http://...</string>
+    <string name="save">Захаваць</string>
+    <string name="pref_live_mode">Кіраванне для эфіру</string>
+    <string name="pref_live_mode_desc">Для плэйлістаў з эфірам: ОК - спіс, Улева/Управа - каналы, Уверх - інфапанэль</string>
+    <string name="pref_track_change_info">Інфармацыя пры змене трэка</string>
+    <string name="pref_track_change_info_desc">Адлюстроўваць верхнюю інфапанэль пры змене трэка</string>
+    <string name="pref_buffer_display">Адлюстраванне буфера</string>
+    <string name="pref_buffer_display_desc">Дзе паказваць працэнт буферызацыі</string>
+    <string name="buffer_off">Выкл</string>
+    <string name="buffer_panel">У панэлі кіравання</string>
+    <string name="buffer_clock">Побач з гадзіннікам і ў інфапанэлі</string>
+    <string name="pref_buffer_size">Памер буфера</string>
+    <string name="pref_buffer_size_desc">Аб\'ём АЗП для буферызацыі сеткавага відэа. Лакальныя файлы выкарыстоўваюць буфер па змаўчанні</string>
+    <string name="buffer_size_auto">Аўта</string>
+    <string name="buffer_size_mb">%d МБ</string>
+    <string name="buffer_percentage">Буфер: %d%%</string>
+    <string name="select_group">Выберыце групу</string>
+    <string name="group_all">Усе</string>
 
     <!-- Resume Playback -->
     <string name="pref_resume_mode">Аднаўленне прагляду</string>
@@ -193,6 +228,7 @@
     <string name="update_found">Знойдзена абнаўленне: %s</string>
     <string name="update_latest">У вас апошняя версія</string>
     <string name="update_error">Памылка праверкі абнаўленняў</string>
+    <string name="update_download_error">Не ўдалося спампаваць абнаўленне</string>
     <string name="update_exist">Даступна абнаўленне</string>
     <string name="update_desc">Спіс змен…</string>
     <string name="loading">Загрузка…</string>

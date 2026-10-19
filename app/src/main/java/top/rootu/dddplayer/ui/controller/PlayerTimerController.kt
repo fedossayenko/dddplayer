@@ -1,5 +1,6 @@
 package top.rootu.dddplayer.ui.controller
 
+import android.text.format.DateFormat
 import android.widget.TextView
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -7,34 +8,57 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.util.Calendar
+import java.util.Date
 import java.util.Locale
 
 /**
  * Контроллер таймеров плеера на Coroutines.
- * @param scope CoroutineScope, привязанный к жизненному циклу (например, viewLifecycleOwner.lifecycleScope)
  */
 class PlayerTimerController(
     private val scope: CoroutineScope,
     private val onHideControls: () -> Unit,
     private val onHideSettings: () -> Unit,
-    private val clockView: TextView
+    private val clockViews: List<TextView>
 ) {
     private var controlsTimerJob: Job? = null
     private var settingsTimerJob: Job? = null
     private var clockJob: Job? = null
 
+    private var lastTimeStr: String = ""
+
+    // Текст буфера, который добавляется к часам (например "95%")
+    var bufferText: String = ""
+        set(value) {
+            if (field == value) return
+            field = value
+            updateClockViews()
+        }
+
     fun startClock() {
         clockJob?.cancel()
         clockJob = scope.launch {
             while (isActive) {
-                val calendar = Calendar.getInstance()
-                clockView.text = String.format(
-                    Locale.getDefault(), "%02d:%02d",
-                    calendar.get(Calendar.HOUR_OF_DAY), calendar.get(Calendar.MINUTE)
-                )
+                // Формат 12/24 ч берем из системных настроек, как это делал TextClock
+                val context = clockViews.firstOrNull()?.context
+                lastTimeStr = if (context != null) {
+                    DateFormat.getTimeFormat(context).format(Date())
+                } else {
+                    val calendar = Calendar.getInstance()
+                    String.format(
+                        Locale.getDefault(), "%02d:%02d",
+                        calendar.get(Calendar.HOUR_OF_DAY), calendar.get(Calendar.MINUTE)
+                    )
+                }
+                updateClockViews()
                 delay(10000) // Обновляем каждые 10 секунд
             }
         }
+    }
+
+    private fun updateClockViews() {
+        if (lastTimeStr.isEmpty()) return
+        val content = if (bufferText.isNotEmpty()) "$bufferText • $lastTimeStr" else lastTimeStr
+        clockViews.forEach { it.text = content }
     }
 
     fun resetControlsTimer() {

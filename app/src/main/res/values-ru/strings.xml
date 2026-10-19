@@ -52,6 +52,8 @@
     <string name="setting_leak_l">Утечка (Левый)</string>
     <string name="setting_leak_r">Утечка (Правый)</string>
     <string name="setting_space">Пространство</string>
+    <string name="setting_render_api">Рендер</string>
+    <string name="msg_render_api_restart">OpenGL ES 3.0 будет использован после повторного открытия плеера</string>
 
     <!-- Значения настроек OSD -->
     <string name="val_custom">Пользов.</string>
@@ -62,6 +64,7 @@
     <string name="playback_speed">Скорость</string>
     <string name="playback_zoom">Масштабирование</string>
     <string name="playback_zoom_scale">Увеличение %d%%</string>
+    <string name="picture_in_picture">Картинка в картинке</string>
     <string name="playback_zoom_percent">Масштаб: %d%%</string>
 
     <!-- Режимы масштабирования -->
@@ -90,6 +93,9 @@
     <string name="error_video_decoder">Ошибка видео декодера.\nВоспроизводится только звук.</string>
     <string name="error_audio_disabled">Ошибка аудио. Звук отключен.\n%s</string>
     <string name="error_audio_disabled_hint">Ошибка аудио. Звук отключен.\nПопробуйте другую дорожку.\n%s</string>
+    <string name="pip_unavailable">Не удалось открыть PiP. Запустите видео и разрешите режим «Картинка в картинке» в настройках системы.</string>
+    <string name="pip_action_play">Воспроизвести</string>
+    <string name="pip_action_pause">Пауза</string>
     <string name="msg_playlist_empty">Плейлист пуст</string>
     <string name="msg_auto_detect">Автоопределение: %s</string>
     <string name="press_back_exit">Нажмите НАЗАД для выхода</string>
@@ -107,6 +113,7 @@
     <string name="pref_decoder_priority_prefer_app">Предпочитать декодеры приложения (AV1 + FFmpeg) SW+HW</string>
     <string name="pref_decoder_priority_only_device">Только декодеры устройства</string>
     <string name="pref_decoder_sw_desc">¹ - SW содержит декодеры AV1 и FFmpeg (собран с аудиокодеками: vorbis, opus, flac, alac, pcm_mulaw, pcm_alaw, mp3, amrnb, amrwb, aac, ac3, eac3, dca(DTS), mlp, truehd)</string>
+    <string name="pref_auto_pip_desc">Автоматически открывать небольшое окно с видео при сворачивании во время воспроизведения.</string>
     <string name="pref_downmix">Downmix в стерео</string>
     <string name="pref_downmix_desc">При использовании SW декодера, позволяет преобразовать многоканальный звук в правильно¹ смиксированное стерео, что позволяет решить проблему с отсутствием голоса/перевода (обычно присутствуют на центральном канале).\n¹ - Матрицы для downmix рассчитаны аналогично RFC 7845 (Section 5.1.1.5).</string>
     <string name="pref_downmix_config">Коррекция Downmix</string>
@@ -163,11 +170,17 @@
     <string name="pref_up_action_desc">Что открывать при нажатии \'Вверх\' в плеере</string>
     <string name="pref_up_action_osd">Панель настройки</string>
     <string name="pref_up_action_menu">Меню настроек (Боковое)</string>
+    <string name="pref_up_action_info">Инфо-панель</string>
     <string name="pref_up_action_none">Ничего</string>
+    <string name="pref_ok_action">Действие кнопки \'OK\'</string>
+    <string name="pref_ok_action_desc">Что делать при нажатии \'OK\' в плеере</string>
+    <string name="pref_ok_action_pause">Переключить паузу</string>
+    <string name="pref_ok_action_pause_panel">Пауза + Панель</string>
+    <string name="pref_ok_action_panel">Показать панель</string>
     <string name="pref_remember_zoom">Запоминать масштабирование</string>
     <string name="pref_remember_zoom_desc">Применять последний выбранный режим масштабирования ко всем видео</string>
-    <string name="pref_show_clock">Отображать часы</string>
-    <string name="pref_show_clock_desc">Отображать часы в правом верхнем углу (поверх видео)</string>
+    <string name="pref_show_clock">Часы и их прозрачность</string>
+    <string name="pref_show_clock_desc">Можно включить часы в правом верхнем углу и задать их прозрачность</string>
     <string name="pref_show_playlist_index">Номер в плейлисте</string>
     <string name="pref_show_playlist_index_desc">Отображать порядковый номер поверх миниатюры видео</string>
     <string name="pref_swipe_horizontal">Горизонтальный свайп</string>
@@ -185,6 +198,28 @@
     <string name="swipe_release_exit">Отпустите для выхода</string>
     <string name="pref_pause_dim">Затемнение экрана на паузе</string>
     <string name="pref_pause_dim_desc">Защищает OLED экраны от выгорания</string>
+    <string name="pref_startup_playlist">Плейлист при запуске</string>
+    <string name="pref_startup_playlist_desc">Ссылка на M3U плейлист</string>
+    <string name="pref_startup_playlist_not_set">Не задан</string>
+    <string name="dialog_input_url_title">Введите ссылку на плейлист</string>
+    <string name="dialog_input_url_hint">http://...</string>
+    <string name="save">Сохранить</string>
+    <string name="pref_live_mode">Управление для эфира</string>
+    <string name="pref_live_mode_desc">Для плейлистов с эфиром: ОК - список, Влево/Вправо - каналы, Вверх - инфопанель</string>
+    <string name="pref_track_change_info">Информация при смене трека</string>
+    <string name="pref_track_change_info_desc">Отображать верхнюю инфопанель при смене трека</string>
+    <string name="pref_buffer_display">Отображение буфера</string>
+    <string name="pref_buffer_display_desc">Где показывать процент буферизации</string>
+    <string name="buffer_off">Выкл</string>
+    <string name="buffer_panel">В панели управления</string>
+    <string name="buffer_clock">Рядом с часами и в инфопанели</string>
+    <string name="pref_buffer_size">Размер буфера</string>
+    <string name="pref_buffer_size_desc">Объём ОЗУ для буферизации сетевого видео. Локальные файлы используют буфер по умолчанию</string>
+    <string name="buffer_size_auto">Авто</string>
+    <string name="buffer_size_mb">%d МБ</string>
+    <string name="buffer_percentage">Буфер: %d%%</string>
+    <string name="select_group">Выберите группу</string>
+    <string name="group_all">Все</string>
 
     <!-- Resume Playback -->
     <string name="pref_resume_mode">Возобновление просмотра</string>
@@ -218,6 +253,7 @@
     <string name="update_found">Найдено обновление: %s</string>
     <string name="update_latest">У вас последняя версия</string>
     <string name="update_error">Ошибка проверки обновлений</string>
+    <string name="update_download_error">Не удалось скачать обновление</string>
     <string name="update_exist">Доступно обновление</string>
     <string name="update_desc">Список изменений…</string>
     <string name="loading">Скачивание…</string>

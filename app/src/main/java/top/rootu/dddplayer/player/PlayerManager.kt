@@ -33,19 +33,25 @@ import androidx.media3.exoplayer.mediacodec.MediaCodecUtil
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.source.MediaSource
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
+import androidx.media3.exoplayer.upstream.DefaultAllocator
 import androidx.media3.exoplayer.upstream.DefaultLoadErrorHandlingPolicy
 import androidx.media3.extractor.DefaultExtractorsFactory
 import androidx.media3.extractor.mp4.Mp4Extractor
 import androidx.media3.extractor.ts.DefaultTsPayloadReaderFactory
 import androidx.media3.extractor.ts.TsExtractor
 import androidx.media3.session.MediaSession
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
+import okhttp3.Request
 import top.rootu.dddplayer.App.Companion.USER_AGENT
 import top.rootu.dddplayer.data.SettingsRepository
 import top.rootu.dddplayer.logic.AudioMixerLogic
+import top.rootu.dddplayer.logic.M3uParser
 import top.rootu.dddplayer.logic.UnifiedMetadataReader
 import top.rootu.dddplayer.model.MediaItem
 import top.rootu.dddplayer.utils.MediaFormatHelper
+import java.io.InputStream
 import java.security.SecureRandom
 import java.security.cert.X509Certificate
 import java.util.concurrent.ConcurrentHashMap
@@ -56,8 +62,10 @@ import javax.net.ssl.TrustManager
 import javax.net.ssl.X509TrustManager
 import androidx.media3.common.MediaItem as Media3MediaItem
 
+private const val MAX_PROBE_BYTES = 32 * 1024 * 1024 // Ограничение размера проверяемого плейлиста
+
 class PlayerManager(
-    private val context: Context,
+    context: Context,
     listener: Player.Listener
 ) {
     private var playerListener: Player.Listener? = listener
@@ -68,14 +76,21 @@ class PlayerManager(
         private set
 
     private var mediaSession: MediaSession? = null
+
+    // Для расчета заполненности буфера, заданного в МБ
+    private var bufferAllocator: DefaultAllocator? = null
+    private var networkBufferBytes: Int = C.LENGTH_UNSET
     private var loudnessEnhancer: LoudnessEnhancer? = null
 
     // Состояние для восстановления
     private var currentWindowIndex = 0
     private var currentPosition = 0L
     private var currentMediaItems: List<Media3MediaItem> = emptyList()
+    private var currentHeaders: List<Map<String, String>> = emptyList()
     private var playWhenReady = true
 
+    // Пишется из IO-потока парсера, читается из потоков загрузки и главного потока
+    @Volatile
     private var currentTrackInfo: Map<Int, UnifiedMetadataReader.TrackInfo> = emptyMap()
     var onMetadataAvailable: (() -> Unit)? = null
     var onPlayerCreated: ((ExoPlayer) -> Unit)? = null
@@ -164,10 +179,17 @@ class PlayerManager(
     // Мы передаем baseHttpFactory как источник для сетевых запросов.
     private val defaultDataSourceFactory = DefaultDataSource.Factory(appContext, baseHttpFactory)
 
+    // Ответы, уже скачанные при проверке ссылки на M3U: плеер получает их без повторного запроса
+    private val prefetchStore = PrefetchStore()
+    private val prefetchingDataSourceFactory = PrefetchingDataSource.Factory(defaultDataSourceFactory, prefetchStore)
+
+    // Типы, определенные при проверке ссылки (переживают очистку resolvedMediaTypes в loadPlaylist)
+    private val probedMediaTypes = ConcurrentHashMap<String, String>()
+
     // Пересоздаем фабрику при инициализации, чтобы гарантировать чистое состояние
     private fun createParsingDataSourceFactory(): ParsingDataSourceFactory {
         return ParsingDataSourceFactory(
-            upstreamFactory = defaultDataSourceFactory,
+            upstreamFactory = prefetchingDataSourceFactory,
             onMetadataParsed = { metadataMap ->
                 currentTrackInfo = metadataMap
                 onMetadataAvailable?.invoke()
@@ -344,15 +366,12 @@ class PlayerManager(
             setEnableDecoderFallback(true) // Разрешаем софтовый декодер
         }
 
-        val loadControl = DefaultLoadControl.Builder()
-            .setBufferDurationsMs(
-                15000, // minBufferMs
-                50000, // maxBufferMs
-                500,   // bufferForPlaybackMs
-                5000   // bufferForPlaybackAfterRebufferMs
-            )
-            .setPrioritizeTimeOverSizeThresholds(true)
-            .build()
+        // Объем буфера из настроек применяется только к сетевому видео,
+        // локальные файлы и режим "Авто" буферизуются с прежними параметрами
+        val networkBufferMB = settingsRepo.getTargetBufferCorrectMB()
+        networkBufferBytes = if (networkBufferMB > 0) networkBufferMB * 1024 * 1024 else C.LENGTH_UNSET
+        val loadControl = NetworkBufferLoadControl.create(networkBufferMB)
+        bufferAllocator = loadControl.bufferAllocator
 
         // Build Player
         val player = ExoPlayer.Builder(appContext, renderersFactory)
@@ -389,6 +408,11 @@ class PlayerManager(
             override fun onAudioSessionIdChanged(audioSessionId: Int) {
                 initLoudnessEnhancer(audioSessionId)
             }
+
+            override fun onMediaItemTransition(mediaItem: Media3MediaItem?, reason: Int) {
+                // Заголовки (Referer, Cookie и т.п.) у каждого элемента плейлиста свои
+                applyHeadersForIndex(player.currentMediaItemIndex)
+            }
         })
         if (player.audioSessionId != C.AUDIO_SESSION_ID_UNSET) {
             initLoudnessEnhancer(player.audioSessionId)
@@ -399,7 +423,7 @@ class PlayerManager(
         // --- MediaSession ---
         if (player.canAdvertiseSession()) {
             try {
-                mediaSession = MediaSession.Builder(context, player).build()
+                mediaSession = MediaSession.Builder(appContext, player).build()
             } catch (e: Exception) {
                 e.printStackTrace()
             }
@@ -434,6 +458,7 @@ class PlayerManager(
 
         // 6. Restore State
         if (currentMediaItems.isNotEmpty()) {
+            applyHeadersForIndex(currentWindowIndex)
             val sources = buildMediaSources(currentMediaItems)
             player.setMediaSources(sources, currentWindowIndex, currentPosition)
             player.playWhenReady = playWhenReady
@@ -487,6 +512,22 @@ class PlayerManager(
         }
     }
 
+    private fun applyHeadersForIndex(index: Int) {
+        baseHttpFactory.setDefaultRequestProperties(currentHeaders.getOrNull(index) ?: emptyMap())
+    }
+
+    /**
+     * Применяет настройки, которые не требуют пересоздания плеера.
+     */
+    fun applyLiveSettings() {
+        val player = exoPlayer ?: return
+        updateTrackSelectionParameters()
+        player.skipSilenceEnabled = settingsRepo.isSkipSilenceEnabled()
+        if (player.audioSessionId != C.AUDIO_SESSION_ID_UNSET) {
+            initLoudnessEnhancer(player.audioSessionId)
+        }
+    }
+
     fun updateTrackSelectionParameters() {
         val player = exoPlayer ?: return
         val audioPref = settingsRepo.getPreferredAudioLang()
@@ -522,13 +563,111 @@ class PlayerManager(
         return resolvedMediaTypes[uri.toString()]
     }
 
+    /**
+     * Если передана одна ссылка на .m3u/.m3u8, проверяет, не плейлист ли это (IPTV/список файлов).
+     *
+     * Ссылка скачивается один раз. Плейлист M3U разбирается в список элементов. HLS (любой тег #EXT-X-)
+     * и прочее остаются как есть, а уже скачанный ответ отдается плееру без повторного запроса.
+     *
+     * @return список элементов M3U или null, если это не M3U плейлист.
+     */
+    suspend fun expandM3u(items: List<MediaItem>, force: Boolean = false): List<MediaItem>? = withContext(Dispatchers.IO) {
+        prefetchStore.clear()
+        val item = items.singleOrNull() ?: return@withContext null
+        if (!force && !isM3uCandidate(item.uri)) return@withContext null
+
+        try {
+            val scheme = item.uri.scheme?.lowercase()
+            val content = if (scheme == "http" || scheme == "https") {
+                fetchForProbe(item)
+            } else {
+                appContext.contentResolver.openInputStream(item.uri)?.use { input ->
+                    readLimited(input)?.toString(Charsets.UTF_8)
+                }
+            } ?: return@withContext null
+
+            if (M3uParser.isPlaylist(content)) {
+                M3uParser.parse(content, item.uri, item.headers).ifEmpty { null }
+            } else {
+                null
+            }
+        } catch (e: Exception) {
+            Log.w("PlayerManager", "M3U probe failed: ${e.message}")
+            null
+        }
+    }
+
+    /** Одна ссылка на .m3u/.m3u8 - ее нужно проверить на плейлист M3U. */
+    fun isM3uCandidate(items: List<MediaItem>): Boolean {
+        val item = items.singleOrNull() ?: return false
+        return isM3uCandidate(item.uri)
+    }
+
+    private fun isM3uCandidate(uri: android.net.Uri): Boolean {
+        val path = uri.path?.lowercase() ?: return false
+        return path.endsWith(".m3u") || path.endsWith(".m3u8")
+    }
+
+    /**
+     * Скачивает ссылку для проверки. Если это не плейлист M3U, сохраняет ответ для плеера.
+     * @return текст ответа или null (не текст / ошибка / слишком большой).
+     */
+    private fun fetchForProbe(item: MediaItem): String? {
+        val uriString = item.uri.toString()
+        val requestBuilder = Request.Builder().url(uriString)
+        item.headers.forEach { (k, v) -> requestBuilder.header(k, v) }
+        if (item.headers.keys.none { it.equals("User-Agent", ignoreCase = true) }) {
+            requestBuilder.header("User-Agent", USER_AGENT)
+        }
+
+        okHttpClient.newCall(requestBuilder.build()).execute().use { response ->
+            if (!response.isSuccessful) return null
+            val contentType = response.header("Content-Type")?.lowercase().orEmpty()
+            // Видео/аудио по ссылке .m3u - не плейлист, плеер откроет его сам
+            if (contentType.startsWith("video/") || contentType.startsWith("audio/")) return null
+            val contentLength = response.body.contentLength()
+            if (contentLength > MAX_PROBE_BYTES) return null
+
+            val data = readLimited(response.body.byteStream()) ?: return null
+            val text = data.toString(Charsets.UTF_8)
+
+            if (!M3uParser.isPlaylist(text)) {
+                // HLS и прочее: отдаем плееру уже скачанный ответ
+                prefetchStore.put(
+                    uriString,
+                    PrefetchedResponse(data, response.request.url.toString().toUri(), response.headers.toMultimap())
+                )
+                if (text.contains("#EXT-X-")) {
+                    probedMediaTypes[uriString] = MimeTypes.APPLICATION_M3U8
+                }
+            }
+            return text
+        }
+    }
+
+    private fun readLimited(input: InputStream): ByteArray? {
+        val out = java.io.ByteArrayOutputStream()
+        val buffer = ByteArray(16 * 1024)
+        var total = 0
+        while (true) {
+            val count = input.read(buffer)
+            if (count == -1) break
+            total += count
+            if (total > MAX_PROBE_BYTES) return null
+            out.write(buffer, 0, count)
+        }
+        return out.toByteArray()
+    }
+
     fun loadPlaylist(items: List<MediaItem>, startIndex: Int, startPosMs: Long = 0) {
         currentTrackInfo = emptyMap()
         resolvedMediaTypes.clear() // Очищаем кэш типов при новой загрузке
+        resolvedMediaTypes.putAll(probedMediaTypes)
+        probedMediaTypes.clear()
 
-        if (items.isNotEmpty()) {
-            baseHttpFactory.setDefaultRequestProperties(items[startIndex].headers)
-        }
+        val safeStartIndex = if (items.isEmpty()) 0 else startIndex.coerceIn(0, items.lastIndex)
+        currentHeaders = items.map { it.headers }
+        applyHeadersForIndex(safeStartIndex)
 
         val exoItems = items.map { item ->
             val subConfigs = item.subtitles.map { sub ->
@@ -554,6 +693,7 @@ class PlayerManager(
                 .build()
 
             Media3MediaItem.Builder()
+                .setMediaId(item.uuid)
                 .setUri(item.uri)
 //                .setMimeType(mimeType)
                 .setMediaMetadata(metadata)
@@ -563,7 +703,7 @@ class PlayerManager(
         }
 
         currentMediaItems = exoItems
-        currentWindowIndex = startIndex
+        currentWindowIndex = safeStartIndex
         currentPosition = if (startPosMs <= 0L) C.TIME_UNSET else startPosMs
         playWhenReady = true
 
@@ -571,10 +711,25 @@ class PlayerManager(
             initializePlayer()
         } else {
             val sources = buildMediaSources(exoItems)
-            exoPlayer?.setMediaSources(sources, startIndex, currentPosition)
+            exoPlayer?.setMediaSources(sources, safeStartIndex, currentPosition)
             exoPlayer?.playWhenReady = true
             exoPlayer?.prepare()
         }
+    }
+
+    /**
+     * Перезагружает плейлист в текущий плеер (восстановление после ошибки).
+     * Источники собираются через [buildMediaSources], чтобы сохранить
+     * кастомные экстракторы и ParsingDataSource.
+     */
+    fun reloadMediaItems(items: List<Media3MediaItem>, index: Int, positionMs: Long) {
+        val player = exoPlayer ?: return
+        currentMediaItems = items
+        currentWindowIndex = index
+        currentPosition = positionMs
+        player.setMediaSources(buildMediaSources(items), index, positionMs)
+        player.prepare()
+        player.play()
     }
 
     fun releasePlayer(isFinalRelease: Boolean = false, saveState: Boolean = true) {
@@ -606,12 +761,43 @@ class PlayerManager(
 
     fun getTrackMetadata(): Map<Int, UnifiedMetadataReader.TrackInfo> = currentTrackInfo
 
+    /**
+     * Заполненность буфера (0-100) по объему, если для текущего сетевого видео задан размер в МБ.
+     * null - режим "Авто" или локальный файл: процент считается по времени, как раньше.
+     */
+    fun getNetworkBufferFillPercent(): Int? {
+        val player = exoPlayer ?: return null
+        val allocator = bufferAllocator ?: return null
+        if (networkBufferBytes == C.LENGTH_UNSET) return null
+        val scheme = player.currentMediaItem?.localConfiguration?.uri?.scheme
+        if (scheme.isNullOrEmpty() || scheme in DefaultLoadControl.LOCAL_PLAYBACK_SCHEMES) return null
+        return ((allocator.totalBytesAllocated * 100L) / networkBufferBytes).toInt().coerceIn(0, 100)
+    }
+
     fun togglePlayPause() {
-        exoPlayer?.let { if (it.isPlaying) it.pause() else it.play() }
+        val player = exoPlayer ?: return
+        // Ориентируемся на playWhenReady, а не на isPlaying: во время буферизации
+        // isPlaying == false, но пользователь ожидает именно паузу.
+        val state = player.playbackState
+        if (player.playWhenReady && state != Player.STATE_ENDED && state != Player.STATE_IDLE) {
+            player.pause()
+        } else {
+            when (state) {
+                Player.STATE_ENDED -> player.seekToDefaultPosition()
+                Player.STATE_IDLE -> player.prepare()
+            }
+            player.play()
+        }
     }
 
     fun seekForward() {
-        exoPlayer?.let { it.seekTo((it.currentPosition + it.seekForwardIncrement).coerceAtMost(it.duration)) }
+        exoPlayer?.let {
+            val target = it.currentPosition + it.seekForwardIncrement
+            // Для потоков с неизвестной длительностью duration == C.TIME_UNSET,
+            // а seekTo(C.TIME_UNSET) означает переход в начало.
+            val duration = it.duration
+            it.seekTo(if (duration != C.TIME_UNSET) target.coerceAtMost(duration) else target)
+        }
     }
 
     fun seekBack() {

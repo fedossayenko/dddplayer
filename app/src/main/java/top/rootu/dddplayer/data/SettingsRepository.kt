@@ -21,6 +21,29 @@ class SettingsRepository private constructor(context: Context) {
         const val RESUME_ALWAYS = 1
         const val RESUME_NEVER = 2
 
+        // Действие кнопки "Вверх"
+        const val UP_ACTION_NONE = 0
+        const val UP_ACTION_OSD = 1
+        const val UP_ACTION_MENU = 2
+        const val UP_ACTION_INFO = 3
+
+        // Действие кнопки "OK" при скрытой панели
+        const val OK_ACTION_PAUSE = 0
+        const val OK_ACTION_PAUSE_PANEL = 1
+        const val OK_ACTION_PANEL = 2
+
+        // Прозрачность часов: -1 = часы выключены, 0..80 = прозрачность в %
+        const val CLOCK_OFF = -1
+
+        // Отображение процента буфера
+        const val BUFFER_DISPLAY_OFF = 0
+        const val BUFFER_DISPLAY_PANEL = 1
+        const val BUFFER_DISPLAY_CLOCK = 2 // Рядом с часами (одиночные часы и инфопанель)
+
+        const val BUFFER_SIZE_AUTO = -1
+        const val RENDER_API_AUTO = 0
+        const val RENDER_API_GLES2 = 1
+
         @Volatile
         private var instance: SettingsRepository? = null
 
@@ -47,6 +70,10 @@ class SettingsRepository private constructor(context: Context) {
         db.videoSettingsDao().deleteOldSettings(System.currentTimeMillis() - 2592000000L)
     }
 
+    // RENDER_API_AUTO = GLES 3.0 (если доступно), RENDER_API_GLES2 = принудительно GLES 2.0
+    fun getRenderApiMode(): Int = prefs.getInt("render_api_mode", RENDER_API_AUTO)
+    fun setRenderApiMode(mode: Int) = prefs.edit { putInt("render_api_mode", mode) }
+
     // --- Zoom Settings ---
     fun isRememberZoomEnabled(): Boolean = prefs.getBoolean("remember_zoom", false)
     fun setRememberZoomEnabled(enabled: Boolean) = prefs.edit { putBoolean("remember_zoom", enabled) }
@@ -59,6 +86,49 @@ class SettingsRepository private constructor(context: Context) {
     fun getZoomScalePercent(): Int = prefs.getInt("video_zoom_scale", 115)
     fun setZoomScalePercent(percent: Int) = prefs.edit { putInt("video_zoom_scale", percent) }
 
+    // --- Playlist Settings ---
+    // Плейлист, который открывается при запуске из лаунчера
+    fun getStartupPlaylistUri(): String? = prefs.getString("startup_playlist_uri", null)
+    fun setStartupPlaylistUri(uri: String?) = prefs.edit { putString("startup_playlist_uri", uri) }
+
+    // Последний канал M3U плейлиста (восстанавливается только по точному URI)
+    fun getLastPlayedChannelUri(): String? = prefs.getString("last_channel_uri", null)
+    fun setLastPlayedChannelUri(uri: String?) = prefs.edit { putString("last_channel_uri", uri) }
+
+    // Эфирный режим (OK - плейлист, Влево/Вправо - переключение каналов) для плейлистов с live-потоком.
+    // По умолчанию выключен
+    fun isLiveModeEnabled(): Boolean = prefs.getBoolean("live_mode_control", false)
+    fun setLiveModeEnabled(enabled: Boolean) = prefs.edit { putBoolean("live_mode_control", enabled) }
+
+    // Показывать инфопанель при смене элемента плейлиста. По умолчанию выключено
+    fun isShowInfoOnTrackChange(): Boolean = prefs.getBoolean("show_info_on_change", false)
+    fun setShowInfoOnTrackChange(enabled: Boolean) = prefs.edit { putBoolean("show_info_on_change", enabled) }
+
+    // --- Buffer Settings ---
+    // Отображение процента буфера (BUFFER_DISPLAY_*)
+    fun getBufferDisplayMode(): Int = prefs.getInt("buffer_display_mode", BUFFER_DISPLAY_OFF)
+    fun setBufferDisplayMode(mode: Int) = prefs.edit { putInt("buffer_display_mode", mode) }
+
+    // Размер буфера сетевого видео в мегабайтах (BUFFER_SIZE_AUTO = текущие параметры плеера)
+    fun getTargetBufferOptions(): List<Int> {
+        val uiReserveMB = 96
+        val bufferSizeOptions = listOf(BUFFER_SIZE_AUTO, 16, 32, 48, 64, 96, 128, 160, 192, 224, 256, 320, 352, 384, 448, 512, 768, 1024)
+        val maxHeapMB = Runtime.getRuntime().maxMemory() / 1024 / 1024
+
+        // Разрешаем выбирать буфер в пределах кучи с учетом резерва под UI
+        val safeLimit = (maxHeapMB - uiReserveMB).toInt().coerceAtLeast(16)
+
+        return bufferSizeOptions.filter { it == BUFFER_SIZE_AUTO || it <= safeLimit }
+    }
+
+    // Значение из настроек, если оно допустимо для текущего устройства, иначе "Авто"
+    fun getTargetBufferCorrectMB(): Int {
+        val currentVal = getTargetBufferMB()
+        return if (currentVal in getTargetBufferOptions()) currentVal else BUFFER_SIZE_AUTO
+    }
+    fun getTargetBufferMB(): Int = prefs.getInt("target_buffer_mb", BUFFER_SIZE_AUTO)
+    fun setTargetBufferMB(sizeInMB: Int) = prefs.edit { putInt("target_buffer_mb", sizeInMB) }
+
     // --- UI Settings ---
     fun getPauseDimLevel(): Int = prefs.getInt("pause_dim_level", 60)
     fun setPauseDimLevel(level: Int) = prefs.edit { putInt("pause_dim_level", level) }
@@ -66,6 +136,10 @@ class SettingsRepository private constructor(context: Context) {
     fun setShowPlaylistIndexEnabled(enabled: Boolean) = prefs.edit { putBoolean("show_playlist_index", enabled) }
 
     // --- Global Player Preferences ---
+    // Автоматический переход в PiP при сворачивании. По умолчанию выключен
+    fun isAutoPipEnabled(): Boolean = prefs.getBoolean("auto_pip", false)
+    fun setAutoPipEnabled(enabled: Boolean) = prefs.edit { putBoolean("auto_pip", enabled) }
+
     fun getDecoderPriority(): Int = prefs.getInt("decoder_priority", DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
     fun setDecoderPriority(mode: Int) = prefs.edit { putInt("decoder_priority", mode) }
 
@@ -137,20 +211,37 @@ class SettingsRepository private constructor(context: Context) {
     fun setResumeMode(mode: Int) = prefs.edit { putInt("resume_mode", mode) }
 
     // Действие кнопки "Вверх" ( 0 = Nothing, 1 = OSD, 2 = Side Menu)
-    fun getUpButtonAction(): Int = prefs.getInt("up_button_action", 1)
+    // Действие кнопки "Вверх" (UP_ACTION_*). По умолчанию - боковое меню
+    fun getUpButtonAction(): Int = prefs.getInt("up_button_action", UP_ACTION_MENU)
     fun setUpButtonAction(action: Int) = prefs.edit { putInt("up_button_action", action) }
+
+    // Действие кнопки "OK" (OK_ACTION_*). По умолчанию - пауза + панель (текущее поведение)
+    fun getOkButtonAction(): Int = prefs.getInt("ok_button_action", OK_ACTION_PAUSE_PANEL)
+    fun setOkButtonAction(action: Int) = prefs.edit { putInt("ok_button_action", action) }
     // Горизонтальный свайп ( 0 = None, 1 = Seek, 2 = Playlist)
     fun getHorizontalSwipeAction(): Int = prefs.getInt("horizontal_swipe_action", 2)
     fun setHorizontalSwipeAction(action: Int) = prefs.edit { putInt("horizontal_swipe_action", action) }
 
-    fun isShowClock(): Boolean = prefs.getBoolean("show_clock", false)
-    fun setShowClock(enabled: Boolean) = prefs.edit { putBoolean("show_clock", enabled) }
+    // Прозрачность часов (CLOCK_OFF или 0..80 %).
+    // Миграция со старого переключателя "show_clock": выкл -> часы выключены, вкл -> без прозрачности.
+    fun getClockTransparency(): Int {
+        if (!prefs.contains("clock_transparency")) {
+            val migrated = if (prefs.getBoolean("show_clock", false)) 0 else CLOCK_OFF
+            prefs.edit {
+                putInt("clock_transparency", migrated)
+                remove("show_clock")
+            }
+            return migrated
+        }
+        return prefs.getInt("clock_transparency", CLOCK_OFF)
+    }
+    fun setClockTransparency(transparency: Int) = prefs.edit { putInt("clock_transparency", transparency) }
 
     // Сигнатура настроек, требующих полного перезапуска плеера
     fun getHardSettingsSignature(): String {
         val videoParams = "${getDecoderPriority()}_${isTunnelingEnabled()}_${isMapDvToHevcEnabled()}"
-        val audioDownmix = "${isStereoDownmixEnabled()}_${getMixPreset()}}_${getMixFront()}_${getMixCenter()}_${getMixRear()}_${getMixMiddle()}_${getMixLfe()}"
-        return "${videoParams}_${audioDownmix}"
+        val audioDownmix = "${isStereoDownmixEnabled()}_${getMixPreset()}_${getMixFront()}_${getMixCenter()}_${getMixRear()}_${getMixMiddle()}_${getMixLfe()}"
+        return "${videoParams}_${audioDownmix}_${getTargetBufferCorrectMB()}"
     }
 
     // --- Global Preferences Helpers ---

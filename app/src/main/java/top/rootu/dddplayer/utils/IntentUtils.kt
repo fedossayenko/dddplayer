@@ -53,7 +53,7 @@ object IntentUtils {
             title = filename ?: uri.lastPathSegment ?: "Video"
         }
 
-        val startPosition = extras.getInt("position", 0).toLong()
+        val startPosition = getLongExtraCompat(extras, "position")
         // Single poster
         val singlePoster = extras.getString("thumbnail")
         // Single Video Subtitles
@@ -64,7 +64,7 @@ object IntentUtils {
             title = title,
             filename = filename,
             posterUri = singlePoster?.toUri(),
-            headers = emptyMap(),
+            headers = parseHeaders(extras),
             subtitles = singleSubs,
             startPositionMs = startPosition
         )
@@ -82,17 +82,11 @@ object IntentUtils {
         val posters = getSmartStringArray(extras, "video_list.thumbnail")
         val playlistSubsBundles = getParcelableArrayListCompat<Bundle>(extras, "video_list.subtitles")
 
-        // Headers
-        val headersMap = mutableMapOf<String, String>()
-        val headersArray = getSmartStringArray(extras, "headers")
-        if (headersArray != null) {
-            for (i in 0 until headersArray.size - 1 step 2) {
-                headersMap[headersArray[i]] = headersArray[i + 1]
-            }
-        }
+        val headersMap = parseHeaders(extras)
 
         val playlist = mutableListOf<MediaItem>()
-        var startIndex = 0
+        // Стартовый элемент: явный start_index, либо элемент, совпадающий с intent.data (ниже)
+        var startIndex = extras.getInt("start_index", 0)
 
         for (i in videoListUris.indices) {
             val uri = (videoListUris[i] as? Uri) ?: (videoListUris[i] as? String)?.toUri() ?: continue
@@ -108,7 +102,7 @@ object IntentUtils {
             }
 
             // Если dataUri совпадает с текущим элементом списка, берем позицию из extras
-            val pos = if (dataUri != null && uri == dataUri) extras.getInt("position", 0).toLong() else 0L
+            val pos = if (dataUri != null && uri == dataUri) getLongExtraCompat(extras, "position") else 0L
             if (dataUri != null && uri == dataUri) startIndex = i
 
             playlist.add(
@@ -123,7 +117,30 @@ object IntentUtils {
                 )
             )
         }
+        startIndex = startIndex.coerceIn(0, (playlist.size - 1).coerceAtLeast(0))
         return Pair(playlist, startIndex)
+    }
+
+    // Заголовки передаются массивом ["Имя", "Значение", "Имя", "Значение", ...]
+    private fun parseHeaders(extras: Bundle): Map<String, String> {
+        val headersArray = getSmartStringArray(extras, "headers") ?: return emptyMap()
+        val result = mutableMapOf<String, String>()
+        for (i in 0 until headersArray.size - 1 step 2) {
+            val key = headersArray[i]
+            if (key.isNotBlank()) result[key] = headersArray[i + 1]
+        }
+        return result
+    }
+
+    // Позиция может прийти как Int, Long или String (разные приложения передают по-разному)
+    @Suppress("DEPRECATION")
+    private fun getLongExtraCompat(bundle: Bundle, key: String, defaultValue: Long = 0L): Long {
+        return when (val value = bundle.get(key)) {
+            is Long -> value
+            is Int -> value.toLong()
+            is String -> value.toLongOrNull() ?: defaultValue
+            else -> defaultValue
+        }
     }
 
     /**

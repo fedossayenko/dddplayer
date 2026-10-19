@@ -25,6 +25,7 @@
     <string name="playback_zoom">Zoom</string>
     <string name="playback_zoom_percent">Zoom: %d%%</string>
     <string name="playback_zoom_scale">Scale %d%%</string>
+    <string name="picture_in_picture">Picture-in-picture</string>
 
     <!-- Zoom modes -->
     <string name="resize_mode_fit">Fit</string>
@@ -67,6 +68,8 @@
     <string name="setting_leak_l">Leak (Left)</string>
     <string name="setting_leak_r">Leak (Right)</string>
     <string name="setting_space">Space</string>
+    <string name="setting_render_api">Render</string>
+    <string name="msg_render_api_restart">OpenGL ES 3.0 will be used after reopening the player</string>
 
     <!-- OSD Settings Values -->
     <string name="val_custom">Custom</string>
@@ -77,6 +80,8 @@
     <string name="screen_separation_format" translatable="false">%.1f</string>
     <string name="vr_distortion_format" translatable="false">%.2f</string>
     <string name="vr_zoom_format" translatable="false">%.2f</string>
+    <string name="api_gles2" translatable="false">OpenGL ES 2.0</string>
+    <string name="api_gles3" translatable="false">OpenGL ES 3.0</string>
 
     <!-- Side Menu -->
     <string name="menu_main_title">Settings</string>
@@ -95,6 +100,9 @@
     <string name="error_video_decoder">Video decoder error.\nPlaying audio only.</string>
     <string name="error_audio_disabled">Audio error. Sound is disabled.\n%s</string>
     <string name="error_audio_disabled_hint">Audio error. Sound is disabled.\nTry another track.\n%s</string>
+    <string name="pip_unavailable">Cannot open picture-in-picture. Start a video and allow picture-in-picture in system settings.</string>
+    <string name="pip_action_play">Play</string>
+    <string name="pip_action_pause">Pause</string>
     <string name="msg_playlist_empty">Playlist is empty</string>
     <string name="msg_auto_detect">Auto-detect: %s</string>
     <string name="press_back_exit">Press BACK to exit</string>
@@ -110,6 +118,7 @@
     <string name="pref_decoder_priority_prefer_app" tools:ignore="Typos">Prefer app decoders (AV1 + Ffmpeg) SW+HW</string>
     <string name="pref_decoder_priority_only_device">Device decoders only</string>
     <string name="pref_decoder_sw_desc">¹ - SW includes AV1 and Ffmpeg decoders (built with audio codecs: vorbis, opus, flac, alac, pcm_mulaw, pcm_alaw, mp3, amrnb, amrwb, aac, ac3, eac3, dca(DTS), mlp, truehd)</string>
+    <string name="pref_auto_pip_desc">Automatically open a small video window when minimizing during playback.</string>
     <string name="pref_downmix">Downmix to Stereo</string>
     <string name="pref_downmix_desc">When using the SW decoder, this allows converting multi-channel audio into a properly¹ mixed stereo, which can solve the problem of missing voice/translation (usually present on the center channel).\n¹ - The downmix matrices are calculated similarly to RFC 7845 (Section 5.1.1.5).</string>
     <string name="pref_downmix_config">Downmix Correction</string>
@@ -171,11 +180,17 @@
     <string name="pref_up_action_desc">What to open when pressing \'Up\' in the player</string>
     <string name="pref_up_action_osd">Quick Settings Panel</string>
     <string name="pref_up_action_menu">Settings Menu (Side)</string>
+    <string name="pref_up_action_info">Info panel</string>
     <string name="pref_up_action_none">Nothing</string>
+    <string name="pref_ok_action">\'OK\' Button Action</string>
+    <string name="pref_ok_action_desc">What to do when pressing \'OK\' in the player</string>
+    <string name="pref_ok_action_pause">Toggle Pause</string>
+    <string name="pref_ok_action_pause_panel">Pause + Panel</string>
+    <string name="pref_ok_action_panel">Show Panel</string>
     <string name="pref_remember_zoom">Remember zoom</string>
     <string name="pref_remember_zoom_desc">Apply the last selected zoom mode to all videos</string>
-    <string name="pref_show_clock">Show clock</string>
-    <string name="pref_show_clock_desc">Display clock in the top right corner (over video)</string>
+    <string name="pref_show_clock">Clock &amp; Transparency</string>
+    <string name="pref_show_clock_desc">You can enable the clock in the top right corner and set its transparency</string>
     <string name="pref_show_playlist_index">Playlist index</string>
     <string name="pref_show_playlist_index_desc">Display the sequence number over the video thumbnail</string>
     <string name="pref_swipe_horizontal">Horizontal swipe</string>
@@ -193,6 +208,28 @@
     <string name="swipe_release_exit">Release to exit</string>
     <string name="pref_pause_dim">Dim screen on pause</string>
     <string name="pref_pause_dim_desc">Protects OLED screens from burn-in</string>
+    <string name="pref_startup_playlist">Startup Playlist</string>
+    <string name="pref_startup_playlist_desc">URL to M3U playlist</string>
+    <string name="pref_startup_playlist_not_set">Not set</string>
+    <string name="dialog_input_url_title">Enter Playlist URL</string>
+    <string name="dialog_input_url_hint">http://...</string>
+    <string name="save">Save</string>
+    <string name="pref_live_mode">Live Mode Controls</string>
+    <string name="pref_live_mode_desc">For playlists with a live stream: OK - playlist, Left/Right - switch channels, Up - info panel</string>
+    <string name="pref_track_change_info">Info on track change</string>
+    <string name="pref_track_change_info_desc">Show top info panel when track changes</string>
+    <string name="pref_buffer_display">Buffer Display</string>
+    <string name="pref_buffer_display_desc">Where to show buffering percentage</string>
+    <string name="buffer_off">Off</string>
+    <string name="buffer_panel">In control panel</string>
+    <string name="buffer_clock">Near the clock and in the info panel</string>
+    <string name="pref_buffer_size">Buffer size</string>
+    <string name="pref_buffer_size_desc">Amount of RAM for buffering network video. Local files use the default buffer</string>
+    <string name="buffer_size_auto">Auto</string>
+    <string name="buffer_size_mb">%d MB</string>
+    <string name="buffer_percentage">Buffer: %d%%</string>
+    <string name="select_group">Select Group</string>
+    <string name="group_all">All</string>
 
     <!-- Resume Playback -->
     <string name="pref_resume_mode">Resume playback</string>
@@ -219,6 +256,7 @@
     <string name="update_found">Update found: %s</string>
     <string name="update_latest">You have the latest version</string>
     <string name="update_error">Error checking for updates</string>
+    <string name="update_download_error">Failed to download the update</string>
     <string name="update_exist">Update available</string>
     <string name="update_desc">Changelog…</string>
     <string name="loading">Downloading…</string>

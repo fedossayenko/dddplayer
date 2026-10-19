@@ -19,6 +19,7 @@
     <string name="playback_speed">播放速度</string>
     <string name="playback_zoom">缩放</string>
     <string name="playback_zoom_scale">放大 %d%%</string>
+    <string name="picture_in_picture">画中画</string>
     <string name="playback_zoom_percent">缩放比例: %d%%</string>
 
     <!-- 缩放模式 -->
@@ -62,6 +63,8 @@
     <string name="setting_leak_l">漏光 (左)</string>
     <string name="setting_leak_r">漏光 (右)</string>
     <string name="setting_space">色彩空间</string>
+    <string name="setting_render_api">渲染</string>
+    <string name="msg_render_api_restart">重新打开播放器后将使用 OpenGL ES 3.0</string>
 
     <!-- OSD 设置值 -->
     <string name="val_custom">自定义</string>
@@ -85,6 +88,9 @@
     <string name="error_video_decoder">视频解码器错误。\n仅播放音频。</string>
     <string name="error_audio_disabled">音频错误。声音已禁用。\n%s</string>
     <string name="error_audio_disabled_hint">音频错误。声音已禁用。\n请尝试其他音轨。\n%s</string>
+    <string name="pip_unavailable">无法打开画中画。请先播放视频，并在系统设置中允许使用画中画模式。</string>
+    <string name="pip_action_play">播放</string>
+    <string name="pip_action_pause">暂停</string>
     <string name="msg_playlist_empty">播放列表为空</string>
     <string name="msg_auto_detect">自动检测：%s</string>
     <string name="press_back_exit">按返回键退出</string>
@@ -100,6 +106,7 @@
     <string name="pref_decoder_priority_prefer_app" tools:ignore="Typos">优先使用应用解码器（AV1 + Ffmpeg）SW+HW</string>
     <string name="pref_decoder_priority_only_device">仅使用设备解码器</string>
     <string name="pref_decoder_sw_desc">¹ - SW 包括 AV1 和 Ffmpeg 解码器（内置音频编解码器：vorbis、opus、flac、alac、pcm_mulaw、pcm_alaw、mp3、amrnb、amrwb、aac、ac3、eac3、dca(DTS)、mlp、truehd）</string>
+    <string name="pref_auto_pip_desc">播放期间将应用最小化时，自动打开视频小窗。</string>
     <string name="pref_downmix">缩混至立体声</string>
     <string name="pref_downmix_desc">使用 SW 解码器时，可将多声道音频正确¹混合为立体声，解决人声/配音缺失问题（通常存在于中置声道）。\n¹ - 缩混矩阵的计算类似于 RFC 7845（第 5.1.1.5 节）。</string>
     <string name="pref_downmix_config">缩混校正</string>
@@ -156,11 +163,17 @@
     <string name="pref_up_action_desc">在播放器中按"上"键时打开什么</string>
     <string name="pref_up_action_osd">快捷设置面板</string>
     <string name="pref_up_action_menu">设置菜单（侧边）</string>
+    <string name="pref_up_action_info">信息面板</string>
     <string name="pref_up_action_none">无操作</string>
+    <string name="pref_ok_action">\'OK\' 键动作</string>
+    <string name="pref_ok_action_desc">在播放器中按下 \'OK\' 键时做什么</string>
+    <string name="pref_ok_action_pause">切换暂停</string>
+    <string name="pref_ok_action_pause_panel">暂停 + 面板</string>
+    <string name="pref_ok_action_panel">显示面板</string>
     <string name="pref_remember_zoom">记住缩放</string>
     <string name="pref_remember_zoom_desc">将上次选择的缩放模式应用于所有视频</string>
-    <string name="pref_show_clock">显示时钟</string>
-    <string name="pref_show_clock_desc">在右上角显示时钟（覆盖在视频上）</string>
+    <string name="pref_show_clock">时钟与透明度</string>
+    <string name="pref_show_clock_desc">您可以在右上角启用时钟并设置其透明度</string>
     <string name="pref_show_playlist_index">播放列表序号</string>
     <string name="pref_show_playlist_index_desc">在视频缩略图上显示序号</string>
     <string name="pref_swipe_horizontal">水平滑动</string>
@@ -178,6 +191,28 @@
     <string name="swipe_release_exit">松开退出</string>
     <string name="pref_pause_dim">暂停时调暗屏幕</string>
     <string name="pref_pause_dim_desc">保护 OLED 屏幕免受烧屏影响</string>
+    <string name="pref_startup_playlist">启动播放列表</string>
+    <string name="pref_startup_playlist_desc">M3U播放列表链接</string>
+    <string name="pref_startup_playlist_not_set">未设置</string>
+    <string name="dialog_input_url_title">输入播放列表链接</string>
+    <string name="dialog_input_url_hint">http://...</string>
+    <string name="save">保存</string>
+    <string name="pref_live_mode">直播模式控制</string>
+    <string name="pref_live_mode_desc">适用于含直播流的播放列表：确定 - 列表，左右 - 切换频道，上 - 信息面板</string>
+    <string name="pref_track_change_info">切换曲目时显示信息</string>
+    <string name="pref_track_change_info_desc">切换曲目时显示顶部信息面板</string>
+    <string name="pref_buffer_display">缓冲显示</string>
+    <string name="pref_buffer_display_desc">在哪里显示缓冲百分比</string>
+    <string name="buffer_off">关闭</string>
+    <string name="buffer_panel">在控制面板中</string>
+    <string name="buffer_clock">在时钟旁边和信息面板中</string>
+    <string name="pref_buffer_size">缓冲区大小</string>
+    <string name="pref_buffer_size_desc">用于缓冲网络视频的内存大小。本地文件使用默认缓冲</string>
+    <string name="buffer_size_auto">自动</string>
+    <string name="buffer_size_mb">%d MB</string>
+    <string name="buffer_percentage">缓冲: %d%%</string>
+    <string name="select_group">选择分组</string>
+    <string name="group_all">全部</string>
 
     <!-- Resume Playback -->
     <string name="pref_resume_mode">恢复播放</string>
@@ -209,6 +244,7 @@
     <string name="update_found">发现新版本：%s</string>
     <string name="update_latest">您使用的是最新版本</string>
     <string name="update_error">检查更新失败</string>
+    <string name="update_download_error">下载更新失败</string>
     <string name="update_exist">有可用更新</string>
     <string name="update_desc">更新日志…</string>
     <string name="loading">下载中…</string>
