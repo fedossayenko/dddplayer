@@ -6,6 +6,7 @@ import android.view.View
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.Button
+import android.widget.EditText
 import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.ProgressBar
@@ -99,6 +100,8 @@ class GlobalSettingsActivity : AppCompatActivity() {
     private lateinit var textShowClockValue: TextView
     private lateinit var itemPauseDim: LinearLayout
     private lateinit var textPauseDimValue: TextView
+    private lateinit var itemStartupPlaylist: LinearLayout
+    private lateinit var textStartupPlaylistValue: TextView
     private lateinit var itemBufferDisplay: LinearLayout
     private lateinit var textBufferDisplayValue: TextView
     private lateinit var itemBufferSize: LinearLayout
@@ -206,6 +209,8 @@ class GlobalSettingsActivity : AppCompatActivity() {
         textShowClockValue = findViewById(R.id.text_show_clock_value)
         itemPauseDim = findViewById(R.id.item_pause_dim)
         textPauseDimValue = findViewById(R.id.text_pause_dim_value)
+        itemStartupPlaylist = findViewById(R.id.item_startup_playlist)
+        textStartupPlaylistValue = findViewById(R.id.text_startup_playlist_value)
         itemBufferDisplay = findViewById(R.id.item_buffer_display)
         textBufferDisplayValue = findViewById(R.id.text_buffer_display_value)
         itemBufferSize = findViewById(R.id.item_buffer_size)
@@ -329,6 +334,8 @@ class GlobalSettingsActivity : AppCompatActivity() {
                 updateViewModel.forceCheckUpdates()
             }
         }
+
+        itemStartupPlaylist.setOnClickListener { showUrlInputDialog() }
 
         itemBufferDisplay.setOnClickListener {
             val options = listOf(getString(R.string.buffer_off), getString(R.string.buffer_panel), getString(R.string.buffer_clock))
@@ -478,6 +485,9 @@ class GlobalSettingsActivity : AppCompatActivity() {
         }
 
 
+        settingsViewModel.startupPlaylistUri.observe(this) { uri ->
+            textStartupPlaylistValue.text = if (uri.isNullOrEmpty()) getString(R.string.pref_startup_playlist_not_set) else uri
+        }
         settingsViewModel.bufferDisplayMode.observe(this) { mode ->
             textBufferDisplayValue.text = when (mode) {
                 SettingsRepository.BUFFER_DISPLAY_PANEL -> getString(R.string.buffer_panel)
@@ -494,6 +504,28 @@ class GlobalSettingsActivity : AppCompatActivity() {
             if (checking) textUpdateDesc.text = getString(R.string.update_btn_checking) else updateUpdateUI()
         }
         updateViewModel.downloadProgress.observe(this) { updateDownloadProgress(it) }
+    }
+
+    private fun showUrlInputDialog() {
+        val dialog = Dialog(this, R.style.Theme_App_Dialog)
+        dialog.setContentView(R.layout.dialog_input_url)
+
+        val editUrl = dialog.findViewById<EditText>(R.id.edit_url)
+        val btnSave = dialog.findViewById<Button>(R.id.btn_save)
+        val btnCancel = dialog.findViewById<Button>(R.id.btn_cancel)
+
+        editUrl.setText(settingsViewModel.startupPlaylistUri.value ?: "")
+        editUrl.setSelection(editUrl.text.length)
+
+        btnSave.setOnClickListener {
+            settingsViewModel.setStartupPlaylistUri(editUrl.text.toString())
+            dialog.dismiss()
+        }
+
+        btnCancel.setOnClickListener { dialog.dismiss() }
+
+        dialog.show()
+        editUrl.requestFocus()
     }
 
     private fun showSingleChoiceDialog(title: String, items: List<String>, currentIndex: Int, onSelected: (Int) -> Unit) {

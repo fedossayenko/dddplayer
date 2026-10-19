@@ -73,6 +73,13 @@ data class VideoQualityOption(
     val isAuto: Boolean = false
 )
 
+// Состояние плейлиста для UI (фильтр по группе M3U)
+data class PlaylistUiState(
+    val items: List<MediaItem> = emptyList(),
+    val groupName: String? = null, // null = все группы
+    val availableGroups: List<String> = emptyList() // Пусто, если в плейлисте нет групп
+)
+
 @UnstableApi
 class PlayerViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -116,6 +123,13 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     // Playlist State
     private val _currentPlaylist = MutableLiveData<List<MediaItem>>()
     val currentPlaylist: LiveData<List<MediaItem>> = _currentPlaylist
+    private val _playlistUiState = MutableLiveData(PlaylistUiState())
+    val playlistUiState: LiveData<PlaylistUiState> = _playlistUiState
+
+    // Плейлист загружен из M3U файла/ссылки
+    private val _isM3uPlaylist = MutableLiveData(false)
+    val isM3uPlaylist: LiveData<Boolean> = _isM3uPlaylist
+    private var loadMediaJob: kotlinx.coroutines.Job? = null
     private val _currentWindowIndex = MutableLiveData(0)
     val currentWindowIndex: LiveData<Int> = _currentWindowIndex
     private val _playlistSize = MutableLiveData(0)
@@ -547,6 +561,10 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                 .build()
             p.trackSelectionParameters = params
 
+            if (_isM3uPlaylist.value == true && currentUri != null) {
+                repository.setLastPlayedChannelUri(currentUri)
+            }
+
             if (currentUri != null) {
                 viewModelScope.launch {
                     val saved = repository.getVideoSettings(currentUri!!)
@@ -845,12 +863,78 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
-    fun loadPlaylist(items: List<MediaItem>, startIndex: Int) {
-        _currentPlaylist.value = items
+    /**
+     * Загружает медиа из интента/настроек. Одна ссылка на .m3u/.m3u8 проверяется на плейлист M3U
+     * (без повторного запроса для HLS), остальное загружается как раньше, сразу.
+     */
+    fun loadMedia(items: List<MediaItem>, startIndex: Int, forceM3uProbe: Boolean = false) {
+        loadMediaJob?.cancel()
+        if (items.size != 1 || (!forceM3uProbe && !playerManager.isM3uCandidate(items))) {
+            loadPlaylist(items, startIndex)
+            return
+        }
+        loadMediaJob = viewModelScope.launch {
+            val expanded = playerManager.expandM3u(items, forceM3uProbe)
+            if (expanded != null) {
+                // Последний канал восстанавливаем только по точному URI
+                val lastUri = repository.getLastPlayedChannelUri()
+                val lastIndex = if (lastUri != null) expanded.indexOfFirst { it.uri.toString() == lastUri } else -1
+                loadPlaylist(expanded, lastIndex.coerceAtLeast(0), isM3u = true)
+            } else {
+                loadPlaylist(items, startIndex)
+            }
+        }
+    }
+
+    fun loadPlaylist(items: List<MediaItem>, startIndex: Int, isM3u: Boolean = false) {
+        val indexedItems = items.mapIndexed { index, item -> item.copy(absoluteIndex = index) }
+        _currentPlaylist.value = indexedItems
+        _isM3uPlaylist.value = isM3u
+
+        val groups = indexedItems.mapNotNull { it.group }.distinct()
+        val startGroup = if (groups.isEmpty()) null else indexedItems.getOrNull(startIndex)?.group
+        _playlistUiState.value = PlaylistUiState(
+            items = filterByGroup(indexedItems, startGroup),
+            groupName = startGroup,
+            availableGroups = groups
+        )
+
         resumePlayWhenReady = true // Новый плейлист всегда стартует
-        val startPos = items.getOrNull(startIndex)?.startPositionMs ?: 0L
-        playerManager.loadPlaylist(items, startIndex, startPos)
+        val startPos = indexedItems.getOrNull(startIndex)?.startPositionMs ?: 0L
+        playerManager.loadPlaylist(indexedItems, startIndex, startPos)
         viewModelScope.launch { repository.cleanupOldSettings() }
+    }
+
+    private fun filterByGroup(items: List<MediaItem>, group: String?): List<MediaItem> =
+        if (group == null) items else items.filter { it.group == group }
+
+    /** Показывает в плейлисте элементы группы (null = все). */
+    fun selectGroup(groupName: String?) {
+        val state = _playlistUiState.value ?: return
+        val all = _currentPlaylist.value ?: return
+        _playlistUiState.value = state.copy(items = filterByGroup(all, groupName), groupName = groupName)
+    }
+
+    /** Переключает группу в плейлисте (вместе с пунктом "Все"). */
+    fun cycleGroup(direction: Int) {
+        val state = _playlistUiState.value ?: return
+        if (state.availableGroups.isEmpty()) return
+        val options = listOf<String?>(null) + state.availableGroups
+        val currentIndex = options.indexOf(state.groupName).coerceAtLeast(0)
+        selectGroup(options[(currentIndex + direction + options.size) % options.size])
+    }
+
+    /** Возвращает в плейлисте группу текущего элемента (если группу сменили, но ничего не выбрали). */
+    fun revertToPlayingGroup() {
+        val state = _playlistUiState.value ?: return
+        if (state.availableGroups.isEmpty()) return
+        val playingItem = getPlayingItem()
+        selectGroup(playingItem?.group)
+    }
+
+    fun getPlayingItem(): MediaItem? {
+        val playingId = player?.currentMediaItem?.mediaId ?: return null
+        return _currentPlaylist.value?.find { it.uuid == playingId }
     }
 
     // --- Settings Logic ---

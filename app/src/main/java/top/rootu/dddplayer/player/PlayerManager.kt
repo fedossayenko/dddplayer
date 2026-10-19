@@ -40,13 +40,18 @@ import androidx.media3.extractor.mp4.Mp4Extractor
 import androidx.media3.extractor.ts.DefaultTsPayloadReaderFactory
 import androidx.media3.extractor.ts.TsExtractor
 import androidx.media3.session.MediaSession
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
+import okhttp3.Request
 import top.rootu.dddplayer.App.Companion.USER_AGENT
 import top.rootu.dddplayer.data.SettingsRepository
 import top.rootu.dddplayer.logic.AudioMixerLogic
+import top.rootu.dddplayer.logic.M3uParser
 import top.rootu.dddplayer.logic.UnifiedMetadataReader
 import top.rootu.dddplayer.model.MediaItem
 import top.rootu.dddplayer.utils.MediaFormatHelper
+import java.io.InputStream
 import java.security.SecureRandom
 import java.security.cert.X509Certificate
 import java.util.concurrent.ConcurrentHashMap
@@ -56,6 +61,8 @@ import javax.net.ssl.SSLSocketFactory
 import javax.net.ssl.TrustManager
 import javax.net.ssl.X509TrustManager
 import androidx.media3.common.MediaItem as Media3MediaItem
+
+private const val MAX_PROBE_BYTES = 32 * 1024 * 1024 // Ограничение размера проверяемого плейлиста
 
 class PlayerManager(
     context: Context,
@@ -172,10 +179,17 @@ class PlayerManager(
     // Мы передаем baseHttpFactory как источник для сетевых запросов.
     private val defaultDataSourceFactory = DefaultDataSource.Factory(appContext, baseHttpFactory)
 
+    // Ответы, уже скачанные при проверке ссылки на M3U: плеер получает их без повторного запроса
+    private val prefetchStore = PrefetchStore()
+    private val prefetchingDataSourceFactory = PrefetchingDataSource.Factory(defaultDataSourceFactory, prefetchStore)
+
+    // Типы, определенные при проверке ссылки (переживают очистку resolvedMediaTypes в loadPlaylist)
+    private val probedMediaTypes = ConcurrentHashMap<String, String>()
+
     // Пересоздаем фабрику при инициализации, чтобы гарантировать чистое состояние
     private fun createParsingDataSourceFactory(): ParsingDataSourceFactory {
         return ParsingDataSourceFactory(
-            upstreamFactory = defaultDataSourceFactory,
+            upstreamFactory = prefetchingDataSourceFactory,
             onMetadataParsed = { metadataMap ->
                 currentTrackInfo = metadataMap
                 onMetadataAvailable?.invoke()
@@ -549,9 +563,107 @@ class PlayerManager(
         return resolvedMediaTypes[uri.toString()]
     }
 
+    /**
+     * Если передана одна ссылка на .m3u/.m3u8, проверяет, не плейлист ли это (IPTV/список файлов).
+     *
+     * Ссылка скачивается один раз. Плейлист M3U разбирается в список элементов. HLS (любой тег #EXT-X-)
+     * и прочее остаются как есть, а уже скачанный ответ отдается плееру без повторного запроса.
+     *
+     * @return список элементов M3U или null, если это не M3U плейлист.
+     */
+    suspend fun expandM3u(items: List<MediaItem>, force: Boolean = false): List<MediaItem>? = withContext(Dispatchers.IO) {
+        prefetchStore.clear()
+        val item = items.singleOrNull() ?: return@withContext null
+        if (!force && !isM3uCandidate(item.uri)) return@withContext null
+
+        try {
+            val scheme = item.uri.scheme?.lowercase()
+            val content = if (scheme == "http" || scheme == "https") {
+                fetchForProbe(item)
+            } else {
+                appContext.contentResolver.openInputStream(item.uri)?.use { input ->
+                    readLimited(input)?.toString(Charsets.UTF_8)
+                }
+            } ?: return@withContext null
+
+            if (M3uParser.isPlaylist(content)) {
+                M3uParser.parse(content, item.uri, item.headers).ifEmpty { null }
+            } else {
+                null
+            }
+        } catch (e: Exception) {
+            Log.w("PlayerManager", "M3U probe failed: ${e.message}")
+            null
+        }
+    }
+
+    /** Одна ссылка на .m3u/.m3u8 - ее нужно проверить на плейлист M3U. */
+    fun isM3uCandidate(items: List<MediaItem>): Boolean {
+        val item = items.singleOrNull() ?: return false
+        return isM3uCandidate(item.uri)
+    }
+
+    private fun isM3uCandidate(uri: android.net.Uri): Boolean {
+        val path = uri.path?.lowercase() ?: return false
+        return path.endsWith(".m3u") || path.endsWith(".m3u8")
+    }
+
+    /**
+     * Скачивает ссылку для проверки. Если это не плейлист M3U, сохраняет ответ для плеера.
+     * @return текст ответа или null (не текст / ошибка / слишком большой).
+     */
+    private fun fetchForProbe(item: MediaItem): String? {
+        val uriString = item.uri.toString()
+        val requestBuilder = Request.Builder().url(uriString)
+        item.headers.forEach { (k, v) -> requestBuilder.header(k, v) }
+        if (item.headers.keys.none { it.equals("User-Agent", ignoreCase = true) }) {
+            requestBuilder.header("User-Agent", USER_AGENT)
+        }
+
+        okHttpClient.newCall(requestBuilder.build()).execute().use { response ->
+            if (!response.isSuccessful) return null
+            val contentType = response.header("Content-Type")?.lowercase().orEmpty()
+            // Видео/аудио по ссылке .m3u - не плейлист, плеер откроет его сам
+            if (contentType.startsWith("video/") || contentType.startsWith("audio/")) return null
+            val contentLength = response.body.contentLength()
+            if (contentLength > MAX_PROBE_BYTES) return null
+
+            val data = readLimited(response.body.byteStream()) ?: return null
+            val text = data.toString(Charsets.UTF_8)
+
+            if (!M3uParser.isPlaylist(text)) {
+                // HLS и прочее: отдаем плееру уже скачанный ответ
+                prefetchStore.put(
+                    uriString,
+                    PrefetchedResponse(data, response.request.url.toString().toUri(), response.headers.toMultimap())
+                )
+                if (text.contains("#EXT-X-")) {
+                    probedMediaTypes[uriString] = MimeTypes.APPLICATION_M3U8
+                }
+            }
+            return text
+        }
+    }
+
+    private fun readLimited(input: InputStream): ByteArray? {
+        val out = java.io.ByteArrayOutputStream()
+        val buffer = ByteArray(16 * 1024)
+        var total = 0
+        while (true) {
+            val count = input.read(buffer)
+            if (count == -1) break
+            total += count
+            if (total > MAX_PROBE_BYTES) return null
+            out.write(buffer, 0, count)
+        }
+        return out.toByteArray()
+    }
+
     fun loadPlaylist(items: List<MediaItem>, startIndex: Int, startPosMs: Long = 0) {
         currentTrackInfo = emptyMap()
         resolvedMediaTypes.clear() // Очищаем кэш типов при новой загрузке
+        resolvedMediaTypes.putAll(probedMediaTypes)
+        probedMediaTypes.clear()
 
         val safeStartIndex = if (items.isEmpty()) 0 else startIndex.coerceIn(0, items.lastIndex)
         currentHeaders = items.map { it.headers }
@@ -581,6 +693,7 @@ class PlayerManager(
                 .build()
 
             Media3MediaItem.Builder()
+                .setMediaId(item.uuid)
                 .setUri(item.uri)
 //                .setMimeType(mimeType)
                 .setMediaMetadata(metadata)

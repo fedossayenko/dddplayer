@@ -186,6 +186,12 @@
     <string name="swipe_release_exit">松开退出</string>
     <string name="pref_pause_dim">暂停时调暗屏幕</string>
     <string name="pref_pause_dim_desc">保护 OLED 屏幕免受烧屏影响</string>
+    <string name="pref_startup_playlist">启动播放列表</string>
+    <string name="pref_startup_playlist_desc">M3U播放列表链接</string>
+    <string name="pref_startup_playlist_not_set">未设置</string>
+    <string name="dialog_input_url_title">输入播放列表链接</string>
+    <string name="dialog_input_url_hint">http://...</string>
+    <string name="save">保存</string>
     <string name="pref_buffer_display">缓冲显示</string>
     <string name="pref_buffer_display_desc">在哪里显示缓冲百分比</string>
     <string name="buffer_off">关闭</string>
@@ -196,6 +202,8 @@
     <string name="buffer_size_auto">自动</string>
     <string name="buffer_size_mb">%d MB</string>
     <string name="buffer_percentage">缓冲: %d%%</string>
+    <string name="select_group">选择分组</string>
+    <string name="group_all">全部</string>
 
     <!-- Resume Playback -->
     <string name="pref_resume_mode">恢复播放</string>

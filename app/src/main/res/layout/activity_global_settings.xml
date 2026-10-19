@@ -651,6 +651,14 @@
                 android:layout_marginTop="24dp"
                 android:text="@string/pref_sec_app" />
 
+            <!-- Startup Playlist -->
+            <LinearLayout android:id="@+id/item_startup_playlist" style="@style/SettingsItemContainer">
+                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:duplicateParentState="true">
+                    <TextView style="@style/SettingsItemTitle" android:text="@string/pref_startup_playlist" />
+                    <TextView android:id="@+id/text_startup_playlist_value" style="@style/SettingsItemDesc" tools:text="http://..." />
+                </LinearLayout>
+            </LinearLayout>
+
             <!-- Отображение буфера -->
             <LinearLayout android:id="@+id/item_buffer_display" style="@style/SettingsItemContainer">
                 <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:duplicateParentState="true">

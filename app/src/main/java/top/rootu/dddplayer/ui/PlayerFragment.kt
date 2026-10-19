@@ -30,6 +30,7 @@ import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.media3.common.C
 import androidx.media3.common.Player
+import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -46,6 +47,7 @@ import top.rootu.dddplayer.model.StereoInputType
 import top.rootu.dddplayer.model.StereoOutputMode
 import top.rootu.dddplayer.renderer.OnSurfaceReadyListener
 import top.rootu.dddplayer.renderer.StereoRenderer
+import top.rootu.dddplayer.ui.adapter.ChoiceAdapter
 import top.rootu.dddplayer.ui.adapter.SideMenuAdapter
 import top.rootu.dddplayer.ui.controller.PlayerInputHandler
 import top.rootu.dddplayer.ui.controller.PlayerTimerController
@@ -57,6 +59,7 @@ import top.rootu.dddplayer.utils.afr.DisplayHolder
 import top.rootu.dddplayer.utils.afr.DisplaySyncHelper
 import top.rootu.dddplayer.utils.afr.TvQuickActions
 import top.rootu.dddplayer.viewmodel.PlayerViewModel
+import top.rootu.dddplayer.viewmodel.PlaylistUiState
 import top.rootu.dddplayer.viewmodel.SettingType
 import top.rootu.dddplayer.viewmodel.SettingsViewModel
 import top.rootu.dddplayer.viewmodel.UpdateViewModel
@@ -1175,6 +1178,13 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
             updateTimeLabelsUI(pos)
         }
 
+        viewModel.playlistUiState.observe(viewLifecycleOwner) { state ->
+            if (ui.isPlaylistDialogShowing) {
+                updatePlaylistHeader(state)
+                ui.updatePlaylistItems(state.items, viewModel.player?.currentMediaItem?.mediaId)
+            }
+        }
+
         viewModel.showResumeDialogEvent.observe(viewLifecycleOwner) { data ->
             if (data != null) {
                 showResumeDialog(data.first, data.second)
@@ -1318,8 +1328,8 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
     }
 
     private fun showPlaylist() {
-        val playlist = viewModel.currentPlaylist.value ?: emptyList()
-        if (playlist.isEmpty()) {
+        val initialState = viewModel.playlistUiState.value
+        if (initialState == null || (viewModel.currentPlaylist.value ?: emptyList()).isEmpty()) {
             Toast.makeText(requireContext().applicationContext, getString(R.string.msg_playlist_empty), Toast.LENGTH_SHORT).show()
             return
         }
@@ -1329,18 +1339,77 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
 
         val settingsRepo = SettingsRepository.getInstance(requireContext().applicationContext)
         val showIndex = settingsRepo.isShowPlaylistIndexEnabled()
+        val isM3u = viewModel.isM3uPlaylist.value == true
+        var isSelectionMade = false
 
         ui.showPlaylistDialog(
-            items = playlist,
-            currentIndex = viewModel.player?.currentMediaItemIndex ?: 0,
+            items = initialState.items,
+            playingUuid = viewModel.player?.currentMediaItem?.mediaId,
             showIndexBadge = showIndex,
-            onItemSelected = { index ->
-                viewModel.playPlaylistItem(index)
+            shouldLoop = isM3u || viewModel.isLive.value == true,
+            fitPosters = isM3u,
+            onItemSelected = { indexInList ->
+                val item = viewModel.playlistUiState.value?.items?.getOrNull(indexInList)
+                if (item != null) {
+                    isSelectionMade = true
+                    viewModel.playPlaylistItem(item.absoluteIndex)
+                }
             },
             onDismiss = {
+                // Группу сменили, но ничего не выбрали - возвращаем группу текущего элемента
+                if (!isSelectionMade) viewModel.revertToPlayingGroup()
                 timerController.resetControlsTimer()
             }
         )
+
+        val hasGroups = initialState.availableGroups.isNotEmpty()
+        updatePlaylistHeader(initialState)
+        // Выбор группы: клик по заголовку или Влево/Вправо в списке
+        ui.setPlaylistHeaderClickListener(if (hasGroups) ({ showGroupSelectionDialog() }) else null)
+        ui.setPlaylistKeyListener { keyCode, event ->
+            if (hasGroups && event.action == KeyEvent.ACTION_DOWN) {
+                when (keyCode) {
+                    KeyEvent.KEYCODE_DPAD_LEFT -> { viewModel.cycleGroup(-1); return@setPlaylistKeyListener true }
+                    KeyEvent.KEYCODE_DPAD_RIGHT -> { viewModel.cycleGroup(1); return@setPlaylistKeyListener true }
+                }
+            }
+            false
+        }
+    }
+
+    private fun updatePlaylistHeader(state: PlaylistUiState) {
+        if (state.availableGroups.isEmpty()) {
+            ui.updatePlaylistHeader(getString(R.string.playlist))
+        } else {
+            val groupName = state.groupName ?: getString(R.string.group_all)
+            ui.updatePlaylistHeader("$groupName [${state.items.size}]")
+        }
+    }
+
+    private fun showGroupSelectionDialog() {
+        val state = viewModel.playlistUiState.value ?: return
+        if (state.availableGroups.isEmpty()) return
+
+        val groups = listOf<String?>(null) + state.availableGroups // null = Все
+        val currentIndex = groups.indexOf(state.groupName).coerceAtLeast(0)
+        val displayGroups = groups.map { it ?: getString(R.string.group_all) }
+
+        val dialog = Dialog(requireContext(), R.style.Theme_App_Dialog)
+        dialog.setContentView(R.layout.dialog_list_choice)
+        dialog.findViewById<TextView>(R.id.dialog_title).text = getString(R.string.select_group)
+
+        val recycler = dialog.findViewById<RecyclerView>(R.id.dialog_recycler_view)
+        recycler.layoutManager = LinearLayoutManager(requireContext())
+        recycler.adapter = ChoiceAdapter(displayGroups, currentIndex) { selectedIdx ->
+            viewModel.selectGroup(groups[selectedIdx])
+            dialog.dismiss()
+        }
+        dialog.show()
+
+        recycler.post {
+            (recycler.layoutManager as? LinearLayoutManager)?.scrollToPositionWithOffset(currentIndex, 0)
+            recycler.postDelayed({ recycler.findViewHolderForAdapterPosition(currentIndex)?.itemView?.requestFocus() }, 50)
+        }
     }
 
     private fun showQualityPopup() {

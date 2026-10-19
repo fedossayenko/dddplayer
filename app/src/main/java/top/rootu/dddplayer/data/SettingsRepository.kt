@@ -86,6 +86,15 @@ class SettingsRepository private constructor(context: Context) {
     fun getZoomScalePercent(): Int = prefs.getInt("video_zoom_scale", 115)
     fun setZoomScalePercent(percent: Int) = prefs.edit { putInt("video_zoom_scale", percent) }
 
+    // --- Playlist Settings ---
+    // Плейлист, который открывается при запуске из лаунчера
+    fun getStartupPlaylistUri(): String? = prefs.getString("startup_playlist_uri", null)
+    fun setStartupPlaylistUri(uri: String?) = prefs.edit { putString("startup_playlist_uri", uri) }
+
+    // Последний канал M3U плейлиста (восстанавливается только по точному URI)
+    fun getLastPlayedChannelUri(): String? = prefs.getString("last_channel_uri", null)
+    fun setLastPlayedChannelUri(uri: String?) = prefs.edit { putString("last_channel_uri", uri) }
+
     // --- Buffer Settings ---
     // Отображение процента буфера (BUFFER_DISPLAY_*)
     fun getBufferDisplayMode(): Int = prefs.getInt("buffer_display_mode", BUFFER_DISPLAY_OFF)

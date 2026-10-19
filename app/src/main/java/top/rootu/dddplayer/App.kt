@@ -5,6 +5,8 @@ import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.os.LocaleListCompat
 import coil.ImageLoader
 import coil.ImageLoaderFactory
+import coil.disk.DiskCache
+import coil.memory.MemoryCache
 import okhttp3.OkHttpClient
 import top.rootu.dddplayer.data.SettingsRepository
 import top.rootu.dddplayer.utils.CrashHandler
@@ -54,6 +56,19 @@ class App : Application(), ImageLoaderFactory {
                         chain.proceed(request)
                      }
                      .build()
+            }
+            // Кэш в памяти небольшой, чтобы не отнимать память у буфера видео (largeHeap)
+            .memoryCache {
+                MemoryCache.Builder(this)
+                    .maxSizePercent(0.03)
+                    .build()
+            }
+            // Логотипы каналов M3U кэшируются на диске
+            .diskCache {
+                DiskCache.Builder()
+                    .directory(cacheDir.resolve("image_cache"))
+                    .maxSizeBytes(100L * 1024 * 1024)
+                    .build()
             }
             .crossfade(true)
             .build()

@@ -177,6 +177,12 @@
     <string name="swipe_release_exit">Адпусціце для выхаду</string>
     <string name="pref_pause_dim">Зацьмняць экран на паўзе</string>
     <string name="pref_pause_dim_desc">Абараняе OLED экраны ад выгарання</string>
+    <string name="pref_startup_playlist">Плэйліст пры запуску</string>
+    <string name="pref_startup_playlist_desc">Спасылка на M3U плэйліст</string>
+    <string name="pref_startup_playlist_not_set">Не зададзены</string>
+    <string name="dialog_input_url_title">Увядзіце спасылку на плэйліст</string>
+    <string name="dialog_input_url_hint">http://...</string>
+    <string name="save">Захаваць</string>
     <string name="pref_buffer_display">Адлюстраванне буфера</string>
     <string name="pref_buffer_display_desc">Дзе паказваць працэнт буферызацыі</string>
     <string name="buffer_off">Выкл</string>
@@ -187,6 +193,8 @@
     <string name="buffer_size_auto">Аўта</string>
     <string name="buffer_size_mb">%d МБ</string>
     <string name="buffer_percentage">Буфер: %d%%</string>
+    <string name="select_group">Выберыце групу</string>
+    <string name="group_all">Усе</string>
 
     <!-- Resume Playback -->
     <string name="pref_resume_mode">Аднаўленне прагляду</string>

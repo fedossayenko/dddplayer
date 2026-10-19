@@ -21,7 +21,6 @@ import androidx.core.view.isVisible
 import androidx.media3.common.PlaybackException
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.SubtitleView
-import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.LinearSmoothScroller
 import androidx.recyclerview.widget.RecyclerView
 import coil.load
@@ -34,6 +33,7 @@ import top.rootu.dddplayer.model.StereoOutputMode
 import top.rootu.dddplayer.renderer.StereoGLSurfaceView
 import top.rootu.dddplayer.ui.adapter.OptionsAdapter
 import top.rootu.dddplayer.ui.adapter.PlaylistAdapter
+import top.rootu.dddplayer.ui.widget.CenterLayoutManager
 import top.rootu.dddplayer.ui.widget.OutlineTextView
 import top.rootu.dddplayer.viewmodel.SettingType
 import java.text.SimpleDateFormat
@@ -624,14 +624,26 @@ class PlayerUiController(private val rootView: View) {
         }
     }
 
+    // Колбэки текущего показа плейлиста (диалог переиспользуется между показами)
+    private var playlistOnItemSelected: ((Int) -> Unit)? = null
+    private var playlistOnDismiss: (() -> Unit)? = null
+
+    /**
+     * @param items элементы для показа (может быть отфильтрованный по группе список)
+     * @param onItemSelected позиция в [items]
+     */
     fun showPlaylistDialog(
         items: List<MediaItem>,
-        currentIndex: Int,
+        playingUuid: String?,
         showIndexBadge: Boolean,
+        shouldLoop: Boolean,
+        fitPosters: Boolean,
         onItemSelected: (Int) -> Unit,
         onDismiss: () -> Unit
     ) {
         val context = rootView.context
+        playlistOnItemSelected = onItemSelected
+        playlistOnDismiss = onDismiss
         if (playlistDialog == null) {
             playlistDialog = Dialog(context, android.R.style.Theme_Translucent_NoTitleBar)
             playlistDialog?.setContentView(R.layout.dialog_playlist)
@@ -643,35 +655,63 @@ class PlayerUiController(private val rootView: View) {
             }
 
             val recycler = playlistDialog?.findViewById<RecyclerView>(R.id.playlist_recycler)
-            recycler?.layoutManager = LinearLayoutManager(context)
-            playlistAdapter = PlaylistAdapter { index ->
-                onItemSelected(index)
-                playlistDialog?.dismiss()
-            }
+            recycler?.layoutManager = CenterLayoutManager(context)
+            playlistAdapter = PlaylistAdapter(
+                onLoopRequest = { targetPos ->
+                    recycler?.scrollToPosition(targetPos)
+                    recycler?.postDelayed({
+                        recycler.findViewHolderForAdapterPosition(targetPos)?.itemView?.requestFocus()
+                    }, 50)
+                },
+                onItemClick = { index ->
+                    playlistOnItemSelected?.invoke(index)
+                    playlistDialog?.dismiss()
+                }
+            )
             recycler?.adapter = playlistAdapter
-            playlistDialog?.setOnDismissListener { onDismiss() }
+            playlistDialog?.setOnDismissListener { playlistOnDismiss?.invoke() }
         }
 
+        playlistAdapter?.shouldLoop = shouldLoop
+        playlistAdapter?.fitPosters = fitPosters
         playlistAdapter?.setShowIndexBadge(showIndexBadge)
+        updatePlaylistItems(items, playingUuid)
+        playlistDialog?.show()
+    }
 
+    val isPlaylistDialogShowing: Boolean
+        get() = playlistDialog?.isShowing == true
+
+    fun setPlaylistKeyListener(listener: (keyCode: Int, event: android.view.KeyEvent) -> Boolean) {
+        playlistDialog?.setOnKeyListener { _, keyCode, event -> listener(keyCode, event) }
+    }
+
+    fun setPlaylistHeaderClickListener(listener: (() -> Unit)?) {
+        playlistDialog?.findViewById<View>(R.id.playlist_header)?.apply {
+            setOnClickListener(listener?.let { l -> View.OnClickListener { l() } })
+            isClickable = listener != null
+        }
+    }
+
+    fun updatePlaylistHeader(text: String) {
+        playlistDialog?.findViewById<TextView>(R.id.playlist_header)?.text = text
+    }
+
+    fun updatePlaylistItems(items: List<MediaItem>, playingUuid: String?) {
+        playlistAdapter?.setPlayingItemUuid(playingUuid)
         playlistAdapter?.submitList(items) {
-            playlistAdapter?.setCurrentIndex(currentIndex)
+            val recycler = playlistDialog?.findViewById<RecyclerView>(R.id.playlist_recycler) ?: return@submitList
+            val targetIdx = items.indexOfFirst { it.uuid == playingUuid }.coerceAtLeast(0)
 
-            // Скроллим к текущему элементу (ВСЕГДА, даже если диалог переиспользован)
-            val recycler = playlistDialog?.findViewById<RecyclerView>(R.id.playlist_recycler)
             // Используем post, чтобы скролл сработал после того, как RecyclerView обновит лейаут
-            recycler?.post {
-                recycler.scrollToPosition(currentIndex)
-
+            recycler.post {
+                recycler.scrollToPosition(targetIdx)
                 // Ждем, пока скролл завершится и элемент появится, затем фокусируемся
                 recycler.postDelayed({
-                    val holder = recycler.findViewHolderForAdapterPosition(currentIndex)
-                    holder?.itemView?.requestFocus()
+                    recycler.findViewHolderForAdapterPosition(targetIdx)?.itemView?.requestFocus()
                 }, 50)
             }
         }
-
-        playlistDialog?.show()
     }
 
     fun updateSettingsText(
