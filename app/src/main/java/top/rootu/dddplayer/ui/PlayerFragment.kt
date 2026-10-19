@@ -808,8 +808,10 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
         dimJob?.cancel()
         ui.animateDimming(0f) // Сразу осветляем экран при любой активности
 
-        val isPlaying = viewModel.isPlaying.value == true
-        if (!isPlaying) {
+        // Затемняем только при паузе пользователем. Во время буферизации,
+        // после ошибки или в конце видео playWhenReady остается true.
+        val isPausedByUser = viewModel.player?.playWhenReady == false
+        if (isPausedByUser) {
             val dimLevel = SettingsRepository.getInstance(requireContext()).getPauseDimLevel()
             if (dimLevel > 0) {
                 dimJob = viewLifecycleOwner.lifecycleScope.launch {
@@ -1331,7 +1333,7 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
 
         // Проверяем, нужно ли перезапустить плеер из-за смены настроек
         viewModel.checkSettingsAndRestart()
-        viewModel.player?.playWhenReady = true
+        viewModel.player?.playWhenReady = viewModel.resumePlayWhenReady
         if (viewModel.inputType.value != StereoInputType.NONE) {
             ui.glSurfaceView.onResume()
         }
@@ -1340,7 +1342,10 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
     override fun onPause() {
         super.onPause()
         viewModel.saveCurrentSettings()
-        viewModel.player?.playWhenReady = false
+        viewModel.player?.let { player ->
+            viewModel.resumePlayWhenReady = player.playWhenReady
+            player.playWhenReady = false
+        }
         ui.glSurfaceView.onPause()
     }
 
