@@ -2,6 +2,7 @@ package top.rootu.dddplayer.viewmodel
 
 import android.app.Application
 import android.content.Context
+import android.net.Uri
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
@@ -11,6 +12,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import androidx.media3.common.C
 import androidx.media3.common.Format
+import androidx.media3.common.MimeTypes
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.TrackSelectionOverride
@@ -38,6 +40,7 @@ import top.rootu.dddplayer.model.PlaybackSpeed
 import top.rootu.dddplayer.model.ResizeMode
 import top.rootu.dddplayer.model.StereoInputType
 import top.rootu.dddplayer.model.StereoOutputMode
+import top.rootu.dddplayer.model.SubtitleItem
 import top.rootu.dddplayer.player.PlayerManager
 import top.rootu.dddplayer.renderer.StereoRenderer
 import top.rootu.dddplayer.utils.MediaFormatHelper
@@ -97,6 +100,9 @@ data class PlaylistUiState(
 )
 
 @UnstableApi
+// Пункт "Загрузить из файла" в меню субтитров
+const val SUBTITLE_MENU_LOAD_FILE = "load_file"
+
 class PlayerViewModel(application: Application) : AndroidViewModel(application) {
 
     private var ioRetryCount = 0
@@ -241,6 +247,9 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     // Храним ID, которые нужно применить, когда треки загрузятся (восстановление треков)
     private var pendingAudioId: String? = null
     private var pendingSubtitleId: String? = null
+
+    // Название внешних субтитров, которые нужно включить после их добавления
+    private var pendingSubtitleLabel: String? = null
 
     // Аудиодорожку выбрал пользователь (запоминаем ее для других видео)
     private var audioChosenByUser = false
@@ -898,6 +907,16 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         subtitleOptions = subs
         // Пытаемся применить отложенные субтитры
         var finalSubIdx = subIdx
+        pendingSubtitleLabel?.let { label ->
+            // Только что добавленные субтитры: последняя внешняя дорожка с этим названием
+            val foundIdx = subtitleOptions.indexOfLast { it.format?.language == "ext" && it.format?.label == label }
+            if (foundIdx != -1) {
+                pendingSubtitleLabel = null
+                pendingSubtitleId = null
+                finalSubIdx = foundIdx
+                selectTrackByIndex(C.TRACK_TYPE_TEXT, foundIdx)
+            }
+        }
         pendingSubtitleId?.let { id ->
             // Специальная обработка для "Выкл"
             if (id == "disabled") {
@@ -914,9 +933,12 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         currentSubtitleIndex = finalSubIdx
         _currentSubtitleTrack.postValue(subtitleOptions.getOrNull(currentSubtitleIndex))
 
-        // Очищаем отложенные ID, так как мы их уже применили (или не нашли)
-        pendingAudioId = null
-        pendingSubtitleId = null
+        // Очищаем отложенные ID, так как мы их уже применили (или не нашли).
+        // Пустой список дорожек приходит при перезагрузке источника - ждем настоящий
+        if (!tracks.isEmpty) {
+            pendingAudioId = null
+            pendingSubtitleId = null
+        }
 
         // 3. Видео (Quality)
         _videoQualityOptions.postValue(TrackLogic.extractVideoTracks(tracks))
@@ -1366,10 +1388,46 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun getSubtitleMenuItems(context: Context): List<MenuItem> {
-        return subtitleOptions.mapIndexed { index, option ->
+        val tracks = subtitleOptions.mapIndexed { index, option ->
             val name = TrackLogic.buildTrackLabel(option, context)
             MenuItem(index.toString(), name, isSelected = index == currentSubtitleIndex)
         }
+        // Пункт загрузки субтитров из файла - в конце списка
+        return tracks + MenuItem(SUBTITLE_MENU_LOAD_FILE, context.getString(R.string.subtitle_load_file))
+    }
+
+    /**
+     * Добавляет внешние субтитры к текущему видео и включает их.
+     * Плейлист перезагружается с той же позиции (дорожки субтитров задаются при подготовке источника).
+     */
+    fun addExternalSubtitle(uri: Uri, fileName: String?) {
+        val p = player ?: return
+        val playlist = _currentPlaylist.value ?: return
+        val playingId = p.currentMediaItem?.mediaId ?: return
+        val index = playlist.indexOfFirst { it.uuid == playingId }
+        if (index == -1) return
+
+        val name = fileName ?: uri.lastPathSegment ?: "Subtitles"
+        val mimeType = MediaFormatHelper.getSubtitleMimeTypeByName(name)
+        if (mimeType == null || mimeType == MimeTypes.TEXT_UNKNOWN) {
+            _toastMessage.value = getString(R.string.subtitle_unsupported)
+            return
+        }
+
+        val item = playlist[index]
+        val updated = item.copy(subtitles = item.subtitles + SubtitleItem(uri, name, name, mimeType))
+        val newPlaylist = playlist.toMutableList().apply { set(index, updated) }
+        _currentPlaylist.value = newPlaylist
+        _playlistUiState.value?.let { state ->
+            _playlistUiState.value = state.copy(items = state.items.map { if (it.uuid == updated.uuid) updated else it })
+        }
+
+        // После перезагрузки оставляем текущую аудиодорожку и включаем новые субтитры
+        pendingAudioId = _currentAudioTrack.value?.format?.id
+        pendingSubtitleLabel = name
+        // То же видео перезагружается: настройки и счетчики не сбрасываем
+        isRecoveringFromError = true
+        playerManager.reloadPlaylistItems(newPlaylist, p.currentMediaItemIndex, p.currentPosition)
     }
 
     private fun getResizeModeLabel(context: Context): String {

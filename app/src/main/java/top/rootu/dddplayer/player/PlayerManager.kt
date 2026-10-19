@@ -695,6 +695,47 @@ class PlayerManager(
         return out.toByteArray()
     }
 
+    private fun buildExoItem(item: MediaItem): Media3MediaItem {
+        val subConfigs = item.subtitles.map { sub ->
+            Media3MediaItem.SubtitleConfiguration.Builder(sub.uri)
+                .setMimeType(sub.mimeType)
+                .setLanguage("ext")
+                .setLabel(sub.name ?: sub.filename)
+                .setSelectionFlags(C.SELECTION_FLAG_DEFAULT)
+                .build()
+        }
+
+        val metadata = MediaMetadata.Builder()
+            .setTitle(item.title)
+            .setArtworkUri(item.posterUri)
+            .build()
+
+        // Даем плееру больше времени на "переваривание" битых кадров,
+        // отодвигая точку воспроизведения дальше от края трансляции.
+        val liveConfig = Media3MediaItem.LiveConfiguration.Builder()
+            .setTargetOffsetMs(15000) // увеличили до 15 сек
+            .setMaxOffsetMs(30000)    // Максимальное отставание
+            .setMaxPlaybackSpeed(1.05f) // Разрешаем ускоряться до 1.05x чтобы догнать поток
+            .build()
+
+        return Media3MediaItem.Builder()
+            .setMediaId(item.uuid)
+            .setUri(item.uri)
+//            .setMimeType(mimeType)
+            .setMediaMetadata(metadata)
+            .setSubtitleConfigurations(subConfigs)
+            .setLiveConfiguration(liveConfig)
+            .build()
+    }
+
+    /**
+     * Перезагружает плейлист с измененными элементами (например, добавлены субтитры) с той же позиции.
+     */
+    fun reloadPlaylistItems(items: List<MediaItem>, index: Int, positionMs: Long) {
+        currentHeaders = items.map { it.headers }
+        reloadMediaItems(items.map { buildExoItem(it) }, index, positionMs)
+    }
+
     fun loadPlaylist(items: List<MediaItem>, startIndex: Int, startPosMs: Long = 0) {
         currentTrackInfo = emptyMap()
         resolvedMediaTypes.clear() // Очищаем кэш типов при новой загрузке
@@ -705,38 +746,7 @@ class PlayerManager(
         currentHeaders = items.map { it.headers }
         applyHeadersForIndex(safeStartIndex)
 
-        val exoItems = items.map { item ->
-            val subConfigs = item.subtitles.map { sub ->
-                Media3MediaItem.SubtitleConfiguration.Builder(sub.uri)
-                    .setMimeType(sub.mimeType)
-                    .setLanguage("ext")
-                    .setLabel(sub.name ?: sub.filename)
-                    .setSelectionFlags(C.SELECTION_FLAG_DEFAULT)
-                    .build()
-            }
-
-            val metadata = MediaMetadata.Builder()
-                .setTitle(item.title)
-                .setArtworkUri(item.posterUri)
-                .build()
-
-            // Даем плееру больше времени на "переваривание" битых кадров,
-            // отодвигая точку воспроизведения дальше от края трансляции.
-            val liveConfig = Media3MediaItem.LiveConfiguration.Builder()
-                .setTargetOffsetMs(15000) // увеличили до 15 сек
-                .setMaxOffsetMs(30000)    // Максимальное отставание
-                .setMaxPlaybackSpeed(1.05f) // Разрешаем ускоряться до 1.05x чтобы догнать поток
-                .build()
-
-            Media3MediaItem.Builder()
-                .setMediaId(item.uuid)
-                .setUri(item.uri)
-//                .setMimeType(mimeType)
-                .setMediaMetadata(metadata)
-                .setSubtitleConfigurations(subConfigs)
-                .setLiveConfiguration(liveConfig)
-                .build()
-        }
+        val exoItems = items.map { buildExoItem(it) }
 
         currentMediaItems = exoItems
         currentWindowIndex = safeStartIndex

@@ -29,7 +29,7 @@ HLS (`application/vnd.apple.mpegurl`, `application/x-mpegURL`), `application/das
 | `position` | Int / Long / String | `startPositionMs` (`getLongExtraCompat`) |
 | `thumbnail` | String | `posterUri` |
 | `headers` | String[] / ArrayList<String> | `headers` (пары имя-значение) |
-| `subs`, `subs.name`, `subs.filename` | Uri[] (или ArrayList), String[] | `subtitles` |
+| `subs`, `subs.name`, `subs.filename` | Uri[] (или ArrayList), String[] | `subtitles`. Если не переданы, для `file://` ищутся файлы рядом с видео (`SubtitleFinder`) |
 
 ### Плейлист
 

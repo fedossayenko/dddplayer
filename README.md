@@ -42,7 +42,7 @@ To experience the 3D effect, you will need **anaglyph glasses** (e.g., Red-Cyan)
 *   **Rendering**: OpenGL ES 3.0 shaders with linear-light anaglyph blending and automatic fallback to OpenGL ES 2.0 (can be forced in settings).
 *   **HDR Support**: Direct rendering via SurfaceView for native HDR / Dolby Vision playback on supported displays (when in 2D mode). Optional Dolby Vision → HEVC compatibility mode.
 *   **Audio**: AC3/DTS 5.1 passthrough to receivers via HDMI/Optical, built-in FFmpeg audio decoders, stereo downmix with an adjustable mixer, loudness boost, skip silence.
-*   **Advanced Subtitles**: Correctly renders subtitles in 3D modes, external subtitles via Intent.
+*   **Advanced Subtitles**: Correctly renders subtitles in 3D modes; external subtitles via Intent, from files next to a local video (`movie.srt`, `movie.en.srt`) or loaded from a file in the subtitles menu.
 *   **Playlists & IPTV**:
     *   Playlists passed by other apps (see Intent API) with posters and subtitles.
     *   M3U / M3U8 playlists with groups (`group-title`, `#EXTGRP`), logos and per-channel HTTP headers (`#EXTVLCOPT`, `#EXTHTTP`). HLS streams are detected and played without a second request.

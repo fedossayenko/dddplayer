@@ -3,6 +3,7 @@ package top.rootu.dddplayer.ui
 import android.annotation.SuppressLint
 import android.app.Dialog
 import android.content.Context
+import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.media.AudioManager
 import android.opengl.GLSurfaceView
@@ -24,6 +25,7 @@ import android.widget.PopupMenu
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
@@ -55,12 +57,14 @@ import top.rootu.dddplayer.ui.controller.PlayerInputHandler
 import top.rootu.dddplayer.ui.controller.PlayerTimerController
 import top.rootu.dddplayer.ui.controller.PlayerTouchHandler
 import top.rootu.dddplayer.ui.controller.PlayerUiController
+import top.rootu.dddplayer.utils.IntentUtils
 import top.rootu.dddplayer.utils.afr.AfrFormatItem
 import top.rootu.dddplayer.utils.afr.AutoFrameRateHelper
 import top.rootu.dddplayer.utils.afr.DisplayHolder
 import top.rootu.dddplayer.utils.afr.DisplaySyncHelper
 import top.rootu.dddplayer.utils.afr.TvQuickActions
 import top.rootu.dddplayer.viewmodel.PlayerViewModel
+import top.rootu.dddplayer.viewmodel.SUBTITLE_MENU_LOAD_FILE
 import top.rootu.dddplayer.viewmodel.PlaylistUiState
 import top.rootu.dddplayer.viewmodel.SettingType
 import top.rootu.dddplayer.viewmodel.SettingsViewModel
@@ -659,7 +663,8 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
         val menuItems = viewModel.getSubtitleMenuItems(requireContext())
         if (menuItems.isEmpty()) return
         // -1, потому что первый элемент - "Off"
-        val trackCount = (menuItems.size - 1).coerceAtLeast(0)
+        // -2: пункты "Выкл" и "Загрузить из файла"
+        val trackCount = (menuItems.size - 2).coerceAtLeast(0)
 
         showSideMenu(
             getString(R.string.menu_subtitle_title, trackCount),
@@ -667,10 +672,29 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
         ) { selected ->
             if (selected == null) {
                 showMainMenu("subtitles")
+            } else if (selected.id == SUBTITLE_MENU_LOAD_FILE) {
+                sideMenuDialog?.dismiss()
+                openSubtitleFile()
             } else {
                 selected.id.toIntOrNull()?.let { viewModel.selectTrackByIndex(C.TRACK_TYPE_TEXT, it) }
                 sideMenuDialog?.dismiss()
             }
+        }
+    }
+
+    // Выбор файла субтитров через системный диалог (на части ТВ его нет)
+    private val pickSubtitleLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) {
+            val name = IntentUtils.resolveFileName(requireContext(), uri)
+            viewModel.addExternalSubtitle(uri, name)
+        }
+    }
+
+    private fun openSubtitleFile() {
+        try {
+            pickSubtitleLauncher.launch(arrayOf("*/*"))
+        } catch (e: ActivityNotFoundException) {
+            Toast.makeText(requireContext(), R.string.subtitle_no_file_picker, Toast.LENGTH_SHORT).show()
         }
     }
 
