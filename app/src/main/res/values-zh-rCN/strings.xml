@@ -393,6 +393,8 @@
     <string name="wizard_ana_filter_title_format">滤光片：%1$s</string>
     <string name="wizard_ana_check_text">用双眼观看。圆形应从屏幕后方（左）延伸到屏幕前方（右），方块位于屏幕平面。如果深度相反，说明滤光片左右弄反了：在调整模式下用 ◀ ▶ 交换。“保存”将为这副眼镜添加“已校准”滤镜并设为默认。</string>
     <string name="wizard_vr_check_text">按“查看”并透过头显观看：圆形应从屏幕后方（左）延伸到屏幕前方（右），方块位于屏幕平面，没有重影。如有问题，请返回前面的步骤。“保存”将保存校准。</string>
-    <string name="wizard_param_level">亮度</string>
-    <string name="wizard_ana_match_text">屏幕现在显示未经红蓝处理的纯色，用于测量眼镜本身。闭上%2$s滤光片后的眼睛，只透过%1$s滤光片观看。每个矩形中，全亮度的“%2$s”旁边是亮度可调的“%1$s”。透过滤光片两半色调相同：调整亮度（◀ ▶）直到两者之间的分界线消失。这样即可测出滤光片透过了多少别的颜色的光。</string>
+    <string name="wizard_param_cell">格子</string>
+    <string name="wizard_ana_ladder_text">屏幕现在显示未经立体处理的纯色：我们测量的是眼镜本身。闭上“%2$s”滤光片后面的眼睛，只通过“%1$s”滤光片观看。屏幕上是一排从暗到亮的“%1$s”格子，一条“%2$s”色带横穿所有格子。透过滤光片，色带也呈“%1$s”：在暗格子中它比格子亮，在亮格子中比格子暗，而在某一个格子中与格子融为一体。选择该格子（◀ ▶）。滤光片阻挡另一种颜色的能力越差，该格子越靠右：对于红青眼镜，红色滤光片通常在中间附近，青色滤光片通常在最前面几个。</string>
+    <string name="wizard_ana_ghost_title">重影</string>
+    <string name="wizard_ana_ghost_text">闭上右眼：左眼应只看到字母 L，R 看不见或几乎看不见。然后闭上左眼：只看到 R。如果另一个字母清晰可见，请返回您所透过的滤光片的步骤，选择相邻的格子。</string>
 </resources>

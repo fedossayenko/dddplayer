@@ -62,7 +62,7 @@ class CalibrationWizardActivity : AppCompatActivity(), OnSurfaceReadyListener {
     private class Param(val label: () -> String, val value: () -> String, val change: (Int) -> Unit)
 
     /**
-     * @param filter для MATCH: измеряемый светофильтр (0 - первого цвета группы, 1 - второго)
+     * @param filter для LADDER: измеряемый светофильтр (0 - первого цвета группы, 1 - второго)
      */
     private class Step(
         val titleRes: Int,
@@ -113,8 +113,8 @@ class CalibrationWizardActivity : AppCompatActivity(), OnSurfaceReadyListener {
     private var scale = 1.2f
 
     // Параметры анаглифа: A и B - светофильтры первого и второго цвета группы (например, красный и голубой).
-    // Утечка измеряется яркостью своего цвета фильтра (%, значение sRGB), при которой он выглядит
-    // через фильтр так же, как полный дополнительный цвет
+    // Утечка измеряется яркостью своего цвета фильтра (%, значение sRGB, одна из клеток шкалы),
+    // при которой он выглядит через фильтр так же, как полный дополнительный цвет
     private val glassesOptions = GlassesGroup.entries.flatMap { listOf(Glasses(it, true), Glasses(it, false)) }
     private var glassesIndex = 0
     private var levelA = 0
@@ -181,7 +181,7 @@ class CalibrationWizardActivity : AppCompatActivity(), OnSurfaceReadyListener {
             renderer.setOutputMode(StereoOutputMode.CARDBOARD_VR)
             renderer.setDistortion(k1, k2, scale)
             renderer.setScreenSeparation(separation)
-        } else if (steps[stepIndex].pattern == Pattern.MATCH) {
+        } else if (steps[stepIndex].pattern == Pattern.LADDER) {
             // Измерение очков: чистые цвета экрана без анаглиф-обработки
             renderer.setOutputMode(StereoOutputMode.LEFT_ONLY)
             renderer.setScreenSeparation(0f)
@@ -218,7 +218,7 @@ class CalibrationWizardActivity : AppCompatActivity(), OnSurfaceReadyListener {
                     canvas, step.pattern,
                     depthScale = if (isVr) VR_DEPTH_SCALE else 1f,
                     ownPrimaries = if (step.filter == 1) primaries.second else primaries.first,
-                    ownLevel = (if (step.filter == 1) levelB else levelA) / 100f
+                    selectedCell = CalibrationPatterns.nearestLadderIndex(if (step.filter == 1) levelB else levelA)
                 )
             } finally {
                 surface.unlockCanvasAndPost(canvas)
@@ -297,25 +297,27 @@ class CalibrationWizardActivity : AppCompatActivity(), OnSurfaceReadyListener {
         })
         return listOf(
             Step(R.string.wizard_ana_glasses_title, { glassesStepText() }, Pattern.DEPTH, listOf(glassesParam)),
-            // Светофильтр A: яркость его цвета, при которой он выглядит как полный дополнительный цвет
+            // Светофильтр A: клетка шкалы его цвета, в которой исчезает полоса дополнительного цвета
             Step(
                 R.string.wizard_ana_filter_title,
-                { filterNames(glasses.group).let { (a, b) -> getString(R.string.wizard_ana_match_text, a, b) } },
-                Pattern.MATCH,
-                listOf(Param({ getString(R.string.wizard_param_level) }, { "$levelA%" },
-                    { d -> levelA = SettingsMutator.modifyInt(levelA, d, 1, 0, 100) })),
+                { filterNames(glasses.group).let { (a, b) -> getString(R.string.wizard_ana_ladder_text, a, b) } },
+                Pattern.LADDER,
+                listOf(Param({ getString(R.string.wizard_param_cell) }, { cellLabel(levelA) },
+                    { d -> levelA = moveCell(levelA, d) })),
                 filter = 0,
                 isAvailable = { isCalibratable() }
             ),
             Step(
                 R.string.wizard_ana_filter_title,
-                { filterNames(glasses.group).let { (a, b) -> getString(R.string.wizard_ana_match_text, b, a) } },
-                Pattern.MATCH,
-                listOf(Param({ getString(R.string.wizard_param_level) }, { "$levelB%" },
-                    { d -> levelB = SettingsMutator.modifyInt(levelB, d, 1, 0, 100) })),
+                { filterNames(glasses.group).let { (a, b) -> getString(R.string.wizard_ana_ladder_text, b, a) } },
+                Pattern.LADDER,
+                listOf(Param({ getString(R.string.wizard_param_cell) }, { cellLabel(levelB) },
+                    { d -> levelB = moveCell(levelB, d) })),
                 filter = 1,
                 isAvailable = { isCalibratable() }
             ),
+            // Двоение через откалиброванный анаглиф: каждый глаз видит только свою букву
+            Step(R.string.wizard_ana_ghost_title, { getString(R.string.wizard_ana_ghost_text) }, Pattern.GHOST),
             Step(
                 R.string.wizard_ana_check_title, { getString(R.string.wizard_ana_check_text) }, Pattern.DEPTH,
                 listOf(Param({ getString(R.string.wizard_param_glasses) }, { glassesLabel(glasses) }, {
@@ -324,6 +326,18 @@ class CalibrationWizardActivity : AppCompatActivity(), OnSurfaceReadyListener {
                 }))
             )
         )
+    }
+
+    // Номер клетки шкалы и ее яркость, например "7 (25%)"
+    private fun cellLabel(level: Int): String {
+        val index = CalibrationPatterns.nearestLadderIndex(level)
+        return "${index + 1} (${CalibrationPatterns.LADDER_LEVELS[index]}%)"
+    }
+
+    private fun moveCell(level: Int, direction: Int): Int {
+        val levels = CalibrationPatterns.LADDER_LEVELS
+        val index = (CalibrationPatterns.nearestLadderIndex(level) + direction).coerceIn(0, levels.size - 1)
+        return levels[index]
     }
 
     private fun availableSteps() = steps.indices.filter { steps[it].isAvailable() }
@@ -530,8 +544,9 @@ class CalibrationWizardActivity : AppCompatActivity(), OnSurfaceReadyListener {
     // Сохраненная калибровка выбранной группы очков (или начальные значения группы)
     private fun loadCalibration() {
         val calibration = repository.getAnaglyphCalibration(glasses.group) ?: AnaglyphLogic.defaultCalibration(glasses.group)
-        levelA = leakToLevel(calibration.leakA)
-        levelB = leakToLevel(calibration.leakB)
+        // Значения приводятся к клеткам шкалы, чтобы рамка и сохраненное значение совпадали
+        levelA = moveCell(leakToLevel(calibration.leakA), 0)
+        levelB = moveCell(leakToLevel(calibration.leakB), 0)
     }
 
     private fun save() {

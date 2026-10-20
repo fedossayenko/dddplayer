@@ -5,6 +5,8 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.RectF
 import android.graphics.Typeface
+import kotlin.math.abs
+import kotlin.math.roundToInt
 
 /**
  * Тестовые стереокартинки для визардов калибровки. Рисуются программно (без файлов и лицензий)
@@ -20,19 +22,29 @@ object CalibrationPatterns {
     private const val EYE_W = FRAME_WIDTH.toFloat()
     private const val EYE_H = FRAME_HEIGHT.toFloat()
 
-    enum class Pattern { INTRO, CROSSHAIR, GRID, FRAME, DEPTH, MATCH }
+    enum class Pattern { INTRO, CROSSHAIR, GRID, FRAME, DEPTH, LADDER, GHOST }
+
+    /**
+     * Клетки шкалы светофильтра: яркость своего цвета фильтра (% значения sRGB).
+     * Мелкий шаг в темной части: там обычно лежит ответ (утечка фильтров - единицы-десятки процентов света).
+     */
+    val LADDER_LEVELS = intArrayOf(3, 6, 9, 12, 15, 20, 25, 30, 35, 40, 50, 60, 75, 100)
+
+    /** Ближайшая клетка шкалы к яркости [level] (%). */
+    fun nearestLadderIndex(level: Int): Int =
+        LADDER_LEVELS.indices.minBy { abs(LADDER_LEVELS[it] - level) }
 
     /**
      * @param depthScale DEPTH: множитель параллакса (для анаглифа 1, в VR можно больше)
-     * @param ownPrimaries MATCH: основные цвета, которые пропускает проверяемый светофильтр (0=R, 1=G, 2=B)
-     * @param ownLevel MATCH: яркость своего цвета фильтра (значение sRGB 0..1)
+     * @param ownPrimaries LADDER: основные цвета, которые пропускает проверяемый светофильтр (0=R, 1=G, 2=B)
+     * @param selectedCell LADDER: выбранная клетка шкалы
      */
     fun draw(
         canvas: Canvas,
         pattern: Pattern,
         depthScale: Float = 1f,
         ownPrimaries: Set<Int> = emptySet(),
-        ownLevel: Float = 0f
+        selectedCell: Int = -1
     ) {
         canvas.drawColor(Color.BLACK)
         for (eye in 0..1) {
@@ -46,7 +58,8 @@ object CalibrationPatterns {
                 Pattern.GRID -> drawGrid(canvas)
                 Pattern.FRAME -> drawFrame(canvas)
                 Pattern.DEPTH -> drawDepth(canvas, eye, depthScale)
-                Pattern.MATCH -> drawMatch(canvas, ownPrimaries, ownLevel)
+                Pattern.LADDER -> drawLadder(canvas, ownPrimaries, selectedCell)
+                Pattern.GHOST -> drawGhost(canvas, eye)
             }
             canvas.restore()
         }
@@ -163,29 +176,59 @@ object CalibrationPatterns {
         canvas.drawRect(rect, paint(Color.WHITE, 6f))
     }
 
-    /**
-     * Измерение утечки светофильтра (показывается без анаглиф-обработки): в каждом прямоугольнике
-     * дополнительный цвет на полной яркости и свой цвет фильтра с регулируемой яркостью.
-     * Через фильтр обе половины одного оттенка; при равной яркости граница между ними исчезает.
-     * В нижнем прямоугольнике половины поменяны местами, чтобы не мешало положение на экране.
-     */
-    private fun drawMatch(canvas: Canvas, own: Set<Int>, ownLevel: Float) {
-        fun color(primaries: Set<Int>, level: Float): Int {
-            val v = (level.coerceIn(0f, 1f) * 255).toInt()
-            return Color.rgb(if (0 in primaries) v else 0, if (1 in primaries) v else 0, if (2 in primaries) v else 0)
-        }
-        val foreign = (0..2).filter { it !in own }.toSet()
-        val complement = paint(color(foreign, 1f))
-        val ownPaint = paint(color(own, ownLevel))
+    private fun primaryColor(primaries: Set<Int>, level: Float): Int {
+        val v = (level.coerceIn(0f, 1f) * 255).roundToInt()
+        return Color.rgb(if (0 in primaries) v else 0, if (1 in primaries) v else 0, if (2 in primaries) v else 0)
+    }
 
-        val w = EYE_W * 0.6f
-        val h = EYE_H * 0.3f
-        val left = (EYE_W - w) / 2
-        listOf(EYE_H * 0.14f to true, EYE_H * 0.56f to false).forEach { (top, complementFirst) ->
-            val half = RectF(left, top, left + w / 2, top + h)
-            val other = RectF(left + w / 2, top, left + w, top + h)
-            canvas.drawRect(half, if (complementFirst) complement else ownPaint)
-            canvas.drawRect(other, if (complementFirst) ownPaint else complement)
+    /**
+     * Измерение утечки светофильтра (показывается без анаглиф-обработки): шкала клеток своего цвета фильтра
+     * от темного к яркому, через все клетки идет полоса дополнительного цвета на полной яркости.
+     * Через фильтр полоса тоже его цвета: в темных клетках она светлее фона, в ярких темнее,
+     * а в одной клетке сливается с фоном. Яркость этой клетки - утечка фильтра.
+     */
+    private fun drawLadder(canvas: Canvas, own: Set<Int>, selected: Int) {
+        val stripe = paint(primaryColor((0..2).filter { it !in own }.toSet(), 1f))
+        val count = LADDER_LEVELS.size
+        val margin = EYE_W * 0.04f
+        val gap = 12f
+        val cellW = (EYE_W - 2 * margin - gap * (count - 1)) / count
+        val top = EYE_H * 0.2f
+        val bottom = EYE_H * 0.6f
+        val stripeTop = top + (bottom - top) * 0.38f
+        val stripeBottom = top + (bottom - top) * 0.62f
+        val number = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = 0xFFE0E0E0.toInt()
+            textSize = 56f
+            textAlign = Paint.Align.CENTER
+            typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
         }
+        for (i in 0 until count) {
+            val left = margin + i * (cellW + gap)
+            val cell = RectF(left, top, left + cellW, bottom)
+            canvas.drawRect(cell, paint(primaryColor(own, LADDER_LEVELS[i] / 100f)))
+            canvas.drawRect(RectF(cell.left, stripeTop, cell.right, stripeBottom), stripe)
+            canvas.drawText("${i + 1}", cell.centerX(), bottom + 90f, number)
+            if (i == selected) {
+                val frame = RectF(cell.left - 10f, cell.top - 10f, cell.right + 10f, cell.bottom + 110f)
+                canvas.drawRoundRect(frame, 12f, 12f, paint(Color.WHITE, 8f))
+            }
+        }
+    }
+
+    /**
+     * Проверка двоения через анаглиф: на сером фоне у левого глаза буква L слева, у правого - R справа.
+     * Каждый глаз должен видеть только свою букву, чужая - не видна или едва заметна.
+     */
+    private fun drawGhost(canvas: Canvas, eye: Int) {
+        canvas.drawColor(0xFF808080.toInt())
+        val letter = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.BLACK
+            textSize = 520f
+            textAlign = Paint.Align.CENTER
+            typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
+        }
+        val x = if (eye == 0) EYE_W * 0.3f else EYE_W * 0.7f
+        canvas.drawText(if (eye == 0) "L" else "R", x, EYE_H / 2 + 190f, letter)
     }
 }
