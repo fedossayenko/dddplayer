@@ -188,6 +188,7 @@ When started with `startActivityForResult` and `return_result = true`, the playe
 ### Building
 
 *   Requirements: JDK 17, Android SDK (compileSdk 36). Min SDK 23.
+*   Unit tests: `./gradlew testDebugUnitTest` (JUnit + Robolectric).
 *   Debug build: `./gradlew assembleDebug`. The APK is written to `app/build/outputs/apk/debug/`.
 *   The version is taken from git (`versionCode` = commit count, `versionName` = `git describe --tags`), so clone with full history.
 *   Every push and pull request to `main` is built by [GitHub Actions](https://github.com/usmanec/dddplayer/actions/workflows/android-build.yml); the debug APK is attached to the run as an artifact.

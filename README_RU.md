@@ -188,6 +188,7 @@ intent.putParcelableArrayListExtra("video_list.subtitles", subsList)
 ### Сборка
 
 *   Требуется JDK 17 и Android SDK (compileSdk 36). Минимальная версия Android — 6.0 (API 23).
+*   Юнит-тесты: `./gradlew testDebugUnitTest` (JUnit + Robolectric).
 *   Debug-сборка: `./gradlew assembleDebug`, APK появится в `app/build/outputs/apk/debug/`.
 *   Версия берется из git (`versionCode` — число коммитов, `versionName` — `git describe --tags`), поэтому клонируйте репозиторий с полной историей.
 *   Каждый push и pull request в `main` собирается в [GitHub Actions](https://github.com/usmanec/dddplayer/actions/workflows/android-build.yml), debug APK прикладывается к запуску как артефакт.
