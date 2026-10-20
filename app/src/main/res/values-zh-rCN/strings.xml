@@ -394,7 +394,7 @@
     <string name="wizard_ana_ghost_title">重影</string>
     <string name="wizard_ana_ghost_left_title">左眼：“%1$s”滤光片</string>
     <string name="wizard_ana_ghost_right_title">右眼：“%1$s”滤光片</string>
-    <string name="wizard_ana_ghost_left_text">闭上右眼，用左眼透过“%1$s”滤光片观看。字母 L 清晰可见，而 R 的位置可能有一个比灰色背景更暗或更亮的影子。调整重影抑制（◀ ▶）：影子比背景暗就增大，比背景亮就减小。目标是让字母 R 完全消失。</string>
-    <string name="wizard_ana_ghost_right_text">闭上左眼，用右眼透过“%1$s”滤光片观看。字母 R 清晰可见，而 L 的位置可能有一个比灰色背景更暗或更亮的影子。调整重影抑制（◀ ▶）：影子比背景暗就增大，比背景亮就减小。目标是让字母 L 完全消失。</string>
+    <string name="wizard_ana_ghost_left_text">闭上右眼，用左眼透过“%1$s”滤光片观看。字母 L 清晰可见，而 R 的位置可能有一个比灰色背景更暗或更亮的影子。调整重影抑制（◀ ▶）：影子比背景暗就增大，比背景亮就减小。找到使字母 R 最不明显的值（理想情况下完全看不见）。</string>
+    <string name="wizard_ana_ghost_right_text">闭上左眼，用右眼透过“%1$s”滤光片观看。字母 R 清晰可见，而 L 的位置可能有一个比灰色背景更暗或更亮的影子。调整重影抑制（◀ ▶）：影子比背景暗就增大，比背景亮就减小。找到使字母 L 最不明显的值（理想情况下完全看不见）。</string>
     <string name="wizard_param_ghost">重影抑制</string>
 </resources>
