@@ -38,6 +38,8 @@ import androidx.media3.exoplayer.source.MediaSource
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import androidx.media3.exoplayer.upstream.DefaultAllocator
 import androidx.media3.exoplayer.upstream.DefaultLoadErrorHandlingPolicy
+import androidx.media3.exoplayer.video.MediaCodecVideoRenderer
+import androidx.media3.exoplayer.video.VideoRendererEventListener
 import androidx.media3.extractor.DefaultExtractorsFactory
 import androidx.media3.extractor.mp4.Mp4Extractor
 import androidx.media3.extractor.ts.DefaultTsPayloadReaderFactory
@@ -297,6 +299,37 @@ class PlayerManager(
         val renderersFactory = object : DefaultRenderersFactory(appContext) {
             init {
                 setMediaCodecSelector(mediaCodecSelector)
+            }
+
+            override fun buildVideoRenderers(
+                context: Context,
+                extensionRendererMode: Int,
+                mediaCodecSelector: MediaCodecSelector,
+                enableDecoderFallback: Boolean,
+                eventHandler: Handler,
+                eventListener: VideoRendererEventListener,
+                allowedVideoJoiningTimeMs: Long,
+                out: ArrayList<Renderer>
+            ) {
+                val start = out.size
+                super.buildVideoRenderers(
+                    context, extensionRendererMode, mediaCodecSelector, enableDecoderFallback,
+                    eventHandler, eventListener, allowedVideoJoiningTimeMs, out
+                )
+                if (!mapDvToHevc) return
+                // При подмене DV на HEVC стандартный рендерер заменяем на тот, что не подменяет декодер
+                // для профилей без совместимого слоя HEVC (профиль 5 и др.). Параметры - как в DefaultRenderersFactory
+                val index = (start until out.size).firstOrNull { out[it] is MediaCodecVideoRenderer } ?: return
+                out[index] = DolbyVisionVideoRenderer(
+                    MediaCodecVideoRenderer.Builder(context)
+                        .setCodecAdapterFactory(getCodecAdapterFactory())
+                        .setMediaCodecSelector(mediaCodecSelector)
+                        .setAllowedJoiningTimeMs(allowedVideoJoiningTimeMs)
+                        .setEnableDecoderFallback(enableDecoderFallback)
+                        .setEventHandler(eventHandler)
+                        .setEventListener(eventListener)
+                        .setMaxDroppedFramesToNotify(DefaultRenderersFactory.MAX_DROPPED_VIDEO_FRAME_COUNT_TO_NOTIFY)
+                )
             }
 
             override fun buildAudioRenderers(

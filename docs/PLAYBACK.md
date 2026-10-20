@@ -7,6 +7,8 @@
 - `initializePlayer()` собирает плеер из текущих настроек:
   - `MediaCodecSelector`: запрос декодера Dolby Vision подменяется на HEVC по `dv_mode` — всегда, никогда или
     «авто» (если нет DV декодера или экран не сообщает о поддержке DV, `isDolbyVisionSupported`);
+    селектор видит только MIME-тип, поэтому при подмене видеорендерер заменяется на `DolbyVisionVideoRenderer`:
+    для профилей без совместимого слоя HEVC (5, 9, 10, см. `DolbyVisionLogic`) он берет обычный выбор декодера;
   - `DefaultTrackSelector`: туннелирование, предпочтительные языки аудио и субтитров (`""` — по умолчанию,
     `device` — языки системы), `exceedRendererCapabilitiesIfNecessary`;
   - `DefaultRenderersFactory`: приоритет декодеров-расширений (`decoder_priority`, ffmpeg и AV1 из AAR),
