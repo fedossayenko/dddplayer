@@ -31,14 +31,13 @@
         android:background="@drawable/bg_selector_menu_item"
         android:clickable="true"
         android:contentDescription="@string/close_settings"
-        android:focusable="false"
+        android:focusable="true"
         android:padding="12dp"
         android:src="@drawable/ic_close"
         app:layout_constraintBottom_toBottomOf="@id/settings_header"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="@id/settings_header"
-        app:tint="@color/selector_settings_primary"
-        tools:ignore="KeyboardInaccessibleWidget" />
+        app:tint="@color/selector_settings_primary"/>
 
     <!-- Категории (заполняются в коде) -->
     <ScrollView

@@ -29,14 +29,13 @@
         android:layout_marginEnd="40dp"
         android:background="@drawable/bg_selector_menu_item"
         android:contentDescription="@string/close_settings"
-        android:focusable="false"
+        android:focusable="true"
         android:padding="12dp"
         android:src="@drawable/ic_close"
         app:layout_constraintBottom_toBottomOf="@id/subtitle_style_header"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="@id/subtitle_style_header"
-        app:tint="@color/selector_settings_primary"
-        tools:ignore="KeyboardInaccessibleWidget" />
+        app:tint="@color/selector_settings_primary"/>
 
     <ScrollView
         android:id="@+id/subtitle_options_scroll"

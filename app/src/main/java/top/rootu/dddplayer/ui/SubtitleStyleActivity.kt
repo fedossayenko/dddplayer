@@ -85,6 +85,25 @@ class SubtitleStyleActivity : AppCompatActivity() {
         container.getChildAt(0).requestFocus()
     }
 
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (event.action == KeyEvent.ACTION_DOWN) {
+            val close = findViewById<View>(R.id.btn_close)
+            val first = findViewById<LinearLayout>(R.id.subtitle_options).getChildAt(0)
+            // Вверх с первой настройки - на кнопку закрытия, Вниз/Влево с нее - обратно
+            if (event.keyCode == KeyEvent.KEYCODE_DPAD_UP && currentFocus === first) {
+                close.requestFocus()
+                return true
+            }
+            if ((event.keyCode == KeyEvent.KEYCODE_DPAD_DOWN || event.keyCode == KeyEvent.KEYCODE_DPAD_LEFT) &&
+                currentFocus === close
+            ) {
+                first.requestFocus()
+                return true
+            }
+        }
+        return super.dispatchKeyEvent(event)
+    }
+
     private fun createOptionRow(container: LinearLayout, option: StyleOption): View {
         val row = layoutInflater.inflate(R.layout.item_subtitle_option, container, false)
         row.findViewById<TextView>(R.id.option_title).setText(option.titleRes)

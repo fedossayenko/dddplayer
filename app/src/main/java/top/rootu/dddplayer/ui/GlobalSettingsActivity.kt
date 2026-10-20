@@ -264,11 +264,37 @@ class GlobalSettingsActivity : AppCompatActivity() {
         return false
     }
 
+    // Пункт, с которого перешли на кнопку закрытия (туда возвращаемся Вниз/Влево)
+    private var focusBeforeClose: View? = null
+
+    /** Верхний пункт своей колонки: первая категория или первая видимая настройка категории. */
+    private fun isTopItem(view: View?): Boolean {
+        if (view == null) return false
+        if (view === categoryViews.firstOrNull()) return true
+        val section = findViewById<ViewGroup>(categories[selectedCategory].sectionId)
+        return view === section.children.firstOrNull { it.isVisible && it.isFocusable }
+    }
+
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         if (event.action == KeyEvent.ACTION_DOWN) {
+            val focused = currentFocus
             when (event.keyCode) {
+                // Вверх с верхнего пункта - на кнопку закрытия
+                KeyEvent.KEYCODE_DPAD_UP -> if (isTopItem(focused)) {
+                    focusBeforeClose = focused
+                    btnClose.requestFocus()
+                    return true
+                }
+                // С кнопки закрытия - обратно к пункту, с которого пришли
+                KeyEvent.KEYCODE_DPAD_DOWN -> if (focused === btnClose) {
+                    (focusBeforeClose?.takeIf { it.isShown } ?: categoryViews[selectedCategory]).requestFocus()
+                    return true
+                }
                 // Влево из настроек - обратно к списку категорий
-                KeyEvent.KEYCODE_DPAD_LEFT -> if (isInSettingsContent(currentFocus)) {
+                KeyEvent.KEYCODE_DPAD_LEFT -> if (focused === btnClose) {
+                    (focusBeforeClose?.takeIf { it.isShown } ?: categoryViews[selectedCategory]).requestFocus()
+                    return true
+                } else if (isInSettingsContent(focused)) {
                     categoryViews[selectedCategory].requestFocus()
                     return true
                 }
