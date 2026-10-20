@@ -88,6 +88,8 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
     private var stereoRenderer: StereoRenderer? = null
     private var sideMenuDialog: Dialog? = null
     private var sideMenuAdapter: SideMenuAdapter? = null
+    // Пункты, показанные в боковом меню сейчас (клики по пунктам другого меню игнорируются)
+    private var sideMenuItems: List<MenuItem> = emptyList()
 
     // Контроллеры
     private var _ui: PlayerUiController? = null
@@ -797,7 +799,7 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
                     }
                 }
                 // Принудительно обновляем список в адаптере, чтобы выделить новый пункт.
-                sideMenuAdapter?.submitList(viewModel.getResizeModeMenuItems(requireContext()))
+                updateSideMenuItems(viewModel.getResizeModeMenuItems(requireContext()))
             }
         }
     }
@@ -870,6 +872,12 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
         seekBar?.requestFocus()
     }
 
+    /** Обновляет пункты открытого бокового меню (например, отметку выбранного), не теряя обработку кликов. */
+    private fun updateSideMenuItems(items: List<MenuItem>) {
+        sideMenuItems = items
+        sideMenuAdapter?.submitList(items)
+    }
+
     /**
      * @param initialFocusId ID элемента для начального фокуса.
      * Если null, фокус ставится на элемент с isSelected=true, либо на первый.
@@ -918,7 +926,7 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
             // DiffUtil применяет новый список асинхронно, а обработчик меняется сразу.
             // Клик, пришедший в этот промежуток, относится к элементу предыдущего меню
             // (например, "audio" из главного меню) - игнорируем его.
-            if (items.any { it === item }) {
+            if (sideMenuItems.any { it === item }) {
                 isSelectionMade = true
                 onItemSelected(item)
             }
@@ -930,6 +938,7 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
             sideMenuAdapter?.onItemClick = onItemClick
         }
 
+        sideMenuItems = items
         sideMenuAdapter?.submitList(items) {
             recycler?.post {
                 var targetIndex = -1
