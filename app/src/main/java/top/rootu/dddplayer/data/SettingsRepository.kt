@@ -7,11 +7,13 @@ import androidx.media3.exoplayer.DefaultRenderersFactory
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
+import top.rootu.dddplayer.model.AnaglyphCalibration
 import top.rootu.dddplayer.model.AudioTrackStat
 import top.rootu.dddplayer.model.StereoOutputMode
 import top.rootu.dddplayer.model.SubtitleStyle
 import top.rootu.dddplayer.player.NetworkBufferLoadControl
 import top.rootu.dddplayer.renderer.StereoRenderer
+import top.rootu.dddplayer.viewmodel.GlassesGroup
 
 class SettingsRepository private constructor(context: Context) {
 
@@ -335,6 +337,58 @@ class SettingsRepository private constructor(context: Context) {
     fun getOkButtonAction(): Int = prefs.getInt("ok_button_action", OK_ACTION_PAUSE_PANEL)
     fun setOkButtonAction(action: Int) = prefs.edit { putInt("ok_button_action", action) }
     // Горизонтальный свайп ( 0 = None, 1 = Seek, 2 = Playlist)
+    // Линзы анаглиф-очков переставлены (например, голубая слева): матрицы глаз меняются местами
+    fun isAnaglyphLensSwapped(): Boolean = prefs.getBoolean("anaglyph_lens_swap", false)
+    fun setAnaglyphLensSwapped(swapped: Boolean) = prefs.edit { putBoolean("anaglyph_lens_swap", swapped) }
+
+    // Калибровка анаглиф-очков из визарда (null - встроенная матрица Dubois)
+    fun getAnaglyphCalibration(group: GlassesGroup): AnaglyphCalibration? {
+        val key = "calib_${group.name.lowercase()}_"
+        if (!prefs.getBoolean("${key}set", false)) return null
+        val def = AnaglyphCalibration()
+        return AnaglyphCalibration(
+            hueA = prefs.getInt("${key}hue_a", def.hueA),
+            hueB = prefs.getInt("${key}hue_b", def.hueB),
+            leakA = prefs.getFloat("${key}leak_a", def.leakA),
+            leakB = prefs.getFloat("${key}leak_b", def.leakB)
+        )
+    }
+
+    fun setAnaglyphCalibration(group: GlassesGroup, calibration: AnaglyphCalibration) {
+        val key = "calib_${group.name.lowercase()}_"
+        prefs.edit {
+            putBoolean("${key}set", true)
+            putInt("${key}hue_a", calibration.hueA)
+            putInt("${key}hue_b", calibration.hueB)
+            putFloat("${key}leak_a", calibration.leakA)
+            putFloat("${key}leak_b", calibration.leakB)
+        }
+    }
+
+    /** Сброс калибровки анаглифа к значениям приложения: встроенные матрицы и обычный порядок линз. */
+    fun resetAnaglyphCalibration() {
+        prefs.edit {
+            GlassesGroup.entries.forEach { group ->
+                val key = "calib_${group.name.lowercase()}_"
+                listOf("set", "hue_a", "hue_b", "leak_a", "leak_b").forEach { remove(key + it) }
+            }
+            remove("anaglyph_lens_swap")
+        }
+        bumpCalibrationVersion()
+    }
+
+    /** Сброс калибровки VR к значениям приложения. */
+    fun resetVrCalibration() {
+        prefs.edit {
+            listOf("vr_k1", "vr_k2", "vr_scale", "global_screen_separation_pct").forEach { remove(it) }
+        }
+        bumpCalibrationVersion()
+    }
+
+    // Счетчик сохранений калибровки: плеер перечитывает параметры VR и анаглифа, если он изменился
+    fun getCalibrationVersion(): Int = prefs.getInt("calibration_version", 0)
+    fun bumpCalibrationVersion() = prefs.edit { putInt("calibration_version", getCalibrationVersion() + 1) }
+
     // Стиль субтитров (без сохраненных значений - стандартный вид SubtitleView)
     fun getSubtitleStyle(): SubtitleStyle {
         val def = SubtitleStyle()

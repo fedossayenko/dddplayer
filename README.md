@@ -61,6 +61,7 @@ To experience the 3D effect, you will need **anaglyph glasses** (e.g., Red-Cyan)
     *   Swap Left/Right eyes.
     *   Custom anaglyph color tuning (Hue, Leakage).
     *   VR lens distortion parameters (K1, K2, Scale).
+*   **Calibration wizards** for Cardboard VR (screen separation, lens distortion, scale) and anaglyph glasses (lens colors and order, ghosting, hue) with generated test images; reset to defaults at any time.
 *   **Built-in updates** from GitHub Releases.
 *   **Languages**: English, Russian, Ukrainian, Belarusian, Chinese (Simplified).
 

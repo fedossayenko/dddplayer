@@ -382,6 +382,14 @@ class StereoRenderer(
         return shader
     }
 
+    /**
+     * Размер буфера входной поверхности, когда кадры рисуются на ней через Canvas
+     * (тестовые картинки калибровки). Видео плеер задает размер сам.
+     */
+    fun setInputBufferSize(width: Int, height: Int) {
+        surfaceTexture?.setDefaultBufferSize(width, height)
+    }
+
     fun setInputType(type: StereoInputType) {
         currentInputType = type
         glSurfaceView.requestRender()

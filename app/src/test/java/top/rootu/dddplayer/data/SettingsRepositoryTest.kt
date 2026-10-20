@@ -4,13 +4,16 @@ import android.content.Context
 import androidx.core.content.edit
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
+import top.rootu.dddplayer.model.AnaglyphCalibration
 import top.rootu.dddplayer.model.SubtitleStyle
+import top.rootu.dddplayer.viewmodel.GlassesGroup
 
 @RunWith(RobolectricTestRunner::class)
 class SettingsRepositoryTest {
@@ -114,6 +117,38 @@ class SettingsRepositoryTest {
         )
         repo.setSubtitleStyle(custom)
         assertEquals(custom, repo.getSubtitleStyle())
+    }
+
+    @Test
+    fun `anaglyph calibration is stored per glasses group and can be reset`() {
+        val repo = repo()
+        assertNull(repo.getAnaglyphCalibration(GlassesGroup.RED_CYAN))
+
+        val calibration = AnaglyphCalibration(hueA = 5, hueB = -3, leakA = 0.12f, leakB = 0.3f)
+        repo.setAnaglyphCalibration(GlassesGroup.RED_CYAN, calibration)
+        repo.setAnaglyphLensSwapped(true)
+        val version = repo.getCalibrationVersion()
+
+        assertEquals(calibration, repo.getAnaglyphCalibration(GlassesGroup.RED_CYAN))
+        assertNull(repo.getAnaglyphCalibration(GlassesGroup.YELLOW_BLUE))
+
+        repo.resetAnaglyphCalibration()
+        assertNull(repo.getAnaglyphCalibration(GlassesGroup.RED_CYAN))
+        assertFalse(repo.isAnaglyphLensSwapped())
+        // Плеер перечитывает калибровку по смене версии
+        assertTrue(repo.getCalibrationVersion() > version)
+    }
+
+    @Test
+    fun `vr calibration reset restores app defaults`() {
+        val repo = repo()
+        repo.putGlobalFloat("vr_k1", 0.5f)
+        repo.putGlobalFloat("global_screen_separation_pct", 0.05f)
+
+        repo.resetVrCalibration()
+        assertEquals(0.34f, repo.getGlobalFloat("vr_k1", 0.34f), 0f)
+        assertFalse(prefs.contains("vr_k1"))
+        assertFalse(prefs.contains("global_screen_separation_pct"))
     }
 
     @Test

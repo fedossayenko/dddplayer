@@ -1,6 +1,7 @@
 package top.rootu.dddplayer.logic
 
 import android.graphics.Color
+import top.rootu.dddplayer.model.AnaglyphCalibration
 import top.rootu.dddplayer.renderer.StereoRenderer
 import top.rootu.dddplayer.utils.DuboisMath
 import top.rootu.dddplayer.viewmodel.GlassesGroup
@@ -42,6 +43,37 @@ object AnaglyphLogic {
     }
 
     fun isCustomType(type: StereoRenderer.AnaglyphType) = type.name.endsWith("_CUSTOM")
+
+    /** Фильтр по умолчанию группы очков: его матрицу заменяет калибровка из визарда. */
+    fun defaultFilter(group: GlassesGroup): StereoRenderer.AnaglyphType = when (group) {
+        GlassesGroup.RED_CYAN -> StereoRenderer.AnaglyphType.RC_DUBOIS
+        GlassesGroup.YELLOW_BLUE -> StereoRenderer.AnaglyphType.YB_DUBOIS
+        GlassesGroup.GREEN_MAGENTA -> StereoRenderer.AnaglyphType.GM_DUBOIS
+        GlassesGroup.RED_BLUE -> StereoRenderer.AnaglyphType.RB_MONO // Для красно-синих есть только Mono
+    }
+
+    /** Калибровка доступна для групп с фильтром Dubois. */
+    fun isCalibratable(group: GlassesGroup) = defaultFilter(group).name.endsWith("_DUBOIS")
+
+    /** Базовые цвета линз группы (A, B). */
+    fun groupBaseColors(group: GlassesGroup): Pair<Int, Int> = when (group) {
+        GlassesGroup.RED_CYAN -> Pair(Color.RED, Color.CYAN)
+        GlassesGroup.YELLOW_BLUE -> Pair(Color.YELLOW, Color.BLUE)
+        GlassesGroup.GREEN_MAGENTA -> Pair(Color.GREEN, Color.MAGENTA)
+        GlassesGroup.RED_BLUE -> Pair(Color.RED, Color.BLUE)
+    }
+
+    /** Матрицы фильтра Dubois по калибровке из визарда (расчет в линейном RGB, как у Custom). */
+    fun calculateCalibrated(group: GlassesGroup, calibration: AnaglyphCalibration): DuboisMath.ResultMatrices {
+        val (baseA, baseB) = groupBaseColors(group)
+        return DuboisMath.calculate(
+            DuboisMath.DuboisParams(
+                applyHueOffset(baseA, calibration.hueA),
+                applyHueOffset(baseB, calibration.hueB),
+                calibration.leakA, calibration.leakB, false
+            )
+        )
+    }
 
     fun getCustomPrefix(type: StereoRenderer.AnaglyphType): String {
         return when (type) {

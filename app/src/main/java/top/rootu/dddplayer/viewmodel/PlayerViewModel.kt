@@ -1786,6 +1786,19 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         return AnaglyphLogic.getFiltersForGroup(group).first()
     }
 
+    // Версия калибровки (визарды VR и анаглифа), с которой загружены параметры
+    private var calibrationVersion = repository.getCalibrationVersion()
+
+    /** Перечитывает параметры VR и матрицы анаглифа, если калибровку сохранили или сбросили. */
+    fun reloadCalibrationIfChanged() {
+        val version = repository.getCalibrationVersion()
+        if (version == calibrationVersion) return
+        calibrationVersion = version
+        _screenSeparation.value = repository.getGlobalFloat("global_screen_separation_pct", 0f)
+        anaglyphDelegate.loadGlobalVrParams()
+        _anaglyphType.value?.let { anaglyphDelegate.updateAnaglyphMatrix(it) }
+    }
+
     fun setDeviceSupportsEs3(supported: Boolean) {
         deviceSupportsEs3 = supported
         updateAvailableSettings()

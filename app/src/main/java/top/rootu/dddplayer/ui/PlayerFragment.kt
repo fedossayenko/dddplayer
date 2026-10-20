@@ -1201,7 +1201,7 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
         viewModel.anaglyphDelegate.vrK2.observe(viewLifecycleOwner) { updateVrParams() }
         viewModel.anaglyphDelegate.vrScale.observe(viewLifecycleOwner) { updateVrParams() }
 
-        viewModel.anaglyphDelegate.currentMatrices.observe(viewLifecycleOwner) { (l, r) -> stereoRenderer?.setAnaglyphMatrices(l, r) }
+        viewModel.anaglyphDelegate.currentMatrices.observe(viewLifecycleOwner) { (l, r) -> applyAnaglyphMatrices(l, r) }
 
         // Панель настроек (SettingsViewModel)
         settingsViewModel.isSettingsPanelVisible.observe(viewLifecycleOwner) { isVisible ->
@@ -1380,6 +1380,12 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
 
         // Фокус для Android TV
         btnResume.requestFocus()
+    }
+
+    // Переставленные линзы очков (например, голубая слева): изображение левого глаза - в цвет линзы B
+    private fun applyAnaglyphMatrices(left: FloatArray, right: FloatArray) {
+        val swapped = SettingsRepository.getInstance(requireContext().applicationContext).isAnaglyphLensSwapped()
+        if (swapped) stereoRenderer?.setAnaglyphMatrices(right, left) else stereoRenderer?.setAnaglyphMatrices(left, right)
     }
 
     private fun updateVrParams() {
@@ -1615,6 +1621,8 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
         // Обновляем видимость часов и стиль субтитров (на случай, если изменили в настройках)
         ui.updateClockTransparency(settingsRepo.getClockTransparency())
         ui.applySubtitleStyle(settingsRepo.getSubtitleStyle())
+        // Калибровка VR и анаглифа могла измениться в визарде
+        viewModel.reloadCalibrationIfChanged()
         applyBufferDisplayMode(settingsRepo.getBufferDisplayMode())
 
         // Проверяем, нужно ли перезапустить плеер из-за смены настроек

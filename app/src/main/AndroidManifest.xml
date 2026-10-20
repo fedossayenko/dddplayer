@@ -375,6 +375,11 @@
             android:screenOrientation="landscape"
             android:theme="@style/Theme.AppCompat.NoActionBar" />
         <activity
+            android:name=".ui.calibration.CalibrationWizardActivity"
+            android:exported="false"
+            android:screenOrientation="landscape"
+            android:theme="@style/Theme.AppCompat.NoActionBar" />
+        <activity
             android:name=".ui.SubtitleStyleActivity"
             android:exported="false"
             android:screenOrientation="landscape"

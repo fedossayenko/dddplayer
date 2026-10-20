@@ -32,6 +32,7 @@ import top.rootu.dddplayer.R
 import top.rootu.dddplayer.data.SettingsRepository
 import top.rootu.dddplayer.logic.AudioMixerLogic
 import top.rootu.dddplayer.logic.UpdateInfo
+import top.rootu.dddplayer.ui.calibration.CalibrationWizardActivity
 import top.rootu.dddplayer.utils.LocaleUtils
 import top.rootu.dddplayer.viewmodel.GlobalSettingsViewModel
 import top.rootu.dddplayer.viewmodel.UpdateViewModel
@@ -439,13 +440,10 @@ class GlobalSettingsActivity : AppCompatActivity() {
         // Boost
         itemBoost.setOnClickListener { settingsViewModel.cycleLoudnessBoost() }
 
-        // Calibration (Placeholder)
-        itemCalibrateVr.setOnClickListener {
-            Toast.makeText(applicationContext, getString(R.string.develop_tost), Toast.LENGTH_SHORT).show()
-        }
-        itemCalibrateAnaglyph.setOnClickListener {
-            Toast.makeText(applicationContext, getString(R.string.develop_tost), Toast.LENGTH_SHORT).show()
-        }
+        // Визарды калибровки
+        itemCalibrateVr.setOnClickListener { startCalibration(CalibrationWizardActivity.MODE_VR) }
+        itemCalibrateAnaglyph.setOnClickListener { startCalibration(CalibrationWizardActivity.MODE_ANAGLYPH) }
+        findViewById<View>(R.id.item_reset_calibration).setOnClickListener { showResetCalibrationDialog() }
 
         // Crash Test
         var crashCounter = 0
@@ -772,6 +770,25 @@ class GlobalSettingsActivity : AppCompatActivity() {
                 // Возвращаемся к обновленному списку
                 showAudioPriorityDialog()
             }
+        }
+    }
+
+    private fun startCalibration(mode: String) {
+        startActivity(Intent(this, CalibrationWizardActivity::class.java).putExtra(CalibrationWizardActivity.EXTRA_MODE, mode))
+    }
+
+    // Сброс калибровки к значениям приложения: VR, анаглиф или все
+    private fun showResetCalibrationDialog() {
+        val options = listOf(
+            getString(R.string.reset_calibration_vr),
+            getString(R.string.reset_calibration_anaglyph),
+            getString(R.string.reset_calibration_all)
+        )
+        showSingleChoiceDialog(getString(R.string.pref_reset_calibration), options, -1) { index ->
+            val repository = SettingsRepository.getInstance(this)
+            if (index == 0 || index == 2) repository.resetVrCalibration()
+            if (index == 1 || index == 2) repository.resetAnaglyphCalibration()
+            Toast.makeText(this, R.string.reset_calibration_done, Toast.LENGTH_SHORT).show()
         }
     }
 
