@@ -10,6 +10,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
+import top.rootu.dddplayer.model.SubtitleStyle
 
 @RunWith(RobolectricTestRunner::class)
 class SettingsRepositoryTest {
@@ -100,6 +101,19 @@ class SettingsRepositoryTest {
         prefs.edit { putBoolean("show_clock", true) }
         assertEquals(0, repo().getClockTransparency())
         assertFalse(prefs.contains("show_clock"))
+    }
+
+    @Test
+    fun `subtitle style is stored and defaults to the standard look`() {
+        val repo = repo()
+        assertEquals(SubtitleStyle(), repo.getSubtitleStyle())
+
+        val custom = SubtitleStyle(
+            font = 2, sizePercent = 130, textColor = 0xFFFFEB3B.toInt(), backgroundColor = 0,
+            edgeType = 1, edgeColor = 0xFF424242.toInt(), bottomPercent = 15, applyEmbedded = false
+        )
+        repo.setSubtitleStyle(custom)
+        assertEquals(custom, repo.getSubtitleStyle())
     }
 
     @Test

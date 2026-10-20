@@ -9,6 +9,7 @@ import org.json.JSONException
 import org.json.JSONObject
 import top.rootu.dddplayer.model.AudioTrackStat
 import top.rootu.dddplayer.model.StereoOutputMode
+import top.rootu.dddplayer.model.SubtitleStyle
 import top.rootu.dddplayer.player.NetworkBufferLoadControl
 import top.rootu.dddplayer.renderer.StereoRenderer
 
@@ -334,6 +335,32 @@ class SettingsRepository private constructor(context: Context) {
     fun getOkButtonAction(): Int = prefs.getInt("ok_button_action", OK_ACTION_PAUSE_PANEL)
     fun setOkButtonAction(action: Int) = prefs.edit { putInt("ok_button_action", action) }
     // Горизонтальный свайп ( 0 = None, 1 = Seek, 2 = Playlist)
+    // Стиль субтитров (без сохраненных значений - стандартный вид SubtitleView)
+    fun getSubtitleStyle(): SubtitleStyle {
+        val def = SubtitleStyle()
+        return SubtitleStyle(
+            font = prefs.getInt("sub_font", def.font),
+            sizePercent = prefs.getInt("sub_size", def.sizePercent),
+            textColor = prefs.getInt("sub_text_color", def.textColor),
+            backgroundColor = prefs.getInt("sub_bg_color", def.backgroundColor),
+            edgeType = prefs.getInt("sub_edge_type", def.edgeType),
+            edgeColor = prefs.getInt("sub_edge_color", def.edgeColor),
+            bottomPercent = prefs.getInt("sub_bottom", def.bottomPercent),
+            applyEmbedded = prefs.getBoolean("sub_embedded", def.applyEmbedded)
+        )
+    }
+
+    fun setSubtitleStyle(style: SubtitleStyle) = prefs.edit {
+        putInt("sub_font", style.font)
+        putInt("sub_size", style.sizePercent)
+        putInt("sub_text_color", style.textColor)
+        putInt("sub_bg_color", style.backgroundColor)
+        putInt("sub_edge_type", style.edgeType)
+        putInt("sub_edge_color", style.edgeColor)
+        putInt("sub_bottom", style.bottomPercent)
+        putBoolean("sub_embedded", style.applyEmbedded)
+    }
+
     // Жесты громкости (справа) и яркости (слева) вертикальным свайпом
     fun isVolumeBrightnessGesturesEnabled(): Boolean = prefs.getBoolean("gesture_volume_brightness", true)
     fun setVolumeBrightnessGesturesEnabled(enabled: Boolean) = prefs.edit { putBoolean("gesture_volume_brightness", enabled) }

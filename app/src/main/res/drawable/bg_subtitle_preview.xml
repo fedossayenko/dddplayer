@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Фон предпросмотра субтитров: от темного к яркому, чтобы оценить читаемость на любых кадрах -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <gradient
+        android:angle="0"
+        android:centerColor="#5B7FA6"
+        android:endColor="#F2E3B0"
+        android:startColor="#14213D" />
+    <corners android:radius="12dp" />
+</shape>

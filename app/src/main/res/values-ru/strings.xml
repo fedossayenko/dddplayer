@@ -107,7 +107,7 @@
     <!-- ==================================================== -->
     <!-- Экран глобальных настроек (GlobalSettingsActivity)   -->
     <!-- ==================================================== -->
-    <string name="pref_title">Настройки</string>
+    <string name="pref_title">Глобальные настройки</string>
     <string name="pref_title_desc">Глобальные параметры плеера</string>
     <string name="close_settings">Закрыть настройки</string>
     <string name="exit">Выход</string>
@@ -307,4 +307,48 @@
     <string name="audio_priority_up">Выше</string>
     <string name="audio_priority_down">Ниже</string>
     <string name="audio_priority_remove">Удалить</string>
+    <string name="settings_cat_screen">Экран</string>
+    <string name="settings_cat_video">Видео</string>
+    <string name="settings_cat_audio">Звук</string>
+    <string name="settings_cat_subtitles">Субтитры</string>
+    <string name="settings_cat_control">Управление</string>
+    <string name="settings_cat_3d">3D и VR</string>
+    <string name="pref_subtitle_style">Стиль субтитров</string>
+    <string name="pref_subtitle_style_desc">Шрифт, размер, цвета, фон и обводка с предпросмотром</string>
+    <string name="sub_opt_font">Шрифт</string>
+    <string name="sub_opt_size">Размер</string>
+    <string name="sub_opt_color">Цвет текста</string>
+    <string name="sub_opt_background">Фон</string>
+    <string name="sub_opt_edge">Обводка</string>
+    <string name="sub_opt_edge_color">Цвет обводки</string>
+    <string name="sub_opt_position">Отступ снизу</string>
+    <string name="sub_opt_embedded">Стили из файла (ASS/SSA)</string>
+    <string name="sub_opt_reset">Сбросить по умолчанию</string>
+    <string name="sub_option_prev">Предыдущее значение</string>
+    <string name="sub_option_next">Следующее значение</string>
+    <string name="sub_preview_text">Пример субтитров\nСъешь же ещё этих мягких французских булок</string>
+    <string name="sub_style_hint">Пульт: Влево/Вправо меняют значение, OK открывает список. Изменения сохраняются сразу.</string>
+    <string name="sub_font_default">По умолчанию</string>
+    <string name="sub_font_sans">Без засечек</string>
+    <string name="sub_font_sans_bold">Без засечек, жирный</string>
+    <string name="sub_font_condensed">Узкий</string>
+    <string name="sub_font_serif">С засечками</string>
+    <string name="sub_font_mono">Моноширинный</string>
+    <string name="color_white">Белый</string>
+    <string name="color_yellow">Желтый</string>
+    <string name="color_green">Зеленый</string>
+    <string name="color_cyan">Голубой</string>
+    <string name="color_red">Красный</string>
+    <string name="color_gray">Серый</string>
+    <string name="color_dark_gray">Темно-серый</string>
+    <string name="color_black">Черный</string>
+    <string name="sub_bg_none">Нет</string>
+    <string name="sub_bg_black">Черный %1$d%%</string>
+    <string name="sub_edge_none">Нет</string>
+    <string name="sub_edge_outline">Контур</string>
+    <string name="sub_edge_shadow">Тень</string>
+    <string name="sub_edge_raised">Выпуклый</string>
+    <string name="sub_edge_depressed">Вдавленный</string>
+    <string name="sub_embedded_on">Применять</string>
+    <string name="sub_embedded_off">Игнорировать</string>
 </resources>

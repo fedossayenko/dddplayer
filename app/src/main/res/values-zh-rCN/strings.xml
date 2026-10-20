@@ -100,7 +100,7 @@
     <string name="pref_confirm_exit_desc">再按一次返回键关闭播放器</string>
 
     <!-- 全局设置 -->
-    <string name="pref_title">设置</string>
+    <string name="pref_title">全局设置</string>
     <string name="pref_title_desc">全局播放器参数</string>
     <string name="close_settings">关闭设置</string>
     <string name="exit">退出</string>
@@ -293,4 +293,48 @@
     <string name="audio_priority_up">上移</string>
     <string name="audio_priority_down">下移</string>
     <string name="audio_priority_remove">删除</string>
+    <string name="settings_cat_screen">屏幕</string>
+    <string name="settings_cat_video">视频</string>
+    <string name="settings_cat_audio">音频</string>
+    <string name="settings_cat_subtitles">字幕</string>
+    <string name="settings_cat_control">控制</string>
+    <string name="settings_cat_3d">3D 和 VR</string>
+    <string name="pref_subtitle_style">字幕样式</string>
+    <string name="pref_subtitle_style_desc">字体、大小、颜色、背景和描边（带预览）</string>
+    <string name="sub_opt_font">字体</string>
+    <string name="sub_opt_size">大小</string>
+    <string name="sub_opt_color">文字颜色</string>
+    <string name="sub_opt_background">背景</string>
+    <string name="sub_opt_edge">描边</string>
+    <string name="sub_opt_edge_color">描边颜色</string>
+    <string name="sub_opt_position">底部边距</string>
+    <string name="sub_opt_embedded">文件中的样式 (ASS/SSA)</string>
+    <string name="sub_opt_reset">恢复默认</string>
+    <string name="sub_option_prev">上一个值</string>
+    <string name="sub_option_next">下一个值</string>
+    <string name="sub_preview_text">字幕预览\n敏捷的棕色狐狸跳过了懒狗</string>
+    <string name="sub_style_hint">遥控器：左/右键更改数值，OK 打开列表。更改会立即保存。</string>
+    <string name="sub_font_default">默认</string>
+    <string name="sub_font_sans">无衬线</string>
+    <string name="sub_font_sans_bold">无衬线粗体</string>
+    <string name="sub_font_condensed">窄体</string>
+    <string name="sub_font_serif">衬线</string>
+    <string name="sub_font_mono">等宽</string>
+    <string name="color_white">白色</string>
+    <string name="color_yellow">黄色</string>
+    <string name="color_green">绿色</string>
+    <string name="color_cyan">青色</string>
+    <string name="color_red">红色</string>
+    <string name="color_gray">灰色</string>
+    <string name="color_dark_gray">深灰色</string>
+    <string name="color_black">黑色</string>
+    <string name="sub_bg_none">无</string>
+    <string name="sub_bg_black">黑色 %1$d%%</string>
+    <string name="sub_edge_none">无</string>
+    <string name="sub_edge_outline">轮廓</string>
+    <string name="sub_edge_shadow">阴影</string>
+    <string name="sub_edge_raised">凸起</string>
+    <string name="sub_edge_depressed">凹陷</string>
+    <string name="sub_embedded_on">应用</string>
+    <string name="sub_embedded_off">忽略</string>
 </resources>

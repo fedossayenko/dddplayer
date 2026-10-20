@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Стиль субтитров: слева настройки, справа предпросмотр -->
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/bg_app">
+
+    <TextView
+        android:id="@+id/subtitle_style_header"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="48dp"
+        android:layout_marginTop="20dp"
+        android:layout_marginEnd="16dp"
+        android:text="@string/pref_subtitle_style"
+        android:textColor="@color/tv_white"
+        android:textSize="26sp"
+        android:textStyle="bold"
+        app:layout_constraintEnd_toStartOf="@id/btn_close"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <ImageButton
+        android:id="@+id/btn_close"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_marginEnd="40dp"
+        android:background="@drawable/bg_selector_menu_item"
+        android:contentDescription="@string/close_settings"
+        android:focusable="false"
+        android:padding="12dp"
+        android:src="@drawable/ic_close"
+        app:layout_constraintBottom_toBottomOf="@id/subtitle_style_header"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="@id/subtitle_style_header"
+        app:tint="@color/selector_settings_primary"
+        tools:ignore="KeyboardInaccessibleWidget" />
+
+    <ScrollView
+        android:id="@+id/subtitle_options_scroll"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_marginStart="32dp"
+        android:layout_marginTop="16dp"
+        android:clipToPadding="false"
+        android:paddingBottom="24dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/subtitle_style_header"
+        app:layout_constraintWidth_percent="0.45">
+
+        <LinearLayout
+            android:id="@+id/subtitle_options"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical" />
+    </ScrollView>
+
+    <!-- Предпросмотр: кадр 16:9 с градиентом от темного к яркому -->
+    <FrameLayout
+        android:id="@+id/subtitle_preview_frame"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_marginStart="24dp"
+        android:layout_marginTop="16dp"
+        android:layout_marginEnd="40dp"
+        android:background="@drawable/bg_subtitle_preview"
+        app:layout_constraintDimensionRatio="16:9"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@id/subtitle_options_scroll"
+        app:layout_constraintTop_toBottomOf="@id/subtitle_style_header">
+
+        <androidx.media3.ui.SubtitleView
+            android:id="@+id/subtitle_preview"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+    </FrameLayout>
+
+    <TextView
+        android:id="@+id/subtitle_style_hint"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:text="@string/sub_style_hint"
+        android:textColor="@color/text_secondary"
+        android:textSize="13sp"
+        app:layout_constraintEnd_toEndOf="@id/subtitle_preview_frame"
+        app:layout_constraintStart_toStartOf="@id/subtitle_preview_frame"
+        app:layout_constraintTop_toBottomOf="@id/subtitle_preview_frame" />
+</androidx.constraintlayout.widget.ConstraintLayout>

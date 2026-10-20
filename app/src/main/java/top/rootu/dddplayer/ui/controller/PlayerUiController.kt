@@ -31,7 +31,9 @@ import top.rootu.dddplayer.model.MediaItem
 import top.rootu.dddplayer.model.ResizeMode
 import top.rootu.dddplayer.model.StereoInputType
 import top.rootu.dddplayer.model.StereoOutputMode
+import top.rootu.dddplayer.model.SubtitleStyle
 import top.rootu.dddplayer.renderer.StereoGLSurfaceView
+import top.rootu.dddplayer.ui.SubtitleStyleOptions
 import top.rootu.dddplayer.ui.adapter.OptionsAdapter
 import top.rootu.dddplayer.ui.adapter.PlaylistAdapter
 import top.rootu.dddplayer.ui.widget.CenterLayoutManager
@@ -837,6 +839,11 @@ class PlayerUiController(private val rootView: View) {
         } else {
             bufferingValueTextView.isVisible = false
         }
+    }
+
+    /** Стиль субтитров из настроек - для обычного слоя и двойного (Cardboard VR). */
+    fun applySubtitleStyle(style: SubtitleStyle) {
+        listOf(subtitleView, subtitleViewLeft, subtitleViewRight).forEach { SubtitleStyleOptions.apply(it, style) }
     }
 
     fun updateStereoLayout(mode: StereoOutputMode?, separation: Float) {

@@ -9,1018 +9,1091 @@
     <!-- Заголовок -->
     <TextView
         android:id="@+id/settings_header"
-        android:layout_width="wrap_content"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="48dp"
-        android:layout_marginTop="32dp"
+        android:layout_marginTop="20dp"
+        android:layout_marginEnd="16dp"
         android:text="@string/pref_title"
         android:textColor="@color/tv_white"
-        android:textSize="32sp"
+        android:textSize="26sp"
         android:textStyle="bold"
+        app:layout_constraintEnd_toStartOf="@id/btn_close"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <TextView
-        android:id="@+id/settings_sub_header"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="4dp"
-        android:text="@string/pref_title_desc"
-        android:textColor="@color/text_secondary"
-        android:textSize="16sp"
-        app:layout_constraintStart_toStartOf="@id/settings_header"
-        app:layout_constraintTop_toBottomOf="@id/settings_header" />
-
-    <!-- КНОПКА ЗАКРЫТИЯ (КРЕСТИК) -->
+    <!-- КНОПКА ЗАКРЫТИЯ (для сенсорных экранов, на ТВ - "Назад") -->
     <ImageButton
         android:id="@+id/btn_close"
         android:layout_width="48dp"
         android:layout_height="48dp"
-        android:layout_marginTop="32dp"
-        android:layout_marginEnd="48dp"
+        android:layout_marginEnd="40dp"
         android:background="@drawable/bg_selector_menu_item"
         android:clickable="true"
         android:contentDescription="@string/close_settings"
         android:focusable="false"
-        android:nextFocusLeft="@id/item_decoder"
-        android:nextFocusDown="@id/item_decoder"
         android:padding="12dp"
         android:src="@drawable/ic_close"
+        app:layout_constraintBottom_toBottomOf="@id/settings_header"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintTop_toTopOf="@id/settings_header"
         app:tint="@color/selector_settings_primary"
         tools:ignore="KeyboardInaccessibleWidget" />
 
-    <!-- Контейнер настроек -->
+    <!-- Категории (заполняются в коде) -->
+    <ScrollView
+        android:id="@+id/settings_categories_scroll"
+        android:layout_width="240dp"
+        android:layout_height="0dp"
+        android:layout_marginStart="32dp"
+        android:layout_marginTop="16dp"
+        android:clipToPadding="false"
+        android:paddingBottom="24dp"
+        android:scrollbars="none"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/settings_header">
+
+        <LinearLayout
+            android:id="@+id/settings_categories"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical" />
+    </ScrollView>
+
+    <View
+        android:id="@+id/settings_divider"
+        android:layout_width="1dp"
+        android:layout_height="0dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="16dp"
+        android:layout_marginBottom="24dp"
+        android:background="@color/stroke_glass"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toEndOf="@id/settings_categories_scroll"
+        app:layout_constraintTop_toBottomOf="@id/settings_header" />
+
+    <!-- Настройки выбранной категории -->
     <ScrollView
         android:id="@+id/settings_scrollview"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        android:layout_marginTop="32dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="16dp"
+        android:layout_marginEnd="40dp"
         android:clipToPadding="false"
         android:paddingBottom="32dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/settings_sub_header"
-        app:layout_constraintWidth_percent="0.6">
+        app:layout_constraintStart_toEndOf="@id/settings_divider"
+        app:layout_constraintTop_toBottomOf="@id/settings_header">
 
         <LinearLayout
+            android:id="@+id/settings_content"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical">
 
-            <!-- СЕКЦИЯ: ВОСПРОИЗВЕДЕНИЕ -->
-            <TextView
-                style="@style/SettingsSectionHeader"
-                android:text="@string/pref_general_header" />
-
-            <!-- Размер буфера -->
             <LinearLayout
-                android:id="@+id/item_buffer_size"
-                style="@style/SettingsItemContainer">
+                android:id="@+id/section_playback"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <!-- Resume Mode -->
                 <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:duplicateParentState="true"
-                    android:orientation="vertical">
+                    android:id="@+id/item_resume_mode"
+                    style="@style/SettingsItemContainer">
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:duplicateParentState="true"
+                        android:orientation="vertical">
+                        <TextView
+                            style="@style/SettingsItemTitle"
+                            android:text="@string/pref_resume_mode" />
+                        <TextView
+                            style="@style/SettingsItemDesc"
+                            android:text="@string/pref_resume_mode_desc" />
+                    </LinearLayout>
                     <TextView
-                        style="@style/SettingsItemTitle"
-                        android:text="@string/pref_buffer_size" />
-                    <TextView
-                        style="@style/SettingsItemDesc"
-                        android:text="@string/pref_buffer_size_desc" />
+                        android:id="@+id/text_resume_mode_value"
+                        style="@style/SettingsItemValue"
+                        tools:text="Спрашивать" />
                 </LinearLayout>
-                <TextView
-                    android:id="@+id/text_buffer_size_value"
-                    style="@style/SettingsItemValue"
-                    tools:text="Авто" />
+
+                <!-- External position (intent) -->
+                <LinearLayout
+                    android:id="@+id/item_external_position"
+                    style="@style/SettingsItemContainer">
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:duplicateParentState="true"
+                        android:orientation="vertical">
+                        <TextView
+                            style="@style/SettingsItemTitle"
+                            android:text="@string/pref_external_position" />
+                        <TextView
+                            style="@style/SettingsItemDesc"
+                            android:text="@string/pref_external_position_desc" />
+                    </LinearLayout>
+                    <TextView
+                        android:id="@+id/text_external_position_value"
+                        style="@style/SettingsItemValue"
+                        tools:text="Применять сразу" />
+                </LinearLayout>
+
+                <!-- Startup Playlist -->
+                <LinearLayout android:id="@+id/item_startup_playlist" style="@style/SettingsItemContainer">
+                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:duplicateParentState="true">
+                        <TextView style="@style/SettingsItemTitle" android:text="@string/pref_startup_playlist" />
+                        <TextView android:id="@+id/text_startup_playlist_value" style="@style/SettingsItemDesc" tools:text="http://..." />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <!-- Live Mode -->
+                <LinearLayout android:id="@+id/item_live_mode" style="@style/SettingsItemContainer">
+                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:duplicateParentState="true">
+                        <TextView style="@style/SettingsItemTitle" android:text="@string/pref_live_mode" />
+                        <TextView style="@style/SettingsItemDesc" android:text="@string/pref_live_mode_desc" />
+                    </LinearLayout>
+                    <androidx.appcompat.widget.SwitchCompat android:id="@+id/switch_live_mode" android:layout_width="wrap_content" android:layout_height="wrap_content" android:clickable="false" android:focusable="false" />
+                </LinearLayout>
+
+                <!-- Размер буфера -->
+                <LinearLayout
+                    android:id="@+id/item_buffer_size"
+                    style="@style/SettingsItemContainer">
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:duplicateParentState="true"
+                        android:orientation="vertical">
+                        <TextView
+                            style="@style/SettingsItemTitle"
+                            android:text="@string/pref_buffer_size" />
+                        <TextView
+                            style="@style/SettingsItemDesc"
+                            android:text="@string/pref_buffer_size_desc" />
+                    </LinearLayout>
+                    <TextView
+                        android:id="@+id/text_buffer_size_value"
+                        style="@style/SettingsItemValue"
+                        tools:text="Авто" />
+                </LinearLayout>
+
+                <!-- Picture-in-picture -->
+                <LinearLayout
+                    android:id="@+id/item_auto_pip"
+                    style="@style/SettingsItemContainer">
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:duplicateParentState="true"
+                        android:orientation="vertical">
+                        <TextView
+                            style="@style/SettingsItemTitle"
+                            android:text="@string/picture_in_picture" />
+                        <TextView
+                            style="@style/SettingsItemDesc"
+                            android:text="@string/pref_auto_pip_desc" />
+                    </LinearLayout>
+                    <androidx.appcompat.widget.SwitchCompat
+                        android:id="@+id/switch_auto_pip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:focusable="false"
+                        android:clickable="false" />
+                </LinearLayout>
             </LinearLayout>
 
-            <!-- Декодер -->
             <LinearLayout
-                android:id="@+id/item_decoder"
-                style="@style/SettingsItemContainer">
+                android:id="@+id/section_screen"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone">
 
+                <!-- Show Clock -->
                 <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:duplicateParentState="true"
-                    android:orientation="vertical">
+                    android:id="@+id/item_show_clock"
+                    style="@style/SettingsItemContainer">
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:duplicateParentState="true"
+                        android:orientation="vertical">
+                        <TextView
+                            style="@style/SettingsItemTitle"
+                            android:text="@string/pref_show_clock" />
+                        <TextView
+                            style="@style/SettingsItemDesc"
+                            android:text="@string/pref_show_clock_desc" />
+                    </LinearLayout>
+                    <TextView
+                        android:id="@+id/text_show_clock_value"
+                        style="@style/SettingsItemValue"
+                        tools:text="60%" />
+                </LinearLayout>
+
+                <!-- Отображение буфера -->
+                <LinearLayout android:id="@+id/item_buffer_display" style="@style/SettingsItemContainer">
+                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:duplicateParentState="true">
+                        <TextView style="@style/SettingsItemTitle" android:text="@string/pref_buffer_display" />
+                        <TextView style="@style/SettingsItemDesc" android:text="@string/pref_buffer_display_desc" />
+                    </LinearLayout>
+                    <TextView android:id="@+id/text_buffer_display_value" style="@style/SettingsItemValue" tools:text="Выкл" />
+                </LinearLayout>
+
+                <!-- Info Panel on track change -->
+                <LinearLayout android:id="@+id/item_track_change_info" style="@style/SettingsItemContainer">
+                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:duplicateParentState="true">
+                        <TextView style="@style/SettingsItemTitle" android:text="@string/pref_track_change_info" />
+                        <TextView style="@style/SettingsItemDesc" android:text="@string/pref_track_change_info_desc" />
+                    </LinearLayout>
+                    <androidx.appcompat.widget.SwitchCompat android:id="@+id/switch_track_change_info" android:layout_width="wrap_content" android:layout_height="wrap_content" android:clickable="false" android:focusable="false" />
+                </LinearLayout>
+
+                <!-- Show Playlist Index -->
+                <LinearLayout
+                    android:id="@+id/item_show_index"
+                    style="@style/SettingsItemContainer">
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:duplicateParentState="true"
+                        android:orientation="vertical">
+                        <TextView
+                            style="@style/SettingsItemTitle"
+                            android:text="@string/pref_show_playlist_index" />
+                        <TextView
+                            style="@style/SettingsItemDesc"
+                            android:text="@string/pref_show_playlist_index_desc" />
+                    </LinearLayout>
+                    <androidx.appcompat.widget.SwitchCompat
+                        android:id="@+id/switch_show_index"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:clickable="false"
+                        android:focusable="false" />
+                </LinearLayout>
+
+                <!-- Затемнение на паузе -->
+                <LinearLayout
+                    android:id="@+id/item_pause_dim"
+                    style="@style/SettingsItemContainer">
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:duplicateParentState="true"
+                        android:orientation="vertical">
+                        <TextView
+                            style="@style/SettingsItemTitle"
+                            android:text="@string/pref_pause_dim" />
+                        <TextView
+                            style="@style/SettingsItemDesc"
+                            android:text="@string/pref_pause_dim_desc" />
+                    </LinearLayout>
+                    <TextView
+                        android:id="@+id/text_pause_dim_value"
+                        style="@style/SettingsItemValue"
+                        tools:text="60%" />
+                </LinearLayout>
+
+                <!-- Remember Zoom -->
+                <LinearLayout
+                    android:id="@+id/item_remember_zoom"
+                    style="@style/SettingsItemContainer">
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:duplicateParentState="true"
+                        android:orientation="vertical">
+                        <TextView
+                            style="@style/SettingsItemTitle"
+                            android:text="@string/pref_remember_zoom" />
+                        <TextView
+                            style="@style/SettingsItemDesc"
+                            android:text="@string/pref_remember_zoom_desc" />
+                    </LinearLayout>
+                    <androidx.appcompat.widget.SwitchCompat
+                        android:id="@+id/switch_remember_zoom"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:clickable="false"
+                        android:focusable="false" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/section_video"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <!-- Декодер -->
+                <LinearLayout
+                    android:id="@+id/item_decoder"
+                    style="@style/SettingsItemContainer">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:duplicateParentState="true"
+                        android:orientation="vertical">
+
+                        <TextView
+                            style="@style/SettingsItemTitle"
+                            android:text="@string/pref_decoder_priority" />
+
+                        <TextView
+                            android:id="@+id/text_decoder_desc"
+                            style="@style/SettingsItemDesc"
+                            tools:text="HW+SW" />
+                        <TextView
+                            android:id="@+id/text_decoder_sw_desc"
+                            style="@style/SettingsItemDesc"
+                            android:text="@string/pref_decoder_sw_desc"
+                            tools:text="HW+SW" />
+                    </LinearLayout>
 
                     <TextView
-                        style="@style/SettingsItemTitle"
-                        android:text="@string/pref_decoder_priority" />
-
-                    <TextView
-                        android:id="@+id/text_decoder_desc"
-                        style="@style/SettingsItemDesc"
+                        android:id="@+id/text_decoder_value"
+                        style="@style/SettingsItemValue"
                         tools:text="HW+SW" />
-                    <TextView
-                        android:id="@+id/text_decoder_sw_desc"
-                        style="@style/SettingsItemDesc"
-                        android:text="@string/pref_decoder_sw_desc"
-                        tools:text="HW+SW" />
                 </LinearLayout>
 
+                <!-- Dolby Vision -->
+                <LinearLayout
+                    android:id="@+id/item_dv"
+                    style="@style/SettingsItemContainer">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:duplicateParentState="true"
+                        android:orientation="vertical">
+
+                        <TextView
+                            style="@style/SettingsItemTitle"
+                            android:text="@string/pref_map_dv" />
+
+                        <TextView
+                            style="@style/SettingsItemDesc"
+                            android:text="@string/pref_dv_mode_desc" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/text_dv_value"
+                        style="@style/SettingsItemValue"
+                        tools:text="Auto" />
+                </LinearLayout>
+
+                <!-- Tunneling -->
+                <LinearLayout
+                    android:id="@+id/item_tunneling"
+                    style="@style/SettingsItemContainer">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:duplicateParentState="true"
+                        android:orientation="vertical">
+
+                        <TextView
+                            style="@style/SettingsItemTitle"
+                            android:text="@string/pref_tunneling" />
+
+                        <TextView
+                            style="@style/SettingsItemDesc"
+                            android:text="@string/pref_tunneling_summary" />
+                    </LinearLayout>
+
+                    <androidx.appcompat.widget.SwitchCompat
+                        android:id="@+id/switch_tunneling"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:clickable="false"
+                        android:focusable="false" />
+                </LinearLayout>
+
+                <!-- Подгруппа: AFR -->
                 <TextView
-                    android:id="@+id/text_decoder_value"
-                    style="@style/SettingsItemValue"
-                    tools:text="HW+SW" />
-            </LinearLayout>
+                    style="@style/SettingsSectionHeader"
+                    android:layout_marginTop="16dp"
+                    android:text="@string/pref_afr_sec" />
 
-            <!-- Picture-in-picture -->
-            <LinearLayout
-                android:id="@+id/item_auto_pip"
-                style="@style/SettingsItemContainer">
+                <!-- AFR -->
                 <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:duplicateParentState="true"
-                    android:orientation="vertical">
-                    <TextView
-                        style="@style/SettingsItemTitle"
-                        android:text="@string/picture_in_picture" />
-                    <TextView
-                        style="@style/SettingsItemDesc"
-                        android:text="@string/pref_auto_pip_desc" />
-                </LinearLayout>
-                <androidx.appcompat.widget.SwitchCompat
-                    android:id="@+id/switch_auto_pip"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:focusable="false"
-                    android:clickable="false" />
-            </LinearLayout>
+                    android:id="@+id/item_afr"
+                    style="@style/SettingsItemContainer" >
 
-            <!-- Downmix -->
-            <LinearLayout
-                android:id="@+id/item_downmix"
-                style="@style/SettingsItemContainer">
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:duplicateParentState="true"
-                    android:orientation="vertical">
-                    <TextView
-                        style="@style/SettingsItemTitle"
-                        android:text="@string/pref_downmix" />
-                    <TextView
-                        style="@style/SettingsItemDesc"
-                        android:text="@string/pref_downmix_desc" />
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:duplicateParentState="true"
+                        android:orientation="vertical">
+
+                        <TextView
+                            style="@style/SettingsItemTitle"
+                            android:text="@string/pref_framerate_matching" />
+
+                        <TextView
+                            android:id="@+id/text_afr_desc"
+                            style="@style/SettingsItemDesc"
+                            tools:text="@string/pref_framerate_matching_off" />
+                    </LinearLayout>
+
+                    <androidx.appcompat.widget.SwitchCompat
+                        android:id="@+id/switch_afr"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:clickable="false"
+                        android:focusable="false" />
                 </LinearLayout>
 
-                <androidx.appcompat.widget.SwitchCompat
-                    android:id="@+id/switch_downmix"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:focusable="false"
-                    android:clickable="false" />
-            </LinearLayout>
-
-            <!-- Настройка Downmix (появляется при включении) -->
-            <LinearLayout
-                android:id="@+id/item_downmix_config"
-                style="@style/SettingsItemContainer"
-                android:visibility="gone"
-                tools:visibility="visible">
-
+                <!-- AFR Sub-settings -->
                 <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:duplicateParentState="true"
-                    android:orientation="vertical">
-
-                    <TextView
-                        style="@style/SettingsItemTitle"
-                        android:text="@string/pref_downmix_config" />
-
-                    <TextView
-                        style="@style/SettingsItemDesc"
-                        android:text="@string/pref_downmix_config_desc" />
+                    android:id="@+id/item_afr_resolution"
+                    style="@style/SettingsItemContainer"
+                    android:visibility="gone"
+                    tools:visibility="visible">
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:duplicateParentState="true"
+                        android:orientation="vertical">
+                        <TextView style="@style/SettingsItemTitle" android:text="@string/pref_afr_resolution" />
+                        <TextView style="@style/SettingsItemDesc" android:text="@string/pref_afr_resolution_desc" />
+                    </LinearLayout>
+                    <androidx.appcompat.widget.SwitchCompat
+                        android:id="@+id/switch_afr_resolution"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:clickable="false"
+                        android:focusable="false" />
                 </LinearLayout>
 
-                <ImageView
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:contentDescription="@string/pref_downmix_config"
-                    android:src="@drawable/ic_arrow_right"
-                    android:duplicateParentState="true"
-                    app:tint="@color/selector_settings_secondary" />
-            </LinearLayout>
-
-            <!-- Boost -->
-            <LinearLayout
-                android:id="@+id/item_boost"
-                style="@style/SettingsItemContainer">
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:duplicateParentState="true"
-                    android:orientation="vertical">
-
-                    <TextView
-                        style="@style/SettingsItemTitle"
-                        android:text="@string/pref_audio_boost" />
-
-                    <TextView
-                        style="@style/SettingsItemDesc"
-                        android:text="@string/pref_audio_boost_desc" />
+    <LinearLayout
+                    android:id="@+id/item_afr_fps_correction"
+                    style="@style/SettingsItemContainer"
+                    android:visibility="gone"
+                    tools:visibility="visible">
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:duplicateParentState="true"
+                        android:orientation="vertical">
+                        <TextView style="@style/SettingsItemTitle" android:text="@string/pref_afr_fps_correction" />
+                        <TextView style="@style/SettingsItemDesc" android:text="@string/pref_afr_fps_correction_desc" />
+                    </LinearLayout>
+                    <androidx.appcompat.widget.SwitchCompat
+                        android:id="@+id/switch_afr_fps_correction"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:clickable="false"
+                        android:focusable="false" />
                 </LinearLayout>
 
-                <TextView
-                    android:id="@+id/text_boost_value"
-                    style="@style/SettingsItemValue"
-                    tools:text="Выкл" />
-            </LinearLayout>
-
-            <!-- Skip Silence -->
-            <LinearLayout
-                android:id="@+id/item_skip_silence"
-                style="@style/SettingsItemContainer">
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:duplicateParentState="true"
-                    android:orientation="vertical">
-
-                    <TextView
-                        style="@style/SettingsItemTitle"
-                        android:text="@string/pref_skip_silence" />
-
-                    <TextView
-                        android:id="@+id/text_skip_silence_desc"
-                        style="@style/SettingsItemDesc"
-                        tools:text="@string/pref_skip_silence_off" />
+    <LinearLayout
+                    android:id="@+id/item_afr_double_refresh"
+                    style="@style/SettingsItemContainer"
+                    android:visibility="gone"
+                    tools:visibility="visible">
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:duplicateParentState="true"
+                        android:orientation="vertical">
+                        <TextView style="@style/SettingsItemTitle" android:text="@string/pref_afr_double_refresh" />
+                        <TextView style="@style/SettingsItemDesc" android:text="@string/pref_afr_double_refresh_desc" />
+                    </LinearLayout>
+                    <androidx.appcompat.widget.SwitchCompat
+                        android:id="@+id/switch_afr_double_refresh"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:clickable="false"
+                        android:focusable="false" />
                 </LinearLayout>
 
-                <androidx.appcompat.widget.SwitchCompat
-                    android:id="@+id/switch_skip_silence"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:clickable="false"
-                    android:focusable="false" />
-            </LinearLayout>
-
-            <!-- Remember Zoom -->
-            <LinearLayout
-                android:id="@+id/item_remember_zoom"
-                style="@style/SettingsItemContainer">
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:duplicateParentState="true"
-                    android:orientation="vertical">
-                    <TextView
-                        style="@style/SettingsItemTitle"
-                        android:text="@string/pref_remember_zoom" />
-                    <TextView
-                        style="@style/SettingsItemDesc"
-                        android:text="@string/pref_remember_zoom_desc" />
-                </LinearLayout>
-                <androidx.appcompat.widget.SwitchCompat
-                    android:id="@+id/switch_remember_zoom"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:clickable="false"
-                    android:focusable="false" />
-            </LinearLayout>
-
-            <!-- Затемнение на паузе -->
-            <LinearLayout
-                android:id="@+id/item_pause_dim"
-                style="@style/SettingsItemContainer">
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:duplicateParentState="true"
-                    android:orientation="vertical">
-                    <TextView
-                        style="@style/SettingsItemTitle"
-                        android:text="@string/pref_pause_dim" />
-                    <TextView
-                        style="@style/SettingsItemDesc"
-                        android:text="@string/pref_pause_dim_desc" />
-                </LinearLayout>
-                <TextView
-                    android:id="@+id/text_pause_dim_value"
-                    style="@style/SettingsItemValue"
-                    tools:text="60%" />
-            </LinearLayout>
-
-            <!-- Dolby Vision -->
-            <LinearLayout
-                android:id="@+id/item_dv"
-                style="@style/SettingsItemContainer">
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:duplicateParentState="true"
-                    android:orientation="vertical">
-
-                    <TextView
-                        style="@style/SettingsItemTitle"
-                        android:text="@string/pref_map_dv" />
-
-                    <TextView
-                        style="@style/SettingsItemDesc"
-                        android:text="@string/pref_dv_mode_desc" />
+    <LinearLayout
+                    android:id="@+id/item_afr_skip_24"
+                    style="@style/SettingsItemContainer"
+                    android:visibility="gone"
+                    tools:visibility="visible">
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:duplicateParentState="true"
+                        android:orientation="vertical">
+                        <TextView style="@style/SettingsItemTitle" android:text="@string/pref_afr_skip_24" />
+                        <TextView style="@style/SettingsItemDesc" android:text="@string/pref_afr_skip_24_desc" />
+                    </LinearLayout>
+                    <androidx.appcompat.widget.SwitchCompat
+                        android:id="@+id/switch_afr_skip_24"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:clickable="false"
+                        android:focusable="false" />
                 </LinearLayout>
 
-                <TextView
-                    android:id="@+id/text_dv_value"
-                    style="@style/SettingsItemValue"
-                    tools:text="Auto" />
-            </LinearLayout>
-
-            <!-- Tunneling -->
-            <LinearLayout
-                android:id="@+id/item_tunneling"
-                style="@style/SettingsItemContainer">
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:duplicateParentState="true"
-                    android:orientation="vertical">
-
+    <LinearLayout
+                    android:id="@+id/item_afr_pause"
+                    style="@style/SettingsItemContainer"
+                    android:visibility="gone"
+                    tools:visibility="visible">
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:duplicateParentState="true"
+                        android:orientation="vertical">
+                        <TextView style="@style/SettingsItemTitle" android:text="@string/pref_afr_pause" />
+                        <TextView style="@style/SettingsItemDesc" android:text="@string/pref_afr_pause_desc" />
+                    </LinearLayout>
                     <TextView
-                        style="@style/SettingsItemTitle"
-                        android:text="@string/pref_tunneling" />
-
-                    <TextView
-                        style="@style/SettingsItemDesc"
-                        android:text="@string/pref_tunneling_summary" />
+                        android:id="@+id/text_afr_pause_value"
+                        style="@style/SettingsItemValue"
+                        tools:text="2.0 сек" />
                 </LinearLayout>
 
-                <androidx.appcompat.widget.SwitchCompat
-                    android:id="@+id/switch_tunneling"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:clickable="false"
-                    android:focusable="false" />
-            </LinearLayout>
-
-            <!-- СЕКЦИЯ: AFR -->
-            <TextView
-                style="@style/SettingsSectionHeader"
-                android:layout_marginTop="24dp"
-                android:text="@string/pref_afr_sec" />
-
-            <!-- AFR -->
-            <LinearLayout
-                android:id="@+id/item_afr"
-                style="@style/SettingsItemContainer" >
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:duplicateParentState="true"
-                    android:orientation="vertical">
-
-                    <TextView
-                        style="@style/SettingsItemTitle"
-                        android:text="@string/pref_framerate_matching" />
-
-                    <TextView
-                        android:id="@+id/text_afr_desc"
-                        style="@style/SettingsItemDesc"
-                        tools:text="@string/pref_framerate_matching_off" />
+    <LinearLayout
+                    android:id="@+id/item_afr_skip_shorts"
+                    style="@style/SettingsItemContainer"
+                    android:visibility="gone"
+                    tools:visibility="visible">
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:duplicateParentState="true"
+                        android:orientation="vertical">
+                        <TextView style="@style/SettingsItemTitle" android:text="@string/pref_afr_skip_shorts" />
+                        <TextView style="@style/SettingsItemDesc" android:text="@string/pref_afr_skip_shorts_desc" />
+                    </LinearLayout>
+                    <androidx.appcompat.widget.SwitchCompat
+                        android:id="@+id/switch_afr_skip_shorts"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:clickable="false"
+                        android:focusable="false" />
                 </LinearLayout>
-
-                <androidx.appcompat.widget.SwitchCompat
-                    android:id="@+id/switch_afr"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:clickable="false"
-                    android:focusable="false" />
-            </LinearLayout>
-
-            <!-- AFR Sub-settings -->
-            <LinearLayout
-                android:id="@+id/item_afr_resolution"
-                style="@style/SettingsItemContainer"
-                android:visibility="gone"
-                tools:visibility="visible">
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:duplicateParentState="true"
-                    android:orientation="vertical">
-                    <TextView style="@style/SettingsItemTitle" android:text="@string/pref_afr_resolution" />
-                    <TextView style="@style/SettingsItemDesc" android:text="@string/pref_afr_resolution_desc" />
-                </LinearLayout>
-                <androidx.appcompat.widget.SwitchCompat
-                    android:id="@+id/switch_afr_resolution"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:clickable="false"
-                    android:focusable="false" />
             </LinearLayout>
 
             <LinearLayout
-                android:id="@+id/item_afr_fps_correction"
-                style="@style/SettingsItemContainer"
-                android:visibility="gone"
-                tools:visibility="visible">
+                android:id="@+id/section_audio"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <!-- Аудио язык -->
                 <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:duplicateParentState="true"
-                    android:orientation="vertical">
-                    <TextView style="@style/SettingsItemTitle" android:text="@string/pref_afr_fps_correction" />
-                    <TextView style="@style/SettingsItemDesc" android:text="@string/pref_afr_fps_correction_desc" />
+                    android:id="@+id/item_audio_lang"
+                    style="@style/SettingsItemContainer">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:duplicateParentState="true"
+                        android:orientation="vertical">
+
+                        <TextView
+                            style="@style/SettingsItemTitle"
+                            android:text="@string/pref_language_audio" />
+
+                        <TextView
+                            style="@style/SettingsItemDesc"
+                            android:text="@string/pref_language_audio_desc" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/text_audio_lang_value"
+                        style="@style/SettingsItemValue"
+                        tools:text="Русский" />
                 </LinearLayout>
-                <androidx.appcompat.widget.SwitchCompat
-                    android:id="@+id/switch_afr_fps_correction"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:clickable="false"
-                    android:focusable="false" />
+
+                <!-- Запоминание аудиодорожки -->
+                <LinearLayout android:id="@+id/item_remember_audio" style="@style/SettingsItemContainer">
+                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:duplicateParentState="true">
+                        <TextView style="@style/SettingsItemTitle" android:text="@string/pref_remember_audio" />
+                        <TextView style="@style/SettingsItemDesc" android:text="@string/pref_remember_audio_desc" />
+                    </LinearLayout>
+                    <TextView android:id="@+id/text_remember_audio_value" style="@style/SettingsItemValue" tools:text="Off" />
+                </LinearLayout>
+
+                <!-- Приоритет аудиодорожек (экспериментально) -->
+                <LinearLayout android:id="@+id/item_audio_priority" style="@style/SettingsItemContainer" android:visibility="gone">
+                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:duplicateParentState="true">
+                        <TextView style="@style/SettingsItemTitle" android:text="@string/pref_audio_priority" />
+                        <TextView style="@style/SettingsItemDesc" android:text="@string/pref_audio_priority_desc" />
+                    </LinearLayout>
+                    <TextView android:id="@+id/text_audio_priority_value" style="@style/SettingsItemValue" tools:text="5" />
+                </LinearLayout>
+
+                <!-- Downmix -->
+                <LinearLayout
+                    android:id="@+id/item_downmix"
+                    style="@style/SettingsItemContainer">
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:duplicateParentState="true"
+                        android:orientation="vertical">
+                        <TextView
+                            style="@style/SettingsItemTitle"
+                            android:text="@string/pref_downmix" />
+                        <TextView
+                            style="@style/SettingsItemDesc"
+                            android:text="@string/pref_downmix_desc" />
+                    </LinearLayout>
+
+                    <androidx.appcompat.widget.SwitchCompat
+                        android:id="@+id/switch_downmix"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:focusable="false"
+                        android:clickable="false" />
+                </LinearLayout>
+
+                <!-- Настройка Downmix (появляется при включении) -->
+                <LinearLayout
+                    android:id="@+id/item_downmix_config"
+                    style="@style/SettingsItemContainer"
+                    android:visibility="gone"
+                    tools:visibility="visible">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:duplicateParentState="true"
+                        android:orientation="vertical">
+
+                        <TextView
+                            style="@style/SettingsItemTitle"
+                            android:text="@string/pref_downmix_config" />
+
+                        <TextView
+                            style="@style/SettingsItemDesc"
+                            android:text="@string/pref_downmix_config_desc" />
+                    </LinearLayout>
+
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:contentDescription="@string/pref_downmix_config"
+                        android:src="@drawable/ic_arrow_right"
+                        android:duplicateParentState="true"
+                        app:tint="@color/selector_settings_secondary" />
+                </LinearLayout>
+
+                <!-- Boost -->
+                <LinearLayout
+                    android:id="@+id/item_boost"
+                    style="@style/SettingsItemContainer">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:duplicateParentState="true"
+                        android:orientation="vertical">
+
+                        <TextView
+                            style="@style/SettingsItemTitle"
+                            android:text="@string/pref_audio_boost" />
+
+                        <TextView
+                            style="@style/SettingsItemDesc"
+                            android:text="@string/pref_audio_boost_desc" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/text_boost_value"
+                        style="@style/SettingsItemValue"
+                        tools:text="Выкл" />
+                </LinearLayout>
+
+                <!-- Skip Silence -->
+                <LinearLayout
+                    android:id="@+id/item_skip_silence"
+                    style="@style/SettingsItemContainer">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:duplicateParentState="true"
+                        android:orientation="vertical">
+
+                        <TextView
+                            style="@style/SettingsItemTitle"
+                            android:text="@string/pref_skip_silence" />
+
+                        <TextView
+                            android:id="@+id/text_skip_silence_desc"
+                            style="@style/SettingsItemDesc"
+                            tools:text="@string/pref_skip_silence_off" />
+                    </LinearLayout>
+
+                    <androidx.appcompat.widget.SwitchCompat
+                        android:id="@+id/switch_skip_silence"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:clickable="false"
+                        android:focusable="false" />
+                </LinearLayout>
             </LinearLayout>
 
             <LinearLayout
-                android:id="@+id/item_afr_double_refresh"
-                style="@style/SettingsItemContainer"
-                android:visibility="gone"
-                tools:visibility="visible">
+                android:id="@+id/section_subtitles"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <!-- Субтитры язык -->
                 <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:duplicateParentState="true"
-                    android:orientation="vertical">
-                    <TextView style="@style/SettingsItemTitle" android:text="@string/pref_afr_double_refresh" />
-                    <TextView style="@style/SettingsItemDesc" android:text="@string/pref_afr_double_refresh_desc" />
+                    android:id="@+id/item_sub_lang"
+                    style="@style/SettingsItemContainer">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:duplicateParentState="true"
+                        android:orientation="vertical">
+
+                        <TextView
+                            style="@style/SettingsItemTitle"
+                            android:text="@string/pref_sub_lang_default" />
+
+                        <TextView
+                            style="@style/SettingsItemDesc"
+                            android:text="@string/pref_sub_lang_default_desc" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/text_sub_lang_value"
+                        style="@style/SettingsItemValue"
+                        tools:text="Английский" />
                 </LinearLayout>
-                <androidx.appcompat.widget.SwitchCompat
-                    android:id="@+id/switch_afr_double_refresh"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:clickable="false"
-                    android:focusable="false" />
+
+                <!-- Стиль субтитров (отдельный экран с предпросмотром) -->
+                <LinearLayout android:id="@+id/item_subtitle_style" style="@style/SettingsItemContainer">
+                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:duplicateParentState="true">
+                        <TextView style="@style/SettingsItemTitle" android:text="@string/pref_subtitle_style" />
+                        <TextView style="@style/SettingsItemDesc" android:text="@string/pref_subtitle_style_desc" />
+                    </LinearLayout>
+                    <ImageView android:layout_width="24dp" android:layout_height="24dp" android:importantForAccessibility="no" android:src="@drawable/ic_arrow_right" android:duplicateParentState="true" app:tint="@color/selector_settings_secondary" />
+                </LinearLayout>
             </LinearLayout>
 
             <LinearLayout
-                android:id="@+id/item_afr_skip_24"
-                style="@style/SettingsItemContainer"
-                android:visibility="gone"
-                tools:visibility="visible">
+                android:id="@+id/section_control"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <!-- Кнопка Вверх -->
                 <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:duplicateParentState="true"
-                    android:orientation="vertical">
-                    <TextView style="@style/SettingsItemTitle" android:text="@string/pref_afr_skip_24" />
-                    <TextView style="@style/SettingsItemDesc" android:text="@string/pref_afr_skip_24_desc" />
+                    android:id="@+id/item_up_action"
+                    style="@style/SettingsItemContainer">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:duplicateParentState="true"
+                        android:orientation="vertical">
+
+                        <TextView
+                            style="@style/SettingsItemTitle"
+                            android:text="@string/pref_up_action" />
+
+                        <TextView
+                            style="@style/SettingsItemDesc"
+                            android:text="@string/pref_up_action_desc" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/text_up_action_value"
+                        style="@style/SettingsItemValue"
+                        tools:text="@string/pref_up_action_osd" />
                 </LinearLayout>
-                <androidx.appcompat.widget.SwitchCompat
-                    android:id="@+id/switch_afr_skip_24"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:clickable="false"
-                    android:focusable="false" />
+
+                <!-- Кнопка OK -->
+                <LinearLayout
+                    android:id="@+id/item_ok_action"
+                    style="@style/SettingsItemContainer">
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:duplicateParentState="true"
+                        android:orientation="vertical">
+                        <TextView
+                            style="@style/SettingsItemTitle"
+                            android:text="@string/pref_ok_action" />
+                        <TextView
+                            style="@style/SettingsItemDesc"
+                            android:text="@string/pref_ok_action_desc" />
+                    </LinearLayout>
+                    <TextView
+                        android:id="@+id/text_ok_action_value"
+                        style="@style/SettingsItemValue"
+                        tools:text="Pause + Panel" />
+                </LinearLayout>
+
+                <!-- Confirm exit -->
+                <LinearLayout
+                    android:id="@+id/item_confirm_exit"
+                    style="@style/SettingsItemContainer">
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:duplicateParentState="true"
+                        android:orientation="vertical">
+                        <TextView
+                            style="@style/SettingsItemTitle"
+                            android:text="@string/pref_confirm_exit" />
+                        <TextView
+                            style="@style/SettingsItemDesc"
+                            android:text="@string/pref_confirm_exit_desc" />
+                    </LinearLayout>
+                    <androidx.appcompat.widget.SwitchCompat
+                        android:id="@+id/switch_confirm_exit"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:clickable="false"
+                        android:focusable="false" />
+                </LinearLayout>
+
+                <!-- Horizontal Swipe -->
+                <LinearLayout
+                    android:id="@+id/item_swipe_action"
+                    style="@style/SettingsItemContainer">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:duplicateParentState="true"
+                        android:orientation="vertical">
+
+                        <TextView
+                            style="@style/SettingsItemTitle"
+                            android:text="@string/pref_swipe_horizontal" />
+
+                        <TextView
+                            style="@style/SettingsItemDesc"
+                            android:text="@string/pref_swipe_horizontal_desc"
+                            tools:ignore="TooManyViews" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/text_swipe_action_value"
+                        style="@style/SettingsItemValue"
+                        tools:text="@string/swipe_action_none" />
+                </LinearLayout>
+
+                <!-- Жесты громкости и яркости -->
+                <LinearLayout android:id="@+id/item_gesture_volume" style="@style/SettingsItemContainer">
+                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:duplicateParentState="true">
+                        <TextView style="@style/SettingsItemTitle" android:text="@string/pref_gesture_volume" />
+                        <TextView style="@style/SettingsItemDesc" android:text="@string/pref_gesture_volume_desc" />
+                    </LinearLayout>
+                    <androidx.appcompat.widget.SwitchCompat android:id="@+id/switch_gesture_volume" android:layout_width="wrap_content" android:layout_height="wrap_content" android:clickable="false" android:focusable="false" />
+                </LinearLayout>
             </LinearLayout>
 
             <LinearLayout
-                android:id="@+id/item_afr_pause"
-                style="@style/SettingsItemContainer"
-                android:visibility="gone"
-                tools:visibility="visible">
+                android:id="@+id/section_3d"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <!-- Пункт: VR -->
                 <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:duplicateParentState="true"
-                    android:orientation="vertical">
-                    <TextView style="@style/SettingsItemTitle" android:text="@string/pref_afr_pause" />
-                    <TextView style="@style/SettingsItemDesc" android:text="@string/pref_afr_pause_desc" />
+                    android:id="@+id/item_calibrate_vr"
+                    style="@style/SettingsItemContainer">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:duplicateParentState="true"
+                        android:orientation="vertical">
+
+                        <TextView
+                            style="@style/SettingsItemTitle"
+                            android:text="@string/pref_cardboard_vr" />
+
+                        <TextView
+                            style="@style/SettingsItemDesc"
+                            android:text="@string/pref_cardboard_vr_desc" />
+                    </LinearLayout>
+
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:contentDescription="@string/pref_cardboard_vr"
+                        android:src="@drawable/ic_arrow_right"
+                        android:duplicateParentState="true"
+                        app:tint="@color/selector_settings_secondary" />
                 </LinearLayout>
-                <TextView
-                    android:id="@+id/text_afr_pause_value"
-                    style="@style/SettingsItemValue"
-                    tools:text="2.0 сек" />
+
+                <!-- Пункт: Анаглиф -->
+                <LinearLayout
+                    android:id="@+id/item_calibrate_anaglyph"
+                    style="@style/SettingsItemContainer">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:duplicateParentState="true"
+                        android:orientation="vertical">
+
+                        <TextView
+                            style="@style/SettingsItemTitle"
+                            android:text="@string/pref_anaglyph" />
+
+                        <TextView
+                            style="@style/SettingsItemDesc"
+                            android:text="@string/pref_anaglyph_desc" />
+                    </LinearLayout>
+
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:contentDescription="@string/pref_anaglyph_desc"
+                        android:src="@drawable/ic_arrow_right"
+                        android:duplicateParentState="true"
+                        app:tint="@color/selector_settings_secondary" />
+                </LinearLayout>
             </LinearLayout>
 
             <LinearLayout
-                android:id="@+id/item_afr_skip_shorts"
-                style="@style/SettingsItemContainer"
-                android:visibility="gone"
-                tools:visibility="visible">
+                android:id="@+id/section_app"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <!-- Язык приложения -->
                 <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:duplicateParentState="true"
-                    android:orientation="vertical">
-                    <TextView style="@style/SettingsItemTitle" android:text="@string/pref_afr_skip_shorts" />
-                    <TextView style="@style/SettingsItemDesc" android:text="@string/pref_afr_skip_shorts_desc" />
+                    android:id="@+id/item_app_language"
+                    style="@style/SettingsItemContainer">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:duplicateParentState="true"
+                        android:orientation="vertical">
+
+                        <TextView
+                            style="@style/SettingsItemTitle"
+                            android:text="@string/pref_app_language" />
+
+                        <TextView
+                            style="@style/SettingsItemDesc"
+                            android:text="@string/pref_app_language_desc" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/text_app_language_value"
+                        style="@style/SettingsItemValue"
+                        tools:text="System" />
                 </LinearLayout>
-                <androidx.appcompat.widget.SwitchCompat
-                    android:id="@+id/switch_afr_skip_shorts"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:clickable="false"
-                    android:focusable="false" />
-            </LinearLayout>
 
-            <!-- СЕКЦИЯ: ЯЗЫК И СУБТИТРЫ -->
-            <TextView
-                style="@style/SettingsSectionHeader"
-                android:layout_marginTop="24dp"
-                android:text="@string/pref_sec_lang_and_sub" />
-
-            <!-- Аудио язык -->
-            <LinearLayout
-                android:id="@+id/item_audio_lang"
-                style="@style/SettingsItemContainer">
-
+                <!-- Обновление -->
                 <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:duplicateParentState="true"
-                    android:orientation="vertical">
+                    android:id="@+id/item_update"
+                    style="@style/SettingsItemContainer">
 
-                    <TextView
-                        style="@style/SettingsItemTitle"
-                        android:text="@string/pref_language_audio" />
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:duplicateParentState="true"
+                        android:orientation="vertical">
 
-                    <TextView
-                        style="@style/SettingsItemDesc"
-                        android:text="@string/pref_language_audio_desc" />
+                        <TextView
+                            android:id="@+id/text_update"
+                            style="@style/SettingsItemTitle"
+                            android:text="@string/pref_update_check" />
+
+                        <TextView
+                            android:id="@+id/text_update_desc"
+                            style="@style/SettingsItemDesc"
+                            tools:text="v1.0.6"
+                            tools:ignore="TooManyViews" />
+                    </LinearLayout>
+
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:contentDescription="@string/pref_update_check"
+                        android:duplicateParentState="true"
+                        android:src="@drawable/ic_arrow_right"
+                        app:tint="@color/selector_settings_secondary" />
                 </LinearLayout>
 
-                <TextView
-                    android:id="@+id/text_audio_lang_value"
-                    style="@style/SettingsItemValue"
-                    tools:text="Русский" />
-            </LinearLayout>
-
-            <!-- Запоминание аудиодорожки -->
-            <LinearLayout android:id="@+id/item_remember_audio" style="@style/SettingsItemContainer">
-                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:duplicateParentState="true">
-                    <TextView style="@style/SettingsItemTitle" android:text="@string/pref_remember_audio" />
-                    <TextView style="@style/SettingsItemDesc" android:text="@string/pref_remember_audio_desc" />
-                </LinearLayout>
-                <TextView android:id="@+id/text_remember_audio_value" style="@style/SettingsItemValue" tools:text="Off" />
-            </LinearLayout>
-
-            <!-- Приоритет аудиодорожек (экспериментально) -->
-            <LinearLayout android:id="@+id/item_audio_priority" style="@style/SettingsItemContainer" android:visibility="gone">
-                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:duplicateParentState="true">
-                    <TextView style="@style/SettingsItemTitle" android:text="@string/pref_audio_priority" />
-                    <TextView style="@style/SettingsItemDesc" android:text="@string/pref_audio_priority_desc" />
-                </LinearLayout>
-                <TextView android:id="@+id/text_audio_priority_value" style="@style/SettingsItemValue" tools:text="5" />
-            </LinearLayout>
-
-            <!-- Субтитры язык -->
-            <LinearLayout
-                android:id="@+id/item_sub_lang"
-                style="@style/SettingsItemContainer">
-
+                <!-- Пункт: Выход -->
                 <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:duplicateParentState="true"
-                    android:orientation="vertical">
+                    android:id="@+id/item_exit"
+                    style="@style/SettingsItemContainer">
 
-                    <TextView
-                        style="@style/SettingsItemTitle"
-                        android:text="@string/pref_sub_lang_default" />
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:duplicateParentState="true"
+                        android:orientation="vertical">
 
-                    <TextView
-                        style="@style/SettingsItemDesc"
-                        android:text="@string/pref_sub_lang_default_desc" />
+                        <TextView
+                            style="@style/SettingsItemTitle"
+                            android:text="@string/exit" />
+
+                        <TextView
+                            style="@style/SettingsItemDesc"
+                            android:text="@string/close_settings" />
+                    </LinearLayout>
+
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:contentDescription="@string/close_settings"
+                        android:src="@drawable/ic_exit"
+                        android:duplicateParentState="true"
+                        app:tint="@color/selector_settings_secondary" />
                 </LinearLayout>
-
-                <TextView
-                    android:id="@+id/text_sub_lang_value"
-                    style="@style/SettingsItemValue"
-                    tools:text="Английский" />
-            </LinearLayout>
-
-            <!-- СЕКЦИЯ: КАЛИБРОВКА -->
-            <TextView
-                style="@style/SettingsSectionHeader"
-                android:layout_marginTop="24dp"
-                android:text="@string/pref_calibration_3d" />
-
-            <!-- Пункт: VR -->
-            <LinearLayout
-                android:id="@+id/item_calibrate_vr"
-                style="@style/SettingsItemContainer">
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:duplicateParentState="true"
-                    android:orientation="vertical">
-
-                    <TextView
-                        style="@style/SettingsItemTitle"
-                        android:text="@string/pref_cardboard_vr" />
-
-                    <TextView
-                        style="@style/SettingsItemDesc"
-                        android:text="@string/pref_cardboard_vr_desc" />
-                </LinearLayout>
-
-                <ImageView
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:contentDescription="@string/pref_cardboard_vr"
-                    android:src="@drawable/ic_arrow_right"
-                    android:duplicateParentState="true"
-                    app:tint="@color/selector_settings_secondary" />
-            </LinearLayout>
-
-            <!-- Пункт: Анаглиф -->
-            <LinearLayout
-                android:id="@+id/item_calibrate_anaglyph"
-                style="@style/SettingsItemContainer">
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:duplicateParentState="true"
-                    android:orientation="vertical">
-
-                    <TextView
-                        style="@style/SettingsItemTitle"
-                        android:text="@string/pref_anaglyph" />
-
-                    <TextView
-                        style="@style/SettingsItemDesc"
-                        android:text="@string/pref_anaglyph_desc" />
-                </LinearLayout>
-
-                <ImageView
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:contentDescription="@string/pref_anaglyph_desc"
-                    android:src="@drawable/ic_arrow_right"
-                    android:duplicateParentState="true"
-                    app:tint="@color/selector_settings_secondary" />
-            </LinearLayout>
-
-            <!-- СЕКЦИЯ: ПРИЛОЖЕНИЕ -->
-            <TextView
-                style="@style/SettingsSectionHeader"
-                android:layout_marginTop="24dp"
-                android:text="@string/pref_sec_app" />
-
-            <!-- Startup Playlist -->
-            <LinearLayout android:id="@+id/item_startup_playlist" style="@style/SettingsItemContainer">
-                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:duplicateParentState="true">
-                    <TextView style="@style/SettingsItemTitle" android:text="@string/pref_startup_playlist" />
-                    <TextView android:id="@+id/text_startup_playlist_value" style="@style/SettingsItemDesc" tools:text="http://..." />
-                </LinearLayout>
-            </LinearLayout>
-
-            <!-- Live Mode -->
-            <LinearLayout android:id="@+id/item_live_mode" style="@style/SettingsItemContainer">
-                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:duplicateParentState="true">
-                    <TextView style="@style/SettingsItemTitle" android:text="@string/pref_live_mode" />
-                    <TextView style="@style/SettingsItemDesc" android:text="@string/pref_live_mode_desc" />
-                </LinearLayout>
-                <androidx.appcompat.widget.SwitchCompat android:id="@+id/switch_live_mode" android:layout_width="wrap_content" android:layout_height="wrap_content" android:clickable="false" android:focusable="false" />
-            </LinearLayout>
-
-            <!-- Info Panel on track change -->
-            <LinearLayout android:id="@+id/item_track_change_info" style="@style/SettingsItemContainer">
-                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:duplicateParentState="true">
-                    <TextView style="@style/SettingsItemTitle" android:text="@string/pref_track_change_info" />
-                    <TextView style="@style/SettingsItemDesc" android:text="@string/pref_track_change_info_desc" />
-                </LinearLayout>
-                <androidx.appcompat.widget.SwitchCompat android:id="@+id/switch_track_change_info" android:layout_width="wrap_content" android:layout_height="wrap_content" android:clickable="false" android:focusable="false" />
-            </LinearLayout>
-
-            <!-- Отображение буфера -->
-            <LinearLayout android:id="@+id/item_buffer_display" style="@style/SettingsItemContainer">
-                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:duplicateParentState="true">
-                    <TextView style="@style/SettingsItemTitle" android:text="@string/pref_buffer_display" />
-                    <TextView style="@style/SettingsItemDesc" android:text="@string/pref_buffer_display_desc" />
-                </LinearLayout>
-                <TextView android:id="@+id/text_buffer_display_value" style="@style/SettingsItemValue" tools:text="Выкл" />
-            </LinearLayout>
-
-            <!-- Resume Mode -->
-            <LinearLayout
-                android:id="@+id/item_resume_mode"
-                style="@style/SettingsItemContainer">
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:duplicateParentState="true"
-                    android:orientation="vertical">
-                    <TextView
-                        style="@style/SettingsItemTitle"
-                        android:text="@string/pref_resume_mode" />
-                    <TextView
-                        style="@style/SettingsItemDesc"
-                        android:text="@string/pref_resume_mode_desc" />
-                </LinearLayout>
-                <TextView
-                    android:id="@+id/text_resume_mode_value"
-                    style="@style/SettingsItemValue"
-                    tools:text="Спрашивать" />
-            </LinearLayout>
-
-            <!-- External position (intent) -->
-            <LinearLayout
-                android:id="@+id/item_external_position"
-                style="@style/SettingsItemContainer">
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:duplicateParentState="true"
-                    android:orientation="vertical">
-                    <TextView
-                        style="@style/SettingsItemTitle"
-                        android:text="@string/pref_external_position" />
-                    <TextView
-                        style="@style/SettingsItemDesc"
-                        android:text="@string/pref_external_position_desc" />
-                </LinearLayout>
-                <TextView
-                    android:id="@+id/text_external_position_value"
-                    style="@style/SettingsItemValue"
-                    tools:text="Применять сразу" />
-            </LinearLayout>
-
-            <!-- Show Clock -->
-            <LinearLayout
-                android:id="@+id/item_show_clock"
-                style="@style/SettingsItemContainer">
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:duplicateParentState="true"
-                    android:orientation="vertical">
-                    <TextView
-                        style="@style/SettingsItemTitle"
-                        android:text="@string/pref_show_clock" />
-                    <TextView
-                        style="@style/SettingsItemDesc"
-                        android:text="@string/pref_show_clock_desc" />
-                </LinearLayout>
-                <TextView
-                    android:id="@+id/text_show_clock_value"
-                    style="@style/SettingsItemValue"
-                    tools:text="60%" />
-            </LinearLayout>
-
-            <!-- Show Playlist Index -->
-            <LinearLayout
-                android:id="@+id/item_show_index"
-                style="@style/SettingsItemContainer">
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:duplicateParentState="true"
-                    android:orientation="vertical">
-                    <TextView
-                        style="@style/SettingsItemTitle"
-                        android:text="@string/pref_show_playlist_index" />
-                    <TextView
-                        style="@style/SettingsItemDesc"
-                        android:text="@string/pref_show_playlist_index_desc" />
-                </LinearLayout>
-                <androidx.appcompat.widget.SwitchCompat
-                    android:id="@+id/switch_show_index"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:clickable="false"
-                    android:focusable="false" />
-            </LinearLayout>
-
-            <!-- Confirm exit -->
-            <LinearLayout
-                android:id="@+id/item_confirm_exit"
-                style="@style/SettingsItemContainer">
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:duplicateParentState="true"
-                    android:orientation="vertical">
-                    <TextView
-                        style="@style/SettingsItemTitle"
-                        android:text="@string/pref_confirm_exit" />
-                    <TextView
-                        style="@style/SettingsItemDesc"
-                        android:text="@string/pref_confirm_exit_desc" />
-                </LinearLayout>
-                <androidx.appcompat.widget.SwitchCompat
-                    android:id="@+id/switch_confirm_exit"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:clickable="false"
-                    android:focusable="false" />
-            </LinearLayout>
-
-            <!-- Кнопка Вверх -->
-            <LinearLayout
-                android:id="@+id/item_up_action"
-                style="@style/SettingsItemContainer">
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:duplicateParentState="true"
-                    android:orientation="vertical">
-
-                    <TextView
-                        style="@style/SettingsItemTitle"
-                        android:text="@string/pref_up_action" />
-
-                    <TextView
-                        style="@style/SettingsItemDesc"
-                        android:text="@string/pref_up_action_desc" />
-                </LinearLayout>
-
-                <TextView
-                    android:id="@+id/text_up_action_value"
-                    style="@style/SettingsItemValue"
-                    tools:text="@string/pref_up_action_osd" />
-            </LinearLayout>
-
-            <!-- Кнопка OK -->
-            <LinearLayout
-                android:id="@+id/item_ok_action"
-                style="@style/SettingsItemContainer">
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:duplicateParentState="true"
-                    android:orientation="vertical">
-                    <TextView
-                        style="@style/SettingsItemTitle"
-                        android:text="@string/pref_ok_action" />
-                    <TextView
-                        style="@style/SettingsItemDesc"
-                        android:text="@string/pref_ok_action_desc" />
-                </LinearLayout>
-                <TextView
-                    android:id="@+id/text_ok_action_value"
-                    style="@style/SettingsItemValue"
-                    tools:text="Pause + Panel" />
-            </LinearLayout>
-
-            <!-- Horizontal Swipe -->
-            <LinearLayout
-                android:id="@+id/item_swipe_action"
-                style="@style/SettingsItemContainer">
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:duplicateParentState="true"
-                    android:orientation="vertical">
-
-                    <TextView
-                        style="@style/SettingsItemTitle"
-                        android:text="@string/pref_swipe_horizontal" />
-
-                    <TextView
-                        style="@style/SettingsItemDesc"
-                        android:text="@string/pref_swipe_horizontal_desc"
-                        tools:ignore="TooManyViews" />
-                </LinearLayout>
-
-                <TextView
-                    android:id="@+id/text_swipe_action_value"
-                    style="@style/SettingsItemValue"
-                    tools:text="@string/swipe_action_none" />
-            </LinearLayout>
-
-            <!-- Жесты громкости и яркости -->
-            <LinearLayout android:id="@+id/item_gesture_volume" style="@style/SettingsItemContainer">
-                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:duplicateParentState="true">
-                    <TextView style="@style/SettingsItemTitle" android:text="@string/pref_gesture_volume" />
-                    <TextView style="@style/SettingsItemDesc" android:text="@string/pref_gesture_volume_desc" />
-                </LinearLayout>
-                <androidx.appcompat.widget.SwitchCompat android:id="@+id/switch_gesture_volume" android:layout_width="wrap_content" android:layout_height="wrap_content" android:clickable="false" android:focusable="false" />
-            </LinearLayout>
-
-            <!-- Обновление -->
-            <LinearLayout
-                android:id="@+id/item_update"
-                style="@style/SettingsItemContainer">
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:duplicateParentState="true"
-                    android:orientation="vertical">
-
-                    <TextView
-                        android:id="@+id/text_update"
-                        style="@style/SettingsItemTitle"
-                        android:text="@string/pref_update_check" />
-
-                    <TextView
-                        android:id="@+id/text_update_desc"
-                        style="@style/SettingsItemDesc"
-                        tools:text="v1.0.6"
-                        tools:ignore="TooManyViews" />
-                </LinearLayout>
-
-                <ImageView
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:contentDescription="@string/pref_update_check"
-                    android:duplicateParentState="true"
-                    android:src="@drawable/ic_arrow_right"
-                    app:tint="@color/selector_settings_secondary" />
-            </LinearLayout>
-
-            <!-- Язык приложения -->
-            <LinearLayout
-                android:id="@+id/item_app_language"
-                style="@style/SettingsItemContainer">
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:duplicateParentState="true"
-                    android:orientation="vertical">
-
-                    <TextView
-                        style="@style/SettingsItemTitle"
-                        android:text="@string/pref_app_language" />
-
-                    <TextView
-                        style="@style/SettingsItemDesc"
-                        android:text="@string/pref_app_language_desc" />
-                </LinearLayout>
-
-                <TextView
-                    android:id="@+id/text_app_language_value"
-                    style="@style/SettingsItemValue"
-                    tools:text="System" />
-            </LinearLayout>
-
-            <!-- Пункт: Выход -->
-            <LinearLayout
-                android:id="@+id/item_exit"
-                style="@style/SettingsItemContainer">
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:duplicateParentState="true"
-                    android:orientation="vertical">
-
-                    <TextView
-                        style="@style/SettingsItemTitle"
-                        android:text="@string/exit" />
-
-                    <TextView
-                        style="@style/SettingsItemDesc"
-                        android:text="@string/close_settings" />
-                </LinearLayout>
-
-                <ImageView
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:contentDescription="@string/close_settings"
-                    android:src="@drawable/ic_exit"
-                    android:duplicateParentState="true"
-                    app:tint="@color/selector_settings_secondary" />
             </LinearLayout>
 
         </LinearLayout>

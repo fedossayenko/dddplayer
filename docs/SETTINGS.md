@@ -21,6 +21,7 @@
 | `up_button_action` | `UP_ACTION_MENU` (2) | 0 ничего, 1 OSD-настройки, 2 боковое меню, 3 инфопанель |
 | `ok_button_action` | `OK_ACTION_PAUSE_PANEL` (1) | 0 пауза, 1 пауза + панель, 2 панель |
 | `horizontal_swipe_action` | 2 | Действие горизонтального свайпа (телефон) |
+| `sub_font`, `sub_size`, `sub_text_color`, `sub_bg_color`, `sub_edge_type`, `sub_edge_color`, `sub_bottom`, `sub_embedded` | как у стандартного `SubtitleView` | Стиль субтитров (`SubtitleStyle`, экран `SubtitleStyleActivity`, применение `SubtitleStyleOptions.apply`) |
 | `gesture_volume_brightness` | true | Вертикальные свайпы: громкость справа, яркость слева |
 | `confirm_exit` | true | Выход по второму нажатию «Назад» в течение 2 с |
 | `auto_pip` | false | Авто-PiP при уходе с экрана |
@@ -50,6 +51,15 @@
 
 Полный список смотрите в `SettingsRepository.kt`.
 
+## Экран глобальных настроек
+
+`GlobalSettingsActivity`: слева список категорий (`categories`, пункты `item_settings_category`), справа
+прокручиваемые настройки выбранной категории (контейнеры `section_*`, видим только один).
+
+Управление с пульта: фокус на категории сразу показывает ее настройки; Вправо — в настройки (на последний
+выбранный в категории пункт); Влево или Назад — обратно к категориям; CH+/CH- и PgUp/PgDn — соседняя категория
+из любой колонки; Назад в списке категорий закрывает экран. Выбор из списка значений — `ChoiceDialog`.
+
 ## Перезапуск плеера
 
 `getHardSettingsSignature()` включает приоритет декодеров, туннелирование, DV→HEVC, даунмикс с микшером
@@ -71,7 +81,10 @@
    **должно сохранять текущее поведение.**
 2. Если старый ключ поменял смысл, напишите миграцию (пример — `getClockTransparency`).
 3. `GlobalSettingsViewModel`: добавьте `MutableLiveData` с начальным значением из репозитория и метод изменения.
-4. `activity_global_settings.xml`: добавьте пункт в нужную секцию (по образцу соседних; пункты фокусируемые,
+4. `activity_global_settings.xml`: добавьте пункт в контейнер нужной категории (`section_playback`, `section_screen`,
+   `section_video`, `section_audio`, `section_subtitles`, `section_control`, `section_3d`, `section_app`) по образцу
+   соседних. Пункты фокусируемые: навигация идет с пульта. Новая категория — это новый контейнер `section_*`
+   плюс запись в `GlobalSettingsActivity.categories`.
    потому что навигация идет с пульта).
 5. `GlobalSettingsActivity`: `lateinit` поля, `bindViews`, обработчик в `setupListeners` и подписка
    в `observeViewModel`. Для выбора из списка используйте `showSingleChoiceDialog`.

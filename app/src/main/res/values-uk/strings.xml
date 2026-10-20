@@ -98,7 +98,7 @@
     <string name="pref_confirm_exit_desc">Закривати плеєр повторним натисканням НАЗАД</string>
 
     <!-- Глобальні налаштування -->
-    <string name="pref_title">Налаштування</string>
+    <string name="pref_title">Глобальні налаштування</string>
     <string name="pref_title_desc">Глобальні параметри плеєра</string>
     <string name="exit">Вихід</string>
     <string name="pref_general_header">Відтворення</string>
@@ -278,4 +278,48 @@
     <string name="audio_priority_up">Вище</string>
     <string name="audio_priority_down">Нижче</string>
     <string name="audio_priority_remove">Видалити</string>
+    <string name="settings_cat_screen">Екран</string>
+    <string name="settings_cat_video">Відео</string>
+    <string name="settings_cat_audio">Звук</string>
+    <string name="settings_cat_subtitles">Субтитри</string>
+    <string name="settings_cat_control">Керування</string>
+    <string name="settings_cat_3d">3D і VR</string>
+    <string name="pref_subtitle_style">Стиль субтитрів</string>
+    <string name="pref_subtitle_style_desc">Шрифт, розмір, кольори, фон і обведення з попереднім переглядом</string>
+    <string name="sub_opt_font">Шрифт</string>
+    <string name="sub_opt_size">Розмір</string>
+    <string name="sub_opt_color">Колір тексту</string>
+    <string name="sub_opt_background">Фон</string>
+    <string name="sub_opt_edge">Обведення</string>
+    <string name="sub_opt_edge_color">Колір обведення</string>
+    <string name="sub_opt_position">Відступ знизу</string>
+    <string name="sub_opt_embedded">Стилі з файлу (ASS/SSA)</string>
+    <string name="sub_opt_reset">Скинути за замовчуванням</string>
+    <string name="sub_option_prev">Попереднє значення</string>
+    <string name="sub_option_next">Наступне значення</string>
+    <string name="sub_preview_text">Приклад субтитрів\nЧуєш їх, доцю, га? Кумедна ж ти, прощайся без ґольфів!</string>
+    <string name="sub_style_hint">Пульт: Ліворуч/Праворуч змінюють значення, OK відкриває список. Зміни зберігаються одразу.</string>
+    <string name="sub_font_default">За замовчуванням</string>
+    <string name="sub_font_sans">Без зарубок</string>
+    <string name="sub_font_sans_bold">Без зарубок, жирний</string>
+    <string name="sub_font_condensed">Вузький</string>
+    <string name="sub_font_serif">Із зарубками</string>
+    <string name="sub_font_mono">Моноширинний</string>
+    <string name="color_white">Білий</string>
+    <string name="color_yellow">Жовтий</string>
+    <string name="color_green">Зелений</string>
+    <string name="color_cyan">Блакитний</string>
+    <string name="color_red">Червоний</string>
+    <string name="color_gray">Сірий</string>
+    <string name="color_dark_gray">Темно-сірий</string>
+    <string name="color_black">Чорний</string>
+    <string name="sub_bg_none">Немає</string>
+    <string name="sub_bg_black">Чорний %1$d%%</string>
+    <string name="sub_edge_none">Немає</string>
+    <string name="sub_edge_outline">Контур</string>
+    <string name="sub_edge_shadow">Тінь</string>
+    <string name="sub_edge_raised">Опуклий</string>
+    <string name="sub_edge_depressed">Вдавлений</string>
+    <string name="sub_embedded_on">Застосовувати</string>
+    <string name="sub_embedded_off">Ігнорувати</string>
 </resources>

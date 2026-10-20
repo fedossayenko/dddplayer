@@ -112,7 +112,7 @@
     <string name="pref_confirm_exit_desc">Press BACK twice to close the player</string>
 
     <!-- Global Settings -->
-    <string name="pref_title">Settings</string>
+    <string name="pref_title">Global settings</string>
     <string name="pref_title_desc">Global player parameters</string>
     <string name="close_settings">Close settings</string>
     <string name="exit">Exit</string>
@@ -310,4 +310,48 @@
     <string name="audio_priority_up">Move up</string>
     <string name="audio_priority_down">Move down</string>
     <string name="audio_priority_remove">Remove</string>
+    <string name="settings_cat_screen">Screen</string>
+    <string name="settings_cat_video">Video</string>
+    <string name="settings_cat_audio">Audio</string>
+    <string name="settings_cat_subtitles">Subtitles</string>
+    <string name="settings_cat_control">Controls</string>
+    <string name="settings_cat_3d">3D and VR</string>
+    <string name="pref_subtitle_style">Subtitle style</string>
+    <string name="pref_subtitle_style_desc">Font, size, colors, background and outline with preview</string>
+    <string name="sub_opt_font">Font</string>
+    <string name="sub_opt_size">Size</string>
+    <string name="sub_opt_color">Text color</string>
+    <string name="sub_opt_background">Background</string>
+    <string name="sub_opt_edge">Outline</string>
+    <string name="sub_opt_edge_color">Outline color</string>
+    <string name="sub_opt_position">Bottom offset</string>
+    <string name="sub_opt_embedded">Styles from file (ASS/SSA)</string>
+    <string name="sub_opt_reset">Reset to default</string>
+    <string name="sub_option_prev">Previous value</string>
+    <string name="sub_option_next">Next value</string>
+    <string name="sub_preview_text">Subtitle preview\nThe quick brown fox jumps over the lazy dog</string>
+    <string name="sub_style_hint">Remote: Left/Right change the value, OK opens the list. Changes are saved immediately.</string>
+    <string name="sub_font_default">Default</string>
+    <string name="sub_font_sans">Sans</string>
+    <string name="sub_font_sans_bold">Sans bold</string>
+    <string name="sub_font_condensed">Condensed</string>
+    <string name="sub_font_serif">Serif</string>
+    <string name="sub_font_mono">Monospace</string>
+    <string name="color_white">White</string>
+    <string name="color_yellow">Yellow</string>
+    <string name="color_green">Green</string>
+    <string name="color_cyan">Cyan</string>
+    <string name="color_red">Red</string>
+    <string name="color_gray">Gray</string>
+    <string name="color_dark_gray">Dark gray</string>
+    <string name="color_black">Black</string>
+    <string name="sub_bg_none">None</string>
+    <string name="sub_bg_black">Black %1$d%%</string>
+    <string name="sub_edge_none">None</string>
+    <string name="sub_edge_outline">Outline</string>
+    <string name="sub_edge_shadow">Drop shadow</string>
+    <string name="sub_edge_raised">Raised</string>
+    <string name="sub_edge_depressed">Depressed</string>
+    <string name="sub_embedded_on">Apply</string>
+    <string name="sub_embedded_off">Ignore</string>
 </resources>

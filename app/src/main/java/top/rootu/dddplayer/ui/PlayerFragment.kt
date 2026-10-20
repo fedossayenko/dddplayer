@@ -1612,8 +1612,9 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
         swipeAction = settingsRepo.getHorizontalSwipeAction()
         verticalGesturesEnabled = settingsRepo.isVolumeBrightnessGesturesEnabled()
 
-        // Обновляем видимость часов (на случай, если изменили в настройках)
+        // Обновляем видимость часов и стиль субтитров (на случай, если изменили в настройках)
         ui.updateClockTransparency(settingsRepo.getClockTransparency())
+        ui.applySubtitleStyle(settingsRepo.getSubtitleStyle())
         applyBufferDisplayMode(settingsRepo.getBufferDisplayMode())
 
         // Проверяем, нужно ли перезапустить плеер из-за смены настроек

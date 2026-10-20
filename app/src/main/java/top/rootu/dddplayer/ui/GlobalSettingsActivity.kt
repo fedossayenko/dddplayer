@@ -1,13 +1,17 @@
 package top.rootu.dddplayer.ui
 
 import android.app.Dialog
+import android.content.Intent
 import android.os.Bundle
+import android.view.KeyEvent
 import android.view.View
+import android.view.ViewGroup
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageButton
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.ScrollView
@@ -15,25 +19,42 @@ import android.widget.SeekBar
 import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.addCallback
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.appcompat.widget.SwitchCompat
 import androidx.core.os.LocaleListCompat
+import androidx.core.view.children
 import androidx.core.view.isVisible
-import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
 import top.rootu.dddplayer.BuildConfig
 import top.rootu.dddplayer.R
 import top.rootu.dddplayer.data.SettingsRepository
 import top.rootu.dddplayer.logic.AudioMixerLogic
 import top.rootu.dddplayer.logic.UpdateInfo
-import top.rootu.dddplayer.ui.adapter.ChoiceAdapter
 import top.rootu.dddplayer.utils.LocaleUtils
 import top.rootu.dddplayer.viewmodel.GlobalSettingsViewModel
 import top.rootu.dddplayer.viewmodel.UpdateViewModel
 
 class GlobalSettingsActivity : AppCompatActivity() {
+
+    // Категория настроек: секция в разметке, название и иконка в списке слева
+    private data class SettingsCategory(val sectionId: Int, val titleRes: Int, val iconRes: Int)
+
+    private val categories = listOf(
+        SettingsCategory(R.id.section_playback, R.string.pref_general_header, R.drawable.ic_play_arrow),
+        SettingsCategory(R.id.section_screen, R.string.settings_cat_screen, R.drawable.ic_fullscreen),
+        SettingsCategory(R.id.section_video, R.string.settings_cat_video, R.drawable.ic_fit_screen),
+        SettingsCategory(R.id.section_audio, R.string.settings_cat_audio, R.drawable.ic_volume_up),
+        SettingsCategory(R.id.section_subtitles, R.string.settings_cat_subtitles, R.drawable.ic_subtitles),
+        SettingsCategory(R.id.section_control, R.string.settings_cat_control, R.drawable.ic_settings_remote),
+        SettingsCategory(R.id.section_3d, R.string.settings_cat_3d, R.drawable.ic_settings_3d),
+        SettingsCategory(R.id.section_app, R.string.pref_sec_app, R.drawable.ic_settings)
+    )
+    private val categoryViews = mutableListOf<View>()
+    private var selectedCategory = -1
+    // Последний пункт с фокусом в каждой категории: при возврате в категорию фокус встает на него
+    private val lastFocusedInCategory = mutableMapOf<Int, View>()
 
     private val updateViewModel: UpdateViewModel by viewModels()
     private val settingsViewModel: GlobalSettingsViewModel by viewModels()
@@ -42,6 +63,8 @@ class GlobalSettingsActivity : AppCompatActivity() {
 
     // UI Elements (lateinit, так как они инициализируются в bindViews)
     private lateinit var scrollView: ScrollView
+    private lateinit var contentContainer: LinearLayout
+    private lateinit var itemSubtitleStyle: LinearLayout
     private lateinit var btnClose: ImageButton
     private lateinit var itemExit: LinearLayout
     private lateinit var itemDecoder: LinearLayout
@@ -160,13 +183,111 @@ class GlobalSettingsActivity : AppCompatActivity() {
         setContentView(R.layout.activity_global_settings)
 
         bindViews()
+        setupCategories(savedInstanceState?.getInt(STATE_CATEGORY) ?: 0)
         setupListeners()
         observeViewModel()
-        handleInitialFocus(intent.getIntExtra("FOCUS_ITEM_ID", 0))
+        // После пересоздания (смена языка) пункт из интента повторно не открываем
+        handleInitialFocus(if (savedInstanceState == null) intent.getIntExtra("FOCUS_ITEM_ID", 0) else 0)
+
+        window.decorView.viewTreeObserver.addOnGlobalFocusChangeListener { _, newFocus ->
+            if (isInSettingsContent(newFocus)) lastFocusedInCategory[selectedCategory] = newFocus
+        }
+
+        // "Назад" из настроек категории возвращает к списку категорий, из списка - закрывает экран
+        onBackPressedDispatcher.addCallback(this) {
+            if (isInSettingsContent(currentFocus)) {
+                categoryViews[selectedCategory].requestFocus()
+            } else {
+                finish()
+            }
+        }
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putInt(STATE_CATEGORY, selectedCategory)
+    }
+
+    private fun setupCategories(initialCategory: Int) {
+        val container = findViewById<LinearLayout>(R.id.settings_categories)
+        categories.forEachIndexed { index, category ->
+            val view = layoutInflater.inflate(R.layout.item_settings_category, container, false)
+            view.findViewById<ImageView>(R.id.category_icon).setImageResource(category.iconRes)
+            view.findViewById<TextView>(R.id.category_title).setText(category.titleRes)
+            // Пульт: фокус на категории сразу показывает ее настройки
+            view.setOnFocusChangeListener { _, hasFocus -> if (hasFocus) selectCategory(index) }
+            view.setOnClickListener { selectCategory(index) }
+            // Вправо - к настройкам категории
+            view.setOnKeyListener { _, keyCode, event ->
+                keyCode == KeyEvent.KEYCODE_DPAD_RIGHT && event.action == KeyEvent.ACTION_DOWN && focusFirstSetting()
+            }
+            container.addView(view)
+            categoryViews.add(view)
+        }
+        selectCategory(initialCategory.coerceIn(categories.indices))
+    }
+
+    private fun selectCategory(index: Int) {
+        if (index == selectedCategory) return
+        selectedCategory = index
+        categories.forEachIndexed { i, category -> findViewById<View>(category.sectionId).isVisible = i == index }
+        categoryViews.forEachIndexed { i, view -> view.isSelected = i == index }
+        scrollView.scrollTo(0, 0)
+    }
+
+    /** Фокус на настройки выбранной категории: последний выбранный пункт или первый видимый. */
+    private fun focusFirstSetting(): Boolean {
+        lastFocusedInCategory[selectedCategory]?.takeIf { it.isShown && it.isFocusable }?.let {
+            return it.requestFocus()
+        }
+        val section = findViewById<ViewGroup>(categories[selectedCategory].sectionId)
+        val first = section.children.firstOrNull { it.isVisible && it.isFocusable } ?: return false
+        return first.requestFocus()
+    }
+
+    /** Переход к соседней категории (CH+/CH-, PgUp/PgDn), фокус остается в той же колонке. */
+    private fun switchCategory(direction: Int) {
+        val index = (selectedCategory + direction).coerceIn(categories.indices)
+        if (index == selectedCategory) return
+        val inContent = isInSettingsContent(currentFocus)
+        selectCategory(index)
+        if (!inContent || !focusFirstSetting()) categoryViews[index].requestFocus()
+    }
+
+    private fun isInSettingsContent(view: View?): Boolean {
+        var current: View? = view
+        while (current != null) {
+            if (current === contentContainer) return true
+            current = current.parent as? View
+        }
+        return false
+    }
+
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (event.action == KeyEvent.ACTION_DOWN) {
+            when (event.keyCode) {
+                // Влево из настроек - обратно к списку категорий
+                KeyEvent.KEYCODE_DPAD_LEFT -> if (isInSettingsContent(currentFocus)) {
+                    categoryViews[selectedCategory].requestFocus()
+                    return true
+                }
+                KeyEvent.KEYCODE_CHANNEL_UP, KeyEvent.KEYCODE_PAGE_UP -> {
+                    switchCategory(-1)
+                    return true
+                }
+                KeyEvent.KEYCODE_CHANNEL_DOWN, KeyEvent.KEYCODE_PAGE_DOWN -> {
+                    switchCategory(1)
+                    return true
+                }
+            }
+        }
+        return super.dispatchKeyEvent(event)
     }
 
     private fun bindViews() {
         scrollView = findViewById(R.id.settings_scrollview)
+        contentContainer = findViewById(R.id.settings_content)
+        itemSubtitleStyle = findViewById(R.id.item_subtitle_style)
         btnClose = findViewById(R.id.btn_close)
         itemExit = findViewById(R.id.item_exit)
         itemDecoder = findViewById(R.id.item_decoder)
@@ -253,6 +374,10 @@ class GlobalSettingsActivity : AppCompatActivity() {
     private fun setupListeners() {
         btnClose.setOnClickListener { finish() }
         itemExit.setOnClickListener { finish() }
+
+        itemSubtitleStyle.setOnClickListener {
+            startActivity(Intent(this, SubtitleStyleActivity::class.java))
+        }
 
         // Decoder
         itemDecoder.setOnClickListener { settingsViewModel.toggleDecoderPriority() }
@@ -651,30 +776,17 @@ class GlobalSettingsActivity : AppCompatActivity() {
     }
 
     private fun showSingleChoiceDialog(title: String, items: List<String>, currentIndex: Int, onSelected: (Int) -> Unit) {
-        val dialog = Dialog(this, R.style.Theme_App_Dialog)
-        dialog.setContentView(R.layout.dialog_list_choice)
-        dialog.findViewById<TextView>(R.id.dialog_title).text = title
-
-        val recycler = dialog.findViewById<RecyclerView>(R.id.dialog_recycler_view)
-        recycler.layoutManager = LinearLayoutManager(this)
-        recycler.adapter = ChoiceAdapter(items, currentIndex) { idx ->
-            onSelected(idx)
-            dialog.dismiss()
-        }
-
-        dialog.show()
-        recycler.post {
-            (recycler.layoutManager as? LinearLayoutManager)?.scrollToPositionWithOffset(currentIndex, 0)
-            recycler.postDelayed({ recycler.findViewHolderForAdapterPosition(currentIndex)?.itemView?.requestFocus() }, 50)
-        }
+        ChoiceDialog.show(this, title, items, currentIndex, onSelected)
     }
 
     private fun handleInitialFocus(focusItemId: Int) {
-        if (focusItemId != 0) {
-            val viewToFocus = findViewById<View>(focusItemId)
-            viewToFocus?.post {
-                scrollView.smoothScrollTo(0, viewToFocus.top)
-                scrollView.requestChildFocus(viewToFocus.parent as View, viewToFocus)
+        val viewToFocus = if (focusItemId != 0) findViewById<View>(focusItemId) else null
+        if (viewToFocus != null) {
+            // Открываем категорию, в которой находится пункт
+            val categoryIndex = categories.indexOfFirst { isDescendant(viewToFocus, findViewById(it.sectionId)) }
+            if (categoryIndex != -1) selectCategory(categoryIndex)
+            viewToFocus.post {
+                // requestFocus сам прокручивает список к пункту
                 viewToFocus.requestFocus()
 
                 if (focusItemId == R.id.item_update) {
@@ -687,10 +799,17 @@ class GlobalSettingsActivity : AppCompatActivity() {
                 }
             }
         } else {
-            itemDecoder.post{
-                itemDecoder.requestFocus()
-            }
+            categoryViews[selectedCategory].post { categoryViews[selectedCategory].requestFocus() }
         }
+    }
+
+    private fun isDescendant(view: View, ancestor: View): Boolean {
+        var current: View? = view
+        while (current != null) {
+            if (current === ancestor) return true
+            current = current.parent as? View
+        }
+        return false
     }
 
     private fun applyAppLocale(selectedCode: String) {
@@ -908,6 +1027,10 @@ class GlobalSettingsActivity : AppCompatActivity() {
 
     private fun updateLangUI(textView: TextView, langCode: String) {
         textView.text = LocaleUtils.getFormattedLanguageName(langCode, this)
+    }
+
+    private companion object {
+        const val STATE_CATEGORY = "settings_category"
     }
 
     override fun onDestroy() {
