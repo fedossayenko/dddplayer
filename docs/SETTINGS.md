@@ -46,7 +46,8 @@
 | `subtitle_auto_mode` | `SUB_AUTO_DEFAULT` (0) | Автовключение субтитров при загрузке видео: 0 как решит плеер, 1 выкл, 2 только форсированные (сначала на языке звука), 3 полные (на `pref_sub_lang`, иначе с флагом default, иначе первые). Субтитры, сохраненные для видео, и ручной выбор важнее (`TrackLogic.autoSubtitleIndex`) |
 | `frame_rate_matching`, `afr_*` | false, ... | AFR |
 | `app_language` | `system` | Язык интерфейса |
-| `def_output_mode`, `def_anaglyph_type` | ANAGLYPH, RC_DUBOIS | Вывод по умолчанию для нового стерео-видео |
+| `def_output_mode`, `def_anaglyph_type` | ANAGLYPH, RC_DUBOIS | Вывод по умолчанию для нового стерео-видео (настройка «3D режим по умолчанию»; обновляется и при сохранении настроек видео в OSD) |
+| `stereo_auto_detect` | true | Автоопределение стереопары. false — режим «Не обрабатывать»: кадр выводится как есть, стерео включают вручную в OSD |
 | `pref_filter_<GROUP>` | — | Последний фильтр в группе очков |
 | `calib_<group>_set/leak_a/leak_b`, `anaglyph_lens_swap`, `calibration_version` | — | Калибровка анаглиф-очков из визарда (фильтр «Калибровка» группы), порядок линз, версия для перечитывания в плеере |
 | `vr_k1`, `vr_k2`, `vr_scale`, `global_screen_separation_pct` | 0.34, 0.10, 1.2, 0 | Параметры VR |

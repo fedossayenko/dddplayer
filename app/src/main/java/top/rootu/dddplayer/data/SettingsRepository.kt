@@ -480,6 +480,16 @@ class SettingsRepository private constructor(context: Context) {
         }
     }
 
+    // Автоопределение стереопары для видео без сохраненных настроек (false - "Не обрабатывать")
+    fun isStereoAutoDetectEnabled(): Boolean = prefs.getBoolean("stereo_auto_detect", true)
+    fun setStereoAutoDetectEnabled(enabled: Boolean) = prefs.edit { putBoolean("stereo_auto_detect", enabled) }
+
+    // Вывод по умолчанию для нового стерео-видео (также обновляется при сохранении настроек видео в OSD)
+    fun getDefaultOutputMode(): StereoOutputMode =
+        StereoOutputMode.entries.getOrNull(prefs.getInt("def_output_mode", StereoOutputMode.ANAGLYPH.ordinal))
+            ?: StereoOutputMode.ANAGLYPH
+    fun setDefaultOutputMode(mode: StereoOutputMode) = prefs.edit { putInt("def_output_mode", mode.ordinal) }
+
     fun saveGlobalDefaults(
         outputMode: StereoOutputMode,
         anaglyphType: StereoRenderer.AnaglyphType

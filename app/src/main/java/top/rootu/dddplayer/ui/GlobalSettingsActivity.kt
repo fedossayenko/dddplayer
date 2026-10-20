@@ -34,6 +34,7 @@ import top.rootu.dddplayer.logic.AudioMixerLogic
 import top.rootu.dddplayer.logic.UpdateInfo
 import top.rootu.dddplayer.ui.calibration.CalibrationWizardActivity
 import top.rootu.dddplayer.utils.LocaleUtils
+import top.rootu.dddplayer.model.StereoOutputMode
 import top.rootu.dddplayer.viewmodel.GlobalSettingsViewModel
 import top.rootu.dddplayer.viewmodel.UpdateViewModel
 
@@ -103,6 +104,8 @@ class GlobalSettingsActivity : AppCompatActivity() {
     private lateinit var textSubLangValue: TextView
     private lateinit var itemSubtitleAuto: LinearLayout
     private lateinit var textSubtitleAutoValue: TextView
+    private lateinit var itemDefault3dMode: LinearLayout
+    private lateinit var textDefault3dModeValue: TextView
     private lateinit var itemCalibrateVr: LinearLayout
     private lateinit var itemCalibrateAnaglyph: LinearLayout
     private lateinit var itemDownmix: LinearLayout
@@ -354,6 +357,8 @@ class GlobalSettingsActivity : AppCompatActivity() {
         textSubLangValue = findViewById(R.id.text_sub_lang_value)
         itemSubtitleAuto = findViewById(R.id.item_subtitle_auto)
         textSubtitleAutoValue = findViewById(R.id.text_subtitle_auto_value)
+        itemDefault3dMode = findViewById(R.id.item_default_3d_mode)
+        textDefault3dModeValue = findViewById(R.id.text_default_3d_mode_value)
         itemCalibrateVr = findViewById(R.id.item_calibrate_vr)
         itemCalibrateAnaglyph = findViewById(R.id.item_calibrate_anaglyph)
         itemDownmix = findViewById(R.id.item_downmix)
@@ -471,6 +476,12 @@ class GlobalSettingsActivity : AppCompatActivity() {
         itemBoost.setOnClickListener { settingsViewModel.cycleLoudnessBoost() }
 
         // Визарды калибровки
+        itemDefault3dMode.setOnClickListener {
+            val current = default3dModes.indexOf(settingsViewModel.default3dMode.value).coerceAtLeast(0)
+            showSingleChoiceDialog(getString(R.string.pref_default_3d_mode), default3dModes.map { default3dModeLabel(it) }, current) {
+                settingsViewModel.setDefault3dMode(default3dModes[it])
+            }
+        }
         itemCalibrateVr.setOnClickListener { startCalibration(CalibrationWizardActivity.MODE_VR) }
         itemCalibrateAnaglyph.setOnClickListener { startCalibration(CalibrationWizardActivity.MODE_ANAGLYPH) }
         findViewById<View>(R.id.item_reset_calibration).setOnClickListener { showResetCalibrationDialog() }
@@ -730,6 +741,7 @@ class GlobalSettingsActivity : AppCompatActivity() {
             textStartupPlaylistValue.text = if (uri.isNullOrEmpty()) getString(R.string.pref_startup_playlist_not_set) else uri
         }
         settingsViewModel.isLiveModeEnabled.observe(this) { switchLiveMode.isChecked = it }
+        settingsViewModel.default3dMode.observe(this) { textDefault3dModeValue.text = default3dModeLabel(it) }
         settingsViewModel.subtitleAutoMode.observe(this) { mode ->
             textSubtitleAutoValue.text = when (mode) {
                 SettingsRepository.SUB_AUTO_OFF -> getString(R.string.sub_auto_off)
@@ -839,6 +851,22 @@ class GlobalSettingsActivity : AppCompatActivity() {
             Toast.makeText(this, R.string.reset_calibration_done, Toast.LENGTH_SHORT).show()
         }
     }
+
+    // Варианты 3D режима по умолчанию: null - "Не обрабатывать"
+    private val default3dModes = listOf(
+        null, StereoOutputMode.ANAGLYPH, StereoOutputMode.CARDBOARD_VR,
+        StereoOutputMode.LEFT_ONLY, StereoOutputMode.RIGHT_ONLY
+    )
+
+    private fun default3dModeLabel(mode: StereoOutputMode?): String = getString(
+        when (mode) {
+            null -> R.string.default_3d_none
+            StereoOutputMode.ANAGLYPH -> R.string.output_mode_anaglyph
+            StereoOutputMode.CARDBOARD_VR -> R.string.output_mode_vr
+            StereoOutputMode.LEFT_ONLY -> R.string.default_3d_left
+            StereoOutputMode.RIGHT_ONLY -> R.string.default_3d_right
+        }
+    )
 
     private fun showSingleChoiceDialog(title: String, items: List<String>, currentIndex: Int, onSelected: (Int) -> Unit) {
         ChoiceDialog.show(this, title, items, currentIndex, onSelected)

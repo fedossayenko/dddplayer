@@ -43,6 +43,11 @@
     <string name="output_mode_left">仅左眼</string>
     <string name="output_mode_right">仅右眼</string>
     <string name="output_mode_vr">Cardboard VR</string>
+    <string name="pref_default_3d_mode">默认 3D 模式</string>
+    <string name="pref_default_3d_mode_desc">用于没有已保存设置的立体视频。“不处理”按原样播放画面，不自动检测立体格式</string>
+    <string name="default_3d_none">不处理</string>
+    <string name="default_3d_left">2D（左眼）</string>
+    <string name="default_3d_right">2D（右眼）</string>
     <string name="glasses_rc">红 - 青</string>
     <string name="glasses_yb">黄 - 蓝</string>
     <string name="glasses_gm">绿 - 品红</string>

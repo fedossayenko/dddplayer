@@ -862,8 +862,8 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             return
         }
 
-        // Логика автоопределения
-        if (_inputType.value == StereoInputType.NONE) {
+        // Логика автоопределения (выключена в режиме "Не обрабатывать")
+        if (_inputType.value == StereoInputType.NONE && repository.isStereoAutoDetectEnabled()) {
             val detectedType = StereoTypeDetector.detect(
                 player?.videoFormat,
                 player?.currentMediaItem?.localConfiguration?.uri
@@ -1168,9 +1168,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     // --- Settings Logic ---
 
     private fun loadGlobalDefaults() {
-        val outModeOrd = repository.getGlobalInt("def_output_mode", StereoOutputMode.ANAGLYPH.ordinal)
-        val outputMode = StereoOutputMode.entries.getOrNull(outModeOrd) ?: StereoOutputMode.ANAGLYPH
-        _outputMode.value = outputMode
+        _outputMode.value = repository.getDefaultOutputMode()
 
         val anaTypeOrd = repository.getGlobalInt("def_anaglyph_type", StereoRenderer.AnaglyphType.RC_DUBOIS.ordinal)
         val anaglyphType = StereoRenderer.AnaglyphType.entries.getOrNull(anaTypeOrd) ?: StereoRenderer.AnaglyphType.RC_DUBOIS

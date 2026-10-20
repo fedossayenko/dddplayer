@@ -42,6 +42,11 @@
     <string name="output_mode_left">Тільки ліве</string>
     <string name="output_mode_right">Тільки праве</string>
     <string name="output_mode_vr">Cardboard VR</string>
+    <string name="pref_default_3d_mode">3D режим за замовчуванням</string>
+    <string name="pref_default_3d_mode_desc">Для стерео-відео без збережених налаштувань. «Не обробляти» — кадр як є, без автовизначення стереопари</string>
+    <string name="default_3d_none">Не обробляти</string>
+    <string name="default_3d_left">2D (ліве око)</string>
+    <string name="default_3d_right">2D (праве око)</string>
     <string name="glasses_rc">Red - Cyan</string>
     <string name="glasses_yb">Yellow - Blue</string>
     <string name="glasses_gm">Green - Magenta</string>

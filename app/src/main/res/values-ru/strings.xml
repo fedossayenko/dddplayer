@@ -30,6 +30,11 @@
     <string name="output_mode_left">Только левый</string>
     <string name="output_mode_right">Только правый</string>
     <string name="output_mode_vr">Cardboard VR</string>
+    <string name="pref_default_3d_mode">3D режим по умолчанию</string>
+    <string name="pref_default_3d_mode_desc">Для стерео-видео без сохраненных настроек. «Не обрабатывать» — кадр как есть, без автоопределения стереопары</string>
+    <string name="default_3d_none">Не обрабатывать</string>
+    <string name="default_3d_left">2D (левый глаз)</string>
+    <string name="default_3d_right">2D (правый глаз)</string>
     <string name="glasses_rc">Red - Cyan</string>
     <string name="glasses_yb">Yellow - Blue</string>
     <string name="glasses_gm">Green - Magenta</string>

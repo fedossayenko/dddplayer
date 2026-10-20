@@ -10,6 +10,7 @@ import top.rootu.dddplayer.R
 import top.rootu.dddplayer.data.SettingsRepository
 import top.rootu.dddplayer.logic.AudioMixerLogic
 import top.rootu.dddplayer.model.AudioTrackStat
+import top.rootu.dddplayer.model.StereoOutputMode
 
 /**
  * ViewModel для управления всеми глобальными настройками приложения.
@@ -129,6 +130,18 @@ class GlobalSettingsViewModel(application: Application) : AndroidViewModel(appli
     fun toggleLiveMode(enabled: Boolean) {
         repository.setLiveModeEnabled(enabled)
         _isLiveModeEnabled.value = enabled
+    }
+
+    // 3D режим по умолчанию: null - "Не обрабатывать" (без автоопределения стереопары), иначе вывод
+    private val _default3dMode = MutableLiveData(
+        if (repository.isStereoAutoDetectEnabled()) repository.getDefaultOutputMode() else null
+    )
+    val default3dMode: LiveData<StereoOutputMode?> = _default3dMode
+
+    fun setDefault3dMode(mode: StereoOutputMode?) {
+        repository.setStereoAutoDetectEnabled(mode != null)
+        if (mode != null) repository.setDefaultOutputMode(mode)
+        _default3dMode.value = mode
     }
 
     private val _subtitleAutoMode = MutableLiveData(repository.getSubtitleAutoMode())

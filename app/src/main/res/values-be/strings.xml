@@ -42,6 +42,11 @@
     <string name="output_mode_left">Толькі левае</string>
     <string name="output_mode_right">Толькі правае</string>
     <string name="output_mode_vr">Cardboard VR</string>
+    <string name="pref_default_3d_mode">3D рэжым па змаўчанні</string>
+    <string name="pref_default_3d_mode_desc">Для стэрэа-відэа без захаваных налад. «Не апрацоўваць» — кадр як ёсць, без аўтавызначэння стэрэапары</string>
+    <string name="default_3d_none">Не апрацоўваць</string>
+    <string name="default_3d_left">2D (левае вока)</string>
+    <string name="default_3d_right">2D (правае вока)</string>
     <string name="glasses_rc">Red - Cyan</string>
     <string name="glasses_yb">Yellow - Blue</string>
     <string name="glasses_gm">Green - Magenta</string>

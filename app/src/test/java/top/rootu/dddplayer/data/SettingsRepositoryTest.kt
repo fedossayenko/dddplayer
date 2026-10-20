@@ -12,6 +12,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import top.rootu.dddplayer.model.AnaglyphCalibration
+import top.rootu.dddplayer.model.StereoOutputMode
 import top.rootu.dddplayer.model.SubtitleStyle
 import top.rootu.dddplayer.renderer.StereoRenderer
 import top.rootu.dddplayer.viewmodel.GlassesGroup
@@ -169,5 +170,21 @@ class SettingsRepositoryTest {
         assertFalse(repo.isAutoPipEnabled())
         assertTrue(repo.isConfirmExitEnabled())
         assertTrue(repo.isVolumeBrightnessGesturesEnabled())
+    }
+
+    @Test
+    fun `default 3d mode is anaglyph with stereo detection`() {
+        val repo = repo()
+        assertTrue(repo.isStereoAutoDetectEnabled())
+        assertEquals(StereoOutputMode.ANAGLYPH, repo.getDefaultOutputMode())
+
+        repo.setDefaultOutputMode(StereoOutputMode.LEFT_ONLY)
+        repo.setStereoAutoDetectEnabled(false)
+        assertEquals(StereoOutputMode.LEFT_ONLY, repo.getDefaultOutputMode())
+        assertFalse(repo.isStereoAutoDetectEnabled())
+
+        // Сохранение настроек видео в OSD обновляет тот же ключ
+        repo.saveGlobalDefaults(StereoOutputMode.CARDBOARD_VR, StereoRenderer.AnaglyphType.RC_DUBOIS)
+        assertEquals(StereoOutputMode.CARDBOARD_VR, repo.getDefaultOutputMode())
     }
 }

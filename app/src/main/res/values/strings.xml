@@ -48,6 +48,11 @@
     <string name="output_mode_left">Left Only</string>
     <string name="output_mode_right">Right Only</string>
     <string name="output_mode_vr">Cardboard VR</string>
+    <string name="pref_default_3d_mode">Default 3D mode</string>
+    <string name="pref_default_3d_mode_desc">For stereo video without saved settings. “Don\'t process” plays the frame as is, without stereo pair detection</string>
+    <string name="default_3d_none">Don\'t process</string>
+    <string name="default_3d_left">2D (left eye)</string>
+    <string name="default_3d_right">2D (right eye)</string>
     <string name="glasses_rc">Red - Cyan</string>
     <string name="glasses_yb">Yellow - Blue</string>
     <string name="glasses_gm">Green - Magenta</string>

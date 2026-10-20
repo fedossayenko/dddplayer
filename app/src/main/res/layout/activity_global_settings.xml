@@ -963,6 +963,33 @@
                 android:orientation="vertical"
                 android:visibility="gone">
 
+                <!-- 3D режим по умолчанию для нового стерео-видео -->
+                <LinearLayout
+                    android:id="@+id/item_default_3d_mode"
+                    style="@style/SettingsItemContainer">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:duplicateParentState="true"
+                        android:orientation="vertical">
+
+                        <TextView
+                            style="@style/SettingsItemTitle"
+                            android:text="@string/pref_default_3d_mode" />
+
+                        <TextView
+                            style="@style/SettingsItemDesc"
+                            android:text="@string/pref_default_3d_mode_desc" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/text_default_3d_mode_value"
+                        style="@style/SettingsItemValue"
+                        tools:text="Анаглиф" />
+                </LinearLayout>
+
                 <!-- Пункт: VR -->
                 <LinearLayout
                     android:id="@+id/item_calibrate_vr"
