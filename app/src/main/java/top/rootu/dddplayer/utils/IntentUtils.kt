@@ -86,6 +86,8 @@ object IntentUtils {
         val headersMap = parseHeaders(extras)
 
         val playlist = mutableListOf<MediaItem>()
+        // Видео плейлиста обычно лежат в одной папке: читаем ее для поиска субтитров один раз
+        val listDir = SubtitleFinder.cachedLister()
         // Стартовый элемент: явный start_index, либо элемент, совпадающий с intent.data (ниже)
         var startIndex = extras.getInt("start_index", 0)
 
@@ -113,7 +115,7 @@ object IntentUtils {
                     filename = filenames?.getOrNull(i),
                     posterUri = posters?.getOrNull(i)?.takeIf { it.isNotEmpty() }?.toUri(),
                     headers = headersMap,
-                    subtitles = itemSubs.ifEmpty { SubtitleFinder.findSidecarSubtitles(uri) },
+                    subtitles = itemSubs.ifEmpty { SubtitleFinder.findSidecarSubtitles(uri, listDir) },
                     startPositionMs = pos
                 )
             )

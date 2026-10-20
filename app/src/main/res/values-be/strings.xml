@@ -389,4 +389,22 @@
     <string name="wizard_ana_ghost_left_text">Закрыйце правае вока і глядзіце левым — праз святлафільтр «%1$s». Літару L бачна выразна, а на месцы R можа быць цень — цямнейшы або святлейшы за шэры фон. Змяняйце падаўленне двоення (◀ ▶): калі цень цямнейшы за фон — павялічвайце, калі святлейшы — памяншайце. Знайдзіце значэнне, пры якім літару R найменш прыкметна (у ідэале яе не відаць зусім).</string>
     <string name="wizard_ana_ghost_right_text">Закрыйце левае вока і глядзіце правым — праз святлафільтр «%1$s». Літару R бачна выразна, а на месцы L можа быць цень — цямнейшы або святлейшы за шэры фон. Змяняйце падаўленне двоення (◀ ▶): калі цень цямнейшы за фон — павялічвайце, калі святлейшы — памяншайце. Знайдзіце значэнне, пры якім літару L найменш прыкметна (у ідэале яе не відаць зусім).</string>
     <string name="wizard_param_ghost">Падаўленне двоення</string>
+    <string name="files_title">Файлы</string>
+    <string name="files_internal_storage">Унутраная памяць</string>
+    <string name="files_empty">Тут няма відэа</string>
+    <string name="files_no_access">Няма доступу да гэтай папкі</string>
+    <string name="files_all_access_title">Доступ да ўсіх файлаў</string>
+    <string name="files_all_access_desc">Патрэбны, каб бачыць субцітры побач з відэа (Android 11+)</string>
+    <string name="files_all_access_unavailable">На гэтай прыладзе няма экрана для выдачы доступу да ўсіх файлаў</string>
+    <string name="files_permission_denied">Без доступу да сховішча файлы не бачныя</string>
+    <string name="files_folder">Папка</string>
+    <string name="menu_files_title">Файлы</string>
+    <string name="menu_files_desc">Адкрыць відэа з памяці прылады або з USB-дыска</string>
+    <string-array name="file_size_units">
+        <item>Б</item>
+        <item>КБ</item>
+        <item>МБ</item>
+        <item>ГБ</item>
+        <item>ТБ</item>
+    </string-array>
 </resources>

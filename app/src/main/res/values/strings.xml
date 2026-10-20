@@ -421,4 +421,22 @@
     <string name="wizard_ana_ghost_left_text">Close the right eye and look with the left one, through the “%1$s” filter. The letter L is clear, and in place of R there may be a shadow, darker or lighter than the gray background. Change the ghost suppression (◀ ▶): if the shadow is darker than the background, increase it; if lighter, decrease it. Find the value at which the letter R is least visible (ideally not visible at all).</string>
     <string name="wizard_ana_ghost_right_text">Close the left eye and look with the right one, through the “%1$s” filter. The letter R is clear, and in place of L there may be a shadow, darker or lighter than the gray background. Change the ghost suppression (◀ ▶): if the shadow is darker than the background, increase it; if lighter, decrease it. Find the value at which the letter L is least visible (ideally not visible at all).</string>
     <string name="wizard_param_ghost">Ghost suppression</string>
+    <string name="files_title">Files</string>
+    <string name="files_internal_storage">Internal storage</string>
+    <string name="files_empty">No videos here</string>
+    <string name="files_no_access">No access to this folder</string>
+    <string name="files_all_access_title">All files access</string>
+    <string name="files_all_access_desc">Needed to see subtitles next to videos (Android 11+)</string>
+    <string name="files_all_access_unavailable">This device has no screen to grant all files access</string>
+    <string name="files_permission_denied">Without storage access files are not visible</string>
+    <string name="files_folder">Folder</string>
+    <string name="menu_files_title">Files</string>
+    <string name="menu_files_desc">Open a video from the device storage or a USB drive</string>
+    <string-array name="file_size_units">
+        <item>B</item>
+        <item>KB</item>
+        <item>MB</item>
+        <item>GB</item>
+        <item>TB</item>
+    </string-array>
 </resources>

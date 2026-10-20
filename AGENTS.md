@@ -59,7 +59,7 @@ app/src/main/java/top/rootu/dddplayer/
 ├── viewmodel/                  PlayerViewModel (центр всего), AnaglyphDelegate, SettingsViewModel,
 │                               GlobalSettingsViewModel, UpdateViewModel
 ├── ui/                         PlayerActivity (Intent, PiP, результат), PlayerFragment (экран плеера),
-│                               GlobalSettingsActivity, VrConfigActivity, CrashActivity
+│                               GlobalSettingsActivity, FileBrowserActivity (файлы), VrConfigActivity, CrashActivity
 │   ├── controller/             PlayerUiController (вьюхи), PlayerInputHandler (пульт),
 │   │                           PlayerTouchHandler (жесты), PlayerTimerController (таймеры, часы)
 │   ├── adapter/                RecyclerView адаптеры меню/плейлиста
@@ -75,7 +75,7 @@ app/src/main/java/top/rootu/dddplayer/
 
 1. **Запуск:** `PlayerActivity.onCreate` разбирает Intent (`IntentUtils.parseIntent`) и вызывает
    `PlayerViewModel.loadMedia`. Если Intent пустой, загружается стартовый плейлист из настроек
-   (`forceM3uProbe = true`). При запуске из лаунчера без стартового плейлиста release-сборка открывает настройки.
+   (`forceM3uProbe = true`). При запуске из лаунчера без стартового плейлиста release-сборка открывает файловый браузер.
 2. **Загрузка:** `loadMedia` проверяет одиночную ссылку `.m3u`/`.m3u8` через `PlayerManager.expandM3u`.
    Ссылка скачивается один раз, HLS (`#EXT-X-`) отдается плееру из `PrefetchStore`.
    Затем `loadPlaylist` (VM) передает список в `PlayerManager.loadPlaylist`, а тот собирает `MediaSource`.

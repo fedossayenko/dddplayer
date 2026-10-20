@@ -418,4 +418,22 @@
     <string name="wizard_ana_ghost_left_text">Закройте правый глаз и смотрите левым — через светофильтр «%1$s». Буква L видна четко, а на месте R может быть тень — темнее или светлее серого фона. Меняйте подавление двоения (◀ ▶): если тень темнее фона — увеличивайте, если светлее — уменьшайте. Найдите значение, при котором буква R заметна меньше всего (в идеале не видна вовсе).</string>
     <string name="wizard_ana_ghost_right_text">Закройте левый глаз и смотрите правым — через светофильтр «%1$s». Буква R видна четко, а на месте L может быть тень — темнее или светлее серого фона. Меняйте подавление двоения (◀ ▶): если тень темнее фона — увеличивайте, если светлее — уменьшайте. Найдите значение, при котором буква L заметна меньше всего (в идеале не видна вовсе).</string>
     <string name="wizard_param_ghost">Подавление двоения</string>
+    <string name="files_title">Файлы</string>
+    <string name="files_internal_storage">Внутренняя память</string>
+    <string name="files_empty">Здесь нет видео</string>
+    <string name="files_no_access">Нет доступа к этой папке</string>
+    <string name="files_all_access_title">Доступ ко всем файлам</string>
+    <string name="files_all_access_desc">Нужен, чтобы видеть субтитры рядом с видео (Android 11+)</string>
+    <string name="files_all_access_unavailable">На этом устройстве нет экрана для выдачи доступа ко всем файлам</string>
+    <string name="files_permission_denied">Без доступа к хранилищу файлы не видны</string>
+    <string name="files_folder">Папка</string>
+    <string name="menu_files_title">Файлы</string>
+    <string name="menu_files_desc">Открыть видео из памяти устройства или с USB-диска</string>
+    <string-array name="file_size_units">
+        <item>Б</item>
+        <item>КБ</item>
+        <item>МБ</item>
+        <item>ГБ</item>
+        <item>ТБ</item>
+    </string-array>
 </resources>

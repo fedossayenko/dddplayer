@@ -389,4 +389,22 @@
     <string name="wizard_ana_ghost_left_text">Закрийте праве око й дивіться лівим — крізь світлофільтр «%1$s». Літеру L видно чітко, а на місці R може бути тінь — темніша або світліша за сірий фон. Змінюйте придушення двоїння (◀ ▶): якщо тінь темніша за фон — збільшуйте, якщо світліша — зменшуйте. Знайдіть значення, за якого літеру R найменше помітно (в ідеалі її не видно зовсім).</string>
     <string name="wizard_ana_ghost_right_text">Закрийте ліве око й дивіться правим — крізь світлофільтр «%1$s». Літеру R видно чітко, а на місці L може бути тінь — темніша або світліша за сірий фон. Змінюйте придушення двоїння (◀ ▶): якщо тінь темніша за фон — збільшуйте, якщо світліша — зменшуйте. Знайдіть значення, за якого літеру L найменше помітно (в ідеалі її не видно зовсім).</string>
     <string name="wizard_param_ghost">Придушення двоїння</string>
+    <string name="files_title">Файли</string>
+    <string name="files_internal_storage">Внутрішня пам’ять</string>
+    <string name="files_empty">Тут немає відео</string>
+    <string name="files_no_access">Немає доступу до цієї теки</string>
+    <string name="files_all_access_title">Доступ до всіх файлів</string>
+    <string name="files_all_access_desc">Потрібен, щоб бачити субтитри поруч із відео (Android 11+)</string>
+    <string name="files_all_access_unavailable">На цьому пристрої немає екрана для надання доступу до всіх файлів</string>
+    <string name="files_permission_denied">Без доступу до сховища файли не видно</string>
+    <string name="files_folder">Тека</string>
+    <string name="menu_files_title">Файли</string>
+    <string name="menu_files_desc">Відкрити відео з пам’яті пристрою або з USB-диска</string>
+    <string-array name="file_size_units">
+        <item>Б</item>
+        <item>КБ</item>
+        <item>МБ</item>
+        <item>ГБ</item>
+        <item>ТБ</item>
+    </string-array>
 </resources>

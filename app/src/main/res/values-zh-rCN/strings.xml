@@ -404,4 +404,22 @@
     <string name="wizard_ana_ghost_left_text">闭上右眼，用左眼透过“%1$s”滤光片观看。字母 L 清晰可见，而 R 的位置可能有一个比灰色背景更暗或更亮的影子。调整重影抑制（◀ ▶）：影子比背景暗就增大，比背景亮就减小。找到使字母 R 最不明显的值（理想情况下完全看不见）。</string>
     <string name="wizard_ana_ghost_right_text">闭上左眼，用右眼透过“%1$s”滤光片观看。字母 R 清晰可见，而 L 的位置可能有一个比灰色背景更暗或更亮的影子。调整重影抑制（◀ ▶）：影子比背景暗就增大，比背景亮就减小。找到使字母 L 最不明显的值（理想情况下完全看不见）。</string>
     <string name="wizard_param_ghost">重影抑制</string>
+    <string name="files_title">文件</string>
+    <string name="files_internal_storage">内部存储</string>
+    <string name="files_empty">这里没有视频</string>
+    <string name="files_no_access">无法访问此文件夹</string>
+    <string name="files_all_access_title">所有文件访问权限</string>
+    <string name="files_all_access_desc">用于查看视频旁边的字幕（Android 11+）</string>
+    <string name="files_all_access_unavailable">此设备没有授予所有文件访问权限的界面</string>
+    <string name="files_permission_denied">没有存储访问权限，无法看到文件</string>
+    <string name="files_folder">文件夹</string>
+    <string name="menu_files_title">文件</string>
+    <string name="menu_files_desc">从设备存储或 USB 驱动器打开视频</string>
+    <string-array name="file_size_units">
+        <item>B</item>
+        <item>KB</item>
+        <item>MB</item>
+        <item>GB</item>
+        <item>TB</item>
+    </string-array>
 </resources>

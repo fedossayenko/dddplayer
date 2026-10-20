@@ -1367,6 +1367,12 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                 R.drawable.ic_settings_3d
             ),
             MenuItem(
+                "files",
+                context.getString(R.string.menu_files_title),
+                context.getString(R.string.menu_files_desc),
+                R.drawable.ic_folder
+            ),
+            MenuItem(
                 "global_settings",
                 context.getString(R.string.menu_global_settings_title),
                 context.getString(R.string.menu_global_settings_desc),

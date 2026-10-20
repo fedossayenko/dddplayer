@@ -239,6 +239,10 @@ class SettingsRepository private constructor(context: Context) {
     fun getPreferredSubLang(): String = prefs.getString("pref_sub_lang", TRACK_DEFAULT) ?: TRACK_DEFAULT
     fun setPreferredSubLang(lang: String) = prefs.edit { putString("pref_sub_lang", lang) }
 
+    // Последняя открытая папка файлового браузера (служебное, null - список хранилищ)
+    fun getFileBrowserLastDir(): String? = prefs.getString("file_browser_last_dir", null)
+    fun setFileBrowserLastDir(path: String?) = prefs.edit { putString("file_browser_last_dir", path) }
+
     fun getSubtitleAutoMode(): Int = prefs.getInt("subtitle_auto_mode", SUB_AUTO_DEFAULT)
     fun setSubtitleAutoMode(mode: Int) = prefs.edit { putInt("subtitle_auto_mode", mode) }
 

@@ -204,9 +204,8 @@ class PlayerActivity : AppCompatActivity() {
 
         // Проверяем, как запущено приложение
         if (isLaunchedFromLauncher(intent) && startupUri.isNullOrEmpty() && !BuildConfig.DEBUG) {
-            // Запуск из лаунчера, плейлист НЕ задан, и это РЕЛИЗ -> Идем в настройки
-            val settingsIntent = Intent(this, GlobalSettingsActivity::class.java)
-            startActivity(settingsIntent)
+            // Запуск из лаунчера, плейлист НЕ задан, и это РЕЛИЗ -> файловый браузер (оттуда есть вход в настройки)
+            startActivity(Intent(this, FileBrowserActivity::class.java))
             finish()
             return
         }
