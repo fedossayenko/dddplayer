@@ -86,6 +86,15 @@ object AnaglyphLogic {
         GlassesGroup.RED_BLUE -> Pair(Color.RED, Color.BLUE)
     }
 
+    /**
+     * Начальная калибровка группы (до визарда). Светофильтры неидеальны: красный обычно заметно
+     * пропускает голубой свет, а голубой почти не пропускает красный.
+     */
+    fun defaultCalibration(group: GlassesGroup): AnaglyphCalibration = when (group) {
+        GlassesGroup.RED_CYAN -> AnaglyphCalibration(leakA = 0.20f, leakB = 0.05f)
+        else -> AnaglyphCalibration()
+    }
+
     /** Матрицы фильтра "Калибровка" (расчет в линейном RGB, как у Dubois и Custom). */
     fun calculateCalibrated(group: GlassesGroup, calibration: AnaglyphCalibration): DuboisMath.ResultMatrices {
         val (baseA, baseB) = groupBaseColors(group)

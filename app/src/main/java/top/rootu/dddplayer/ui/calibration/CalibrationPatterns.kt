@@ -20,12 +20,13 @@ object CalibrationPatterns {
     private const val EYE_W = FRAME_WIDTH.toFloat()
     private const val EYE_H = FRAME_HEIGHT.toFloat()
 
-    enum class Pattern { INTRO, CROSSHAIR, GRID, FRAME, DEPTH, GHOSTING, COLORS }
+    enum class Pattern { INTRO, CROSSHAIR, GRID, FRAME, DEPTH, CROSSTALK }
 
     /**
-     * @param ghostEye глаз, для которого в GHOSTING рисуются круги (второму - квадраты)
+     * @param targetEye CROSSTALK: глаз, в изображении которого есть фигуры (у второго - ровный серый фон)
+     * @param depthScale DEPTH: множитель параллакса (для анаглифа 1, в VR можно больше)
      */
-    fun draw(canvas: Canvas, pattern: Pattern, ghostEye: Int = 0) {
+    fun draw(canvas: Canvas, pattern: Pattern, targetEye: Int = 0, depthScale: Float = 1f) {
         canvas.drawColor(Color.BLACK)
         for (eye in 0..1) {
             canvas.save()
@@ -37,9 +38,8 @@ object CalibrationPatterns {
                 Pattern.CROSSHAIR -> drawCrosshair(canvas)
                 Pattern.GRID -> drawGrid(canvas)
                 Pattern.FRAME -> drawFrame(canvas)
-                Pattern.DEPTH -> drawDepth(canvas, eye)
-                Pattern.GHOSTING -> drawGhosting(canvas, eye == ghostEye)
-                Pattern.COLORS -> drawColors(canvas)
+                Pattern.DEPTH -> drawDepth(canvas, eye, depthScale)
+                Pattern.CROSSTALK -> drawCrosstalk(canvas, eye == targetEye)
             }
             canvas.restore()
         }
@@ -53,17 +53,16 @@ object CalibrationPatterns {
         }
     }
 
-    private fun textPaint(color: Int, size: Float) = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        this.color = color
-        textSize = size
-        textAlign = Paint.Align.CENTER
-        typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
-    }
-
     private fun drawIntro(canvas: Canvas) {
         canvas.drawColor(0xFF101820.toInt())
         canvas.drawCircle(EYE_W / 2, EYE_H / 2, 260f, paint(0xFF2E4A62.toInt()))
-        canvas.drawText("3D", EYE_W / 2, EYE_H / 2 + 70f, textPaint(Color.WHITE, 200f))
+        val text = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.WHITE
+            textSize = 200f
+            textAlign = Paint.Align.CENTER
+            typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
+        }
+        canvas.drawText("3D", EYE_W / 2, EYE_H / 2 + 70f, text)
     }
 
     // Перекрестие и кольца по центру: при верном разносе экранов два перекрестия сливаются в одно
@@ -113,56 +112,65 @@ object CalibrationPatterns {
     }
 
     /**
-     * Сцена с глубиной: сетка за экраном, круг на уровне экрана, круг перед экраном.
+     * Стереопара с небольшим параллаксом (как в обычном 3D видео, не больше ~1% ширины):
+     * сетка фона за экраном, квадрат на уровне экрана и ряд кругов от "за экраном" к "перед экраном".
      * Параллакс > 0 - объект за экраном (изображение правого глаза смещено вправо).
      */
-    private fun drawDepth(canvas: Canvas, eye: Int) {
-        fun shift(parallax: Float) = if (eye == 0) -parallax / 2 else parallax / 2
+    private fun drawDepth(canvas: Canvas, eye: Int, scale: Float) {
+        fun shift(parallax: Float) = (if (eye == 0) -parallax / 2 else parallax / 2) * scale
 
-        canvas.drawColor(0xFF101418.toInt())
-        // Сетка за экраном
-        val behind = shift(60f)
-        val grid = paint(0xFF37474F.toInt(), 4f)
+        canvas.drawColor(0xFF3A3A3A.toInt())
+        // Фон за экраном
+        val behind = shift(12f)
+        val grid = paint(0xFF5A5A5A.toInt(), 4f)
         var x = -120f
         while (x <= EYE_W + 120f) { canvas.drawLine(x + behind, 0f, x + behind, EYE_H, grid); x += 120f }
-        var y = 0f
+        var y = 60f
         while (y <= EYE_H) { canvas.drawLine(0f, y, EYE_W, y, grid); y += 120f }
 
-        // Круг на уровне экрана
-        canvas.drawCircle(EYE_W * 0.3f, EYE_H * 0.55f, 170f, paint(0xFF1E88E5.toInt()))
-        // Круг перед экраном
-        val front = shift(-70f)
-        canvas.drawCircle(EYE_W * 0.68f + front, EYE_H * 0.5f, 210f, paint(0xFFE53935.toInt()))
-        canvas.drawCircle(EYE_W * 0.68f + front, EYE_H * 0.5f, 210f, paint(Color.WHITE, 8f))
-    }
+        // Квадрат на уровне экрана (шахматная текстура помогает глазам совместить изображения)
+        val square = RectF(EYE_W * 0.42f, EYE_H * 0.12f, EYE_W * 0.58f, EYE_H * 0.12f + EYE_W * 0.16f)
+        drawChecker(canvas, square, 0xFF1E88E5.toInt(), 0xFF90CAF9.toInt())
 
-    // Тест утечки (ghosting): для одного глаза круги, для другого квадраты
-    private fun drawGhosting(canvas: Canvas, circles: Boolean) {
-        val fill = paint(Color.WHITE)
-        for (i in 0..2) {
-            val cx = EYE_W * (0.25f + 0.25f * i)
-            if (circles) {
-                canvas.drawCircle(cx, EYE_H * 0.32f, 130f, fill)
-            } else {
-                canvas.drawRect(RectF(cx - 120f, EYE_H * 0.68f - 120f, cx + 120f, EYE_H * 0.68f + 120f), fill)
-            }
+        // Ряд кругов: слева за экраном, справа перед экраном
+        val parallaxes = listOf(12f, 6f, 0f, -8f, -16f)
+        val colors = listOf(0xFF43A047, 0xFF00ACC1, 0xFFFDD835, 0xFFFB8C00, 0xFFE53935).map { it.toInt() }
+        parallaxes.forEachIndexed { i, p ->
+            val cx = EYE_W * (0.14f + 0.18f * i) + shift(p)
+            val cy = EYE_H * 0.72f
+            val r = 80f + 12f * i
+            canvas.drawCircle(cx, cy, r, paint(colors[i]))
+            canvas.drawCircle(cx, cy, r, paint(Color.WHITE, 6f))
+            canvas.drawCircle(cx, cy, r * 0.35f, paint(Color.WHITE))
         }
     }
 
-    // Цвета и градации серого (одинаковые для обоих глаз): оценка баланса и яркости
-    private fun drawColors(canvas: Canvas) {
-        canvas.drawColor(0xFF202020.toInt())
-        val colors = listOf(
-            0xFFE53935, 0xFFFB8C00, 0xFFFDD835, 0xFF43A047,
-            0xFF00ACC1, 0xFF1E88E5, 0xFF8E24AA, 0xFFE0AC69
-        ).map { it.toInt() }
-        val barW = EYE_W / colors.size
-        colors.forEachIndexed { i, c -> canvas.drawRect(i * barW, EYE_H * 0.1f, (i + 1) * barW, EYE_H * 0.55f, paint(c)) }
-        val steps = 10
-        val stepW = EYE_W / steps
-        for (i in 0 until steps) {
-            val v = (255 * i / (steps - 1))
-            canvas.drawRect(i * stepW, EYE_H * 0.62f, (i + 1) * stepW, EYE_H * 0.9f, paint(Color.rgb(v, v, v)))
+    private fun drawChecker(canvas: Canvas, rect: RectF, dark: Int, light: Int) {
+        val cells = 6
+        val w = rect.width() / cells
+        val h = rect.height() / cells
+        for (i in 0 until cells) for (j in 0 until cells) {
+            val c = if ((i + j) % 2 == 0) dark else light
+            canvas.drawRect(rect.left + i * w, rect.top + j * h, rect.left + (i + 1) * w, rect.top + (j + 1) * h, paint(c))
         }
+        canvas.drawRect(rect, paint(Color.WHITE, 6f))
+    }
+
+    /**
+     * Перекрестные помехи (двоение): серый фон у обоих глаз, светлые и темные фигуры - только в изображении
+     * одного глаза. Через светофильтр второго глаза фигуры должны быть не видны.
+     * Серый фон нужен для компенсации: на черном вычитать нечего.
+     */
+    private fun drawCrosstalk(canvas: Canvas, withShapes: Boolean) {
+        canvas.drawColor(0xFF808080.toInt())
+        if (!withShapes) return
+        val white = paint(Color.WHITE)
+        val black = paint(Color.BLACK)
+        canvas.drawCircle(EYE_W * 0.25f, EYE_H * 0.35f, 150f, white)
+        canvas.drawCircle(EYE_W * 0.75f, EYE_H * 0.35f, 150f, black)
+        canvas.drawRect(RectF(EYE_W * 0.25f - 140f, EYE_H * 0.72f - 140f, EYE_W * 0.25f + 140f, EYE_H * 0.72f + 140f), black)
+        canvas.drawRect(RectF(EYE_W * 0.75f - 140f, EYE_H * 0.72f - 140f, EYE_W * 0.75f + 140f, EYE_H * 0.72f + 140f), white)
+        // Полосы средней яркости для остаточного двоения
+        canvas.drawRect(RectF(EYE_W * 0.45f, EYE_H * 0.15f, EYE_W * 0.55f, EYE_H * 0.85f), paint(0xFFC0C0C0.toInt()))
     }
 }

@@ -40,10 +40,10 @@ import kotlin.math.roundToInt
  * Визард калибровки Cardboard VR или анаглиф-очков.
  *
  * Тестовые картинки рисуются в кадр Side-by-Side и проходят через StereoRenderer, как видео.
- * Каждый шаг начинается с инструкции (в VR - для каждого глаза). Управление:
- * инструкция - кнопки Назад / Настроить / Далее; режим настройки - Влево/Вправо меняют значение,
- * Вверх/Вниз выбирают параметр, OK или Назад возвращают инструкцию. Касание: слева/справа - изменить,
- * в центре - инструкция, свайп вверх/вниз - другой параметр.
+ * Каждый шаг начинается с инструкции (в VR - для каждого глаза, со сдвигом на разнос экранов).
+ * Инструкция: кнопки Назад / Настроить (или Просмотр) / Далее. Режим настройки или просмотра:
+ * Влево/Вправо меняют значение, Вверх/Вниз выбирают параметр, OK или Назад возвращают инструкцию.
+ * Касание: края панели - изменить значение, центр - инструкция, свайп вверх/вниз - другой параметр.
  */
 class CalibrationWizardActivity : AppCompatActivity(), OnSurfaceReadyListener {
 
@@ -52,21 +52,28 @@ class CalibrationWizardActivity : AppCompatActivity(), OnSurfaceReadyListener {
         const val MODE_VR = "vr"
         const val MODE_ANAGLYPH = "anaglyph"
         private const val TAG = "CalibrationWizard"
+
+        // Глубина сцены проверки в VR: у каждого глаза свой экран, параллакс можно больше, чем в анаглифе
+        private const val VR_DEPTH_SCALE = 1.5f
     }
 
     /** Настраиваемый параметр шага: название, текущее значение и изменение на шаг. */
     private class Param(val label: () -> String, val value: () -> String, val change: (Int) -> Unit)
 
+    /**
+     * @param targetEye для CROSSTALK: глаз, в изображении которого рисуются фигуры
+     */
     private class Step(
         val titleRes: Int,
         val text: () -> String,
         val pattern: Pattern,
         val params: List<Param> = emptyList(),
+        val targetEye: () -> Int = { 0 },
         val isAvailable: () -> Boolean = { true }
     )
 
-    /** Панель для одного глаза. */
-    private class Panel(root: View) {
+    /** Панель для одного глаза (в VR - половина экрана, обрезает содержимое по своей границе). */
+    private class Panel(val root: View) {
         val card: View = root.findViewById(R.id.wizard_card)
         val step: TextView = root.findViewById(R.id.wizard_step)
         val title: TextView = root.findViewById(R.id.wizard_title)
@@ -78,12 +85,16 @@ class CalibrationWizardActivity : AppCompatActivity(), OnSurfaceReadyListener {
         val value: TextView = root.findViewById(R.id.wizard_value)
     }
 
-    /** Очки анаглиф: группа цветов и переставленные линзы (цвет B слева). */
-    private class Glasses(val group: GlassesGroup, val swapped: Boolean)
+    /**
+     * Очки анаглиф: группа цветов и сторона светофильтра первого цвета группы (A).
+     * filterALeft = true: например, для Red-Cyan красный фильтр слева, голубой справа.
+     */
+    private class Glasses(val group: GlassesGroup, val filterALeft: Boolean)
 
     private lateinit var repository: SettingsRepository
     private lateinit var glView: StereoGLSurfaceView
     private lateinit var renderer: StereoRenderer
+    private lateinit var overlay: LinearLayout
     @Volatile
     private var inputSurface: Surface? = null
 
@@ -100,8 +111,8 @@ class CalibrationWizardActivity : AppCompatActivity(), OnSurfaceReadyListener {
     private var k2 = 0.10f
     private var scale = 1.2f
 
-    // Параметры анаглифа (A и B - базовые цвета группы, например красная и голубая линзы)
-    private val glassesOptions = GlassesGroup.entries.flatMap { listOf(Glasses(it, false), Glasses(it, true)) }
+    // Параметры анаглифа: A и B - светофильтры первого и второго цвета группы (например, красный и голубой)
+    private val glassesOptions = GlassesGroup.entries.flatMap { listOf(Glasses(it, true), Glasses(it, false)) }
     private var glassesIndex = 0
     private var hueA = 0
     private var hueB = 0
@@ -109,6 +120,10 @@ class CalibrationWizardActivity : AppCompatActivity(), OnSurfaceReadyListener {
     private var leakB = 0.2f
 
     private val glasses get() = glassesOptions[glassesIndex]
+
+    // Глаз за светофильтром A и за светофильтром B
+    private val eyeA get() = if (glasses.filterALeft) 0 else 1
+    private val eyeB get() = 1 - eyeA
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -166,20 +181,22 @@ class CalibrationWizardActivity : AppCompatActivity(), OnSurfaceReadyListener {
             renderer.setDistortion(k1, k2, scale)
             renderer.setScreenSeparation(separation)
         } else {
-            val type = AnaglyphLogic.calibratedFilter(glasses.group) ?: AnaglyphLogic.defaultFilter(glasses.group)
-            val matrices = if (AnaglyphLogic.isCalibratable(glasses.group)) {
-                AnaglyphLogic.calculateCalibrated(glasses.group, AnaglyphCalibration(hueA, hueB, leakA, leakB))
+            val group = glasses.group
+            val calibrated = AnaglyphLogic.calibratedFilter(group)
+            val type = calibrated ?: AnaglyphLogic.defaultFilter(group)
+            val matrices = if (calibrated != null) {
+                AnaglyphLogic.calculateCalibrated(group, AnaglyphCalibration(hueA, hueB, leakA, leakB))
             } else {
                 AnaglyphLogic.calculateMatrix(type, 0, 0, 0f, 0f, false)
             }
             renderer.setOutputMode(StereoOutputMode.ANAGLYPH)
             renderer.setAnaglyphType(type)
             renderer.setScreenSeparation(0f)
-            // Переставленные линзы: изображение левого глаза кодируется цветом линзы B
-            if (glasses.swapped) {
-                renderer.setAnaglyphMatrices(matrices.right, matrices.left)
-            } else {
+            // Светофильтр пропускает свой цвет: изображение глаза кодируется цветом фильтра перед этим глазом
+            if (glasses.filterALeft) {
                 renderer.setAnaglyphMatrices(matrices.left, matrices.right)
+            } else {
+                renderer.setAnaglyphMatrices(matrices.right, matrices.left)
             }
         }
     }
@@ -187,11 +204,15 @@ class CalibrationWizardActivity : AppCompatActivity(), OnSurfaceReadyListener {
     private fun drawPattern() {
         val surface = inputSurface ?: return
         if (!surface.isValid) return
+        val step = steps[stepIndex]
         try {
             val canvas = surface.lockCanvas(null)
             try {
-                // Круги теста утечки - для глаза за линзой A
-                CalibrationPatterns.draw(canvas, steps[stepIndex].pattern, ghostEye = if (glasses.swapped) 1 else 0)
+                CalibrationPatterns.draw(
+                    canvas, step.pattern,
+                    targetEye = step.targetEye(),
+                    depthScale = if (isVr) VR_DEPTH_SCALE else 1f
+                )
             } finally {
                 surface.unlockCanvasAndPost(canvas)
             }
@@ -202,21 +223,31 @@ class CalibrationWizardActivity : AppCompatActivity(), OnSurfaceReadyListener {
 
     // ==================== ШАГИ ====================
 
-    private fun lensNames(group: GlassesGroup): Pair<String, String> {
+    /** Названия светофильтров группы (A, B) в форме "красный", "голубой". */
+    private fun filterNames(group: GlassesGroup): Pair<String, String> {
         val (a, b) = when (group) {
-            GlassesGroup.RED_CYAN -> R.string.lens_red to R.string.lens_cyan
-            GlassesGroup.YELLOW_BLUE -> R.string.lens_yellow to R.string.lens_blue
-            GlassesGroup.GREEN_MAGENTA -> R.string.lens_green to R.string.lens_magenta
-            GlassesGroup.RED_BLUE -> R.string.lens_red to R.string.lens_blue
+            GlassesGroup.RED_CYAN -> R.string.filter_red to R.string.filter_cyan
+            GlassesGroup.YELLOW_BLUE -> R.string.filter_yellow to R.string.filter_blue
+            GlassesGroup.GREEN_MAGENTA -> R.string.filter_green to R.string.filter_magenta
+            GlassesGroup.RED_BLUE -> R.string.filter_red to R.string.filter_blue
         }
         return getString(a) to getString(b)
     }
 
+    private fun groupName(group: GlassesGroup): String = getString(
+        when (group) {
+            GlassesGroup.RED_CYAN -> R.string.glasses_rc
+            GlassesGroup.YELLOW_BLUE -> R.string.glasses_yb
+            GlassesGroup.GREEN_MAGENTA -> R.string.glasses_gm
+            GlassesGroup.RED_BLUE -> R.string.glasses_rb
+        }
+    )
+
+    // Например: "Red - Cyan: красный фильтр слева"
     private fun glassesLabel(option: Glasses): String {
-        val (a, b) = lensNames(option.group)
-        val label = if (option.swapped) getString(R.string.wizard_lenses, b, a) else getString(R.string.wizard_lenses, a, b)
-        // Для красно-синих очков есть только черно-белый фильтр
-        return if (AnaglyphLogic.isCalibratable(option.group)) label else getString(R.string.wizard_lenses_mono, label)
+        val filterA = filterNames(option.group).first
+        val side = getString(if (option.filterALeft) R.string.wizard_filter_left else R.string.wizard_filter_right, filterA)
+        return getString(R.string.wizard_glasses_label, groupName(option.group), side)
     }
 
     private fun glassesStepText(): String {
@@ -251,49 +282,51 @@ class CalibrationWizardActivity : AppCompatActivity(), OnSurfaceReadyListener {
         Step(R.string.wizard_vr_check_title, { getString(R.string.wizard_vr_check_text) }, Pattern.DEPTH)
     )
 
-    private fun buildAnaglyphSteps(): List<Step> = listOf(
-        Step(
-            R.string.wizard_ana_glasses_title, { glassesStepText() }, Pattern.DEPTH,
-            listOf(Param({ getString(R.string.wizard_param_glasses) }, { glassesLabel(glasses) }, { d ->
-                val group = glasses.group
-                glassesIndex = (glassesIndex + d + glassesOptions.size) % glassesOptions.size
-                if (glasses.group != group) loadCalibration()
-            }))
-        ),
-        Step(
-            R.string.wizard_ana_ghost_title,
-            { lensNames(glasses.group).let { (a, b) -> getString(R.string.wizard_ana_ghost_text, a, b) } },
-            Pattern.GHOSTING,
-            listOf(
-                Param({ getString(R.string.wizard_param_leak, lensNames(glasses.group).first) },
-                    { "${(leakA * 100).roundToInt()}%" },
-                    { d -> leakA = SettingsMutator.modifyFloat(leakA, d, 0.01f, 0f, 0.5f) }),
-                Param({ getString(R.string.wizard_param_leak, lensNames(glasses.group).second) },
-                    { "${(leakB * 100).roundToInt()}%" },
-                    { d -> leakB = SettingsMutator.modifyFloat(leakB, d, 0.01f, 0f, 0.5f) })
+    private fun buildAnaglyphSteps(): List<Step> {
+        val glassesParam = Param({ getString(R.string.wizard_param_glasses) }, { glassesLabel(glasses) }, { d ->
+            val group = glasses.group
+            glassesIndex = (glassesIndex + d + glassesOptions.size) % glassesOptions.size
+            if (glasses.group != group) loadCalibration()
+        })
+        return listOf(
+            Step(R.string.wizard_ana_glasses_title, { glassesStepText() }, Pattern.DEPTH, listOf(glassesParam)),
+            // Светофильтр A: фигуры только в изображении для глаза за фильтром B, через фильтр A их не должно быть видно
+            Step(
+                R.string.wizard_ana_filter_title,
+                { filterNames(glasses.group).let { (a, b) -> getString(R.string.wizard_ana_filter_text, a, b) } },
+                Pattern.CROSSTALK,
+                listOf(
+                    Param({ getString(R.string.wizard_param_leak) }, { "${(leakA * 100).roundToInt()}%" },
+                        { d -> leakA = SettingsMutator.modifyFloat(leakA, d, 0.01f, 0f, 0.5f) }),
+                    Param({ getString(R.string.wizard_param_hue) }, { String.format(Locale.US, "%+d", hueA) },
+                        { d -> hueA = SettingsMutator.modifyInt(hueA, d, 1, -100, 100) })
+                ),
+                targetEye = { eyeB },
+                isAvailable = { isCalibratable() }
             ),
-            isAvailable = { isCalibratable() }
-        ),
-        Step(
-            R.string.wizard_ana_colors_title, { getString(R.string.wizard_ana_colors_text) }, Pattern.COLORS,
-            listOf(
-                Param({ getString(R.string.wizard_param_hue, lensNames(glasses.group).first) },
-                    { String.format(Locale.US, "%+d", hueA) },
-                    { d -> hueA = SettingsMutator.modifyInt(hueA, d, 1, -100, 100) }),
-                Param({ getString(R.string.wizard_param_hue, lensNames(glasses.group).second) },
-                    { String.format(Locale.US, "%+d", hueB) },
-                    { d -> hueB = SettingsMutator.modifyInt(hueB, d, 1, -100, 100) })
+            // Светофильтр B: фигуры только в изображении для глаза за фильтром A
+            Step(
+                R.string.wizard_ana_filter_title,
+                { filterNames(glasses.group).let { (a, b) -> getString(R.string.wizard_ana_filter_text, b, a) } },
+                Pattern.CROSSTALK,
+                listOf(
+                    Param({ getString(R.string.wizard_param_leak) }, { "${(leakB * 100).roundToInt()}%" },
+                        { d -> leakB = SettingsMutator.modifyFloat(leakB, d, 0.01f, 0f, 0.5f) }),
+                    Param({ getString(R.string.wizard_param_hue) }, { String.format(Locale.US, "%+d", hueB) },
+                        { d -> hueB = SettingsMutator.modifyInt(hueB, d, 1, -100, 100) })
+                ),
+                targetEye = { eyeA },
+                isAvailable = { isCalibratable() }
             ),
-            isAvailable = { isCalibratable() }
-        ),
-        Step(
-            R.string.wizard_ana_check_title, { getString(R.string.wizard_ana_check_text) }, Pattern.DEPTH,
-            listOf(Param({ getString(R.string.wizard_param_glasses) }, { glassesLabel(glasses) }, {
-                // Переставить линзы в той же группе
-                glassesIndex = glassesOptions.indexOfFirst { it.group == glasses.group && it.swapped != glasses.swapped }
-            }))
+            Step(
+                R.string.wizard_ana_check_title, { getString(R.string.wizard_ana_check_text) }, Pattern.DEPTH,
+                listOf(Param({ getString(R.string.wizard_param_glasses) }, { glassesLabel(glasses) }, {
+                    // Поменять стороны светофильтров в той же группе очков
+                    glassesIndex = glassesOptions.indexOfFirst { it.group == glasses.group && it.filterALeft != glasses.filterALeft }
+                }))
+            )
         )
-    )
+    }
 
     private fun availableSteps() = steps.indices.filter { steps[it].isAvailable() }
 
@@ -306,8 +339,7 @@ class CalibrationWizardActivity : AppCompatActivity(), OnSurfaceReadyListener {
     }
 
     private fun nextStep() {
-        val available = availableSteps()
-        val next = available.firstOrNull { it > stepIndex }
+        val next = availableSteps().firstOrNull { it > stepIndex }
         if (next == null) save() else showStep(next)
     }
 
@@ -334,7 +366,7 @@ class CalibrationWizardActivity : AppCompatActivity(), OnSurfaceReadyListener {
     // ==================== ПАНЕЛИ ====================
 
     private fun setupPanels() {
-        val overlay = findViewById<LinearLayout>(R.id.wizard_overlay)
+        overlay = findViewById(R.id.wizard_overlay)
         // В VR инструкция дублируется для каждого глаза
         repeat(if (isVr) 2 else 1) { i ->
             val view = layoutInflater.inflate(R.layout.item_wizard_panel, overlay, false)
@@ -358,6 +390,22 @@ class CalibrationWizardActivity : AppCompatActivity(), OnSurfaceReadyListener {
         ).forEach { (button, counterpart) ->
             button.setOnFocusChangeListener { _, hasFocus -> mirrors.forEach { counterpart(it).isSelected = hasFocus } }
         }
+        // Сдвиг на разнос экранов зависит от ширины экрана - пересчитываем после разметки
+        overlay.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> applyEyeShift() }
+    }
+
+    /**
+     * VR: панели каждого глаза сдвигаются вместе с центром линзы (как изображение в шейдере)
+     * и обрезаются по своей половине экрана, не залезая на соседний глаз.
+     */
+    private fun applyEyeShift() {
+        if (!isVr) return
+        val shiftPx = separation * overlay.width
+        panels.forEachIndexed { i, panel ->
+            val shift = if (i == 0) -shiftPx else shiftPx
+            panel.card.translationX = shift
+            panel.value.translationX = shift
+        }
     }
 
     private fun updatePanels() {
@@ -369,13 +417,9 @@ class CalibrationWizardActivity : AppCompatActivity(), OnSurfaceReadyListener {
         val hasParams = step.params.isNotEmpty()
 
         val controls = buildString {
-            if (hasParams) {
-                append(getString(R.string.wizard_controls_adjust))
-                if (step.params.size > 1) append('\n').append(getString(R.string.wizard_controls_params))
-                append('\n').append(getString(R.string.wizard_controls_touch))
-            } else {
-                append(getString(R.string.wizard_controls_simple))
-            }
+            append(getString(if (hasParams) R.string.wizard_controls_adjust else R.string.wizard_controls_view))
+            if (step.params.size > 1) append('\n').append(getString(R.string.wizard_controls_params))
+            append('\n').append(getString(if (hasParams) R.string.wizard_controls_touch else R.string.wizard_controls_touch_view))
         }
         val param = step.params.getOrNull(paramIndex)
         val valueText = param?.let {
@@ -385,28 +429,34 @@ class CalibrationWizardActivity : AppCompatActivity(), OnSurfaceReadyListener {
 
         panels.forEach { panel ->
             panel.step.text = getString(R.string.wizard_step, position, available.size)
-            panel.title.setText(step.titleRes)
+            panel.title.text = if (step.pattern == Pattern.CROSSTALK) {
+                // Шаг светофильтра: в заголовке его цвет
+                val (a, b) = filterNames(glasses.group)
+                getString(R.string.wizard_ana_filter_title_format, if (step.targetEye() == eyeB) a else b)
+            } else {
+                getString(step.titleRes)
+            }
             panel.text.text = step.text()
             panel.controls.text = controls
             panel.back.setText(if (isFirst) R.string.wizard_cancel else R.string.wizard_back)
+            // Шаг без параметров: кнопка просмотра результата без инструкции
+            panel.adjust.setText(if (hasParams) R.string.wizard_adjust else R.string.wizard_view)
             panel.next.setText(if (isLast) R.string.wizard_save else R.string.wizard_next)
-            panel.adjust.isVisible = hasParams
             panel.card.isVisible = cardVisible
             panel.value.isVisible = !cardVisible && valueText != null
             panel.value.text = valueText
         }
+        applyEyeShift()
     }
 
     private fun showCard() {
         cardVisible = true
         updatePanels()
-        val main = panels[0]
-        val target = if (main.adjust.isVisible) main.adjust else main.next
+        val target = panels[0].adjust
         target.post { target.requestFocus() }
     }
 
     private fun hideCard() {
-        if (steps[stepIndex].params.isEmpty()) return
         cardVisible = false
         updatePanels()
     }
@@ -430,12 +480,15 @@ class CalibrationWizardActivity : AppCompatActivity(), OnSurfaceReadyListener {
     }
 
     private fun setupTouch() {
-        val overlay = findViewById<View>(R.id.wizard_overlay)
         val detector = GestureDetector(this, object : GestureDetector.SimpleOnGestureListener() {
             override fun onDown(e: MotionEvent) = true
 
             override fun onSingleTapUp(e: MotionEvent): Boolean {
                 if (cardVisible) return false
+                if (steps[stepIndex].params.isEmpty()) {
+                    showCard()
+                    return true
+                }
                 // Зоны касания внутри панели глаза: слева - меньше, справа - больше, центр - инструкция
                 val panelWidth = overlay.width / panels.size.toFloat()
                 val position = (e.x % panelWidth) / panelWidth
@@ -470,14 +523,15 @@ class CalibrationWizardActivity : AppCompatActivity(), OnSurfaceReadyListener {
             .getOrNull(repository.getGlobalInt("def_anaglyph_type", StereoRenderer.AnaglyphType.RC_DUBOIS.ordinal))
             ?: StereoRenderer.AnaglyphType.RC_DUBOIS
         val group = AnaglyphLogic.getGlassesGroup(savedType)
-        val swapped = repository.isAnaglyphLensSwapped()
-        glassesIndex = glassesOptions.indexOfFirst { it.group == group && it.swapped == swapped }.coerceAtLeast(0)
+        // Переставленные линзы: фильтр первого цвета справа
+        val filterALeft = !repository.isAnaglyphLensSwapped()
+        glassesIndex = glassesOptions.indexOfFirst { it.group == group && it.filterALeft == filterALeft }.coerceAtLeast(0)
         loadCalibration()
     }
 
-    // Сохраненная калибровка выбранной группы очков (или начальные значения)
+    // Сохраненная калибровка выбранной группы очков (или начальные значения группы)
     private fun loadCalibration() {
-        val calibration = repository.getAnaglyphCalibration(glasses.group) ?: AnaglyphCalibration()
+        val calibration = repository.getAnaglyphCalibration(glasses.group) ?: AnaglyphLogic.defaultCalibration(glasses.group)
         hueA = calibration.hueA
         hueB = calibration.hueB
         leakA = calibration.leakA
@@ -499,7 +553,7 @@ class CalibrationWizardActivity : AppCompatActivity(), OnSurfaceReadyListener {
             // Фильтр по умолчанию - для новых видео и для этой группы очков
             repository.putGlobalInt("pref_filter_${glasses.group.name}", type.ordinal)
             repository.putGlobalInt("def_anaglyph_type", type.ordinal)
-            repository.setAnaglyphLensSwapped(glasses.swapped)
+            repository.setAnaglyphLensSwapped(!glasses.filterALeft)
         }
         repository.bumpCalibrationVersion()
         Toast.makeText(this, R.string.wizard_saved, Toast.LENGTH_SHORT).show()

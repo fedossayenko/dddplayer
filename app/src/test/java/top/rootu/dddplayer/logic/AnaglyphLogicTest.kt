@@ -56,6 +56,13 @@ class AnaglyphLogicTest {
     }
 
     @Test
+    fun `red filter leaks more than cyan by default`() {
+        val rc = AnaglyphLogic.defaultCalibration(GlassesGroup.RED_CYAN)
+        assertTrue(rc.leakA > rc.leakB)
+        assertEquals(AnaglyphCalibration(), AnaglyphLogic.defaultCalibration(GlassesGroup.YELLOW_BLUE))
+    }
+
+    @Test
     fun `zero hue offset keeps the base color`() {
         assertEquals(Color.RED, AnaglyphLogic.applyHueOffset(Color.RED, 0))
     }
