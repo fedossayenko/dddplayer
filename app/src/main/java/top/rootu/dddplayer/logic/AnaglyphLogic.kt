@@ -101,10 +101,10 @@ object AnaglyphLogic {
         else -> AnaglyphCalibration()
     }
 
-    /** Матрицы фильтра "Калибровка" по измеренным утечкам светофильтров. */
+    /** Матрицы фильтра "Калибровка": подавление двоения по утечкам светофильтров, подобранным в визарде. */
     fun calculateCalibrated(group: GlassesGroup, calibration: AnaglyphCalibration): DuboisMath.ResultMatrices {
         val (ownA, ownB) = filterPrimaries(group)
-        return DuboisMath.calculateWithLeaks(ownA, ownB, calibration.leakA, calibration.leakB)
+        return DuboisMath.calculateWithCrosstalk(ownA, ownB, calibration.leakA, calibration.leakB)
     }
 
     fun getCustomPrefix(type: StereoRenderer.AnaglyphType): String {

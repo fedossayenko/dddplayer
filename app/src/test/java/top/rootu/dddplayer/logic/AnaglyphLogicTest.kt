@@ -41,25 +41,38 @@ class AnaglyphLogicTest {
     }
 
     @Test
-    fun `calibration uses the filter primaries of the group and the measured leaks`() {
+    fun `calibration uses the filter primaries of the group and the leaks`() {
         val calibration = AnaglyphCalibration(leakA = 0.1f, leakB = 0.02f)
         val result = AnaglyphLogic.calculateCalibrated(GlassesGroup.RED_CYAN, calibration)
-        val expected = DuboisMath.calculateWithLeaks(setOf(0), setOf(1, 2), 0.1f, 0.02f)
+        val expected = DuboisMath.calculateWithCrosstalk(setOf(0), setOf(1, 2), 0.1f, 0.02f)
         assertArrayEquals(expected.left, result.left, 1e-6f)
         assertArrayEquals(expected.right, result.right, 1e-6f)
     }
 
     @Test
-    fun `leak based matrices keep white and depend on the leaks`() {
-        val ideal = DuboisMath.calculateWithLeaks(setOf(0), setOf(1, 2), 0f, 0f)
-        val leaky = DuboisMath.calculateWithLeaks(setOf(0), setOf(1, 2), 0.1f, 0.02f)
-        assertTrue(ideal.isValid && leaky.isValid)
+    fun `crosstalk matrices keep white and cancel the leaked image`() {
+        val leakA = 0.1f
+        val leakB = 0.02f
+        val ideal = DuboisMath.calculateWithCrosstalk(setOf(0), setOf(1, 2), 0f, 0f)
+        val m = DuboisMath.calculateWithCrosstalk(setOf(0), setOf(1, 2), leakA, leakB)
+        assertTrue(ideal.isValid && m.isValid)
         // Белый в обоих глазах дает белый на экране (сумма строк L и R = 1)
         for (row in 0..2) {
-            val sum = (0..2).sumOf { (leaky.left[row * 3 + it] + leaky.right[row * 3 + it]).toDouble() }
+            val sum = (0..2).sumOf { (m.left[row * 3 + it] + m.right[row * 3 + it]).toDouble() }
             assertEquals(1.0, sum, 1e-4)
         }
-        assertFalse(ideal.left.contentEquals(leaky.left))
+        // Яркость через фильтр: свой канал целиком, остальные (с весами по яркости) - с утечкой
+        val yG = 0.7152f
+        val yB = 0.0722f
+        fun throughRed(mat: FloatArray, c: Int, leak: Float) =
+            mat[c] + leak * (yG * mat[3 + c] + yB * mat[6 + c]) / (yG + yB)
+        fun throughCyan(mat: FloatArray, c: Int, leak: Float) = (yG * mat[3 + c] + yB * mat[6 + c]) / (yG + yB) + leak * mat[c]
+        for (c in 0..2) {
+            // Остается только собственный остаток Dubois, утечка вычтена
+            assertEquals(throughRed(ideal.right, c, 0f), throughRed(m.right, c, leakA), 1e-4f)
+            assertEquals(throughCyan(ideal.left, c, 0f), throughCyan(m.left, c, leakB), 1e-4f)
+        }
+        assertFalse(ideal.right.contentEquals(m.right))
     }
 
     @Test
