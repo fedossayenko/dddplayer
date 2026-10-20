@@ -283,11 +283,14 @@ class SettingsRepository private constructor(context: Context) {
     fun recordAudioTrackChoice(signature: String, label: String) {
         val stats = getAudioTrackStats().toMutableList()
         val index = stats.indexOfFirst { it.signature == signature }
-        if (index != -1) {
-            stats[index] = stats[index].copy(label = label, count = stats[index].count + 1)
+        val updated = if (index != -1) {
+            stats.removeAt(index).let { it.copy(label = label, count = it.count + 1) }
         } else {
-            stats.add(AudioTrackStat(signature, label, 1))
+            AudioTrackStat(signature, label, 1)
         }
+        // Незакрепленные сортируются по счетчику (стабильно): при равном счетчике выше последняя выбранная,
+        // иначе новая дорожка не попала бы в заполненный список
+        stats.add(if (updated.pinned) index else 0, updated)
         saveAudioTrackStats(stats)
     }
 
