@@ -154,6 +154,12 @@
     <string name="pref_language_track_device">设备语言</string>
     <string name="pref_sub_lang_default">默认字幕语言</string>
     <string name="pref_sub_lang_default_desc">首选字幕（如果可用）</string>
+    <string name="pref_subtitle_auto">自动启用字幕</string>
+    <string name="pref_subtitle_auto_desc">视频开始时。为该视频保存的字幕和手动选择优先</string>
+    <string name="sub_auto_default">由播放器决定</string>
+    <string name="sub_auto_off">关闭</string>
+    <string name="sub_auto_forced">仅强制字幕</string>
+    <string name="sub_auto_full">完整字幕</string>
     <string name="pref_calibration_3d">3D 校准</string>
     <string name="pref_cardboard_vr">Cardboard VR 设置</string>
     <string name="pref_cardboard_vr_desc">镜头、缩放和 IPD 设置向导</string>

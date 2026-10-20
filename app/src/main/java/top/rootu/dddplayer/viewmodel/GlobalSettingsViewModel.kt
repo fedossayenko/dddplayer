@@ -131,6 +131,14 @@ class GlobalSettingsViewModel(application: Application) : AndroidViewModel(appli
         _isLiveModeEnabled.value = enabled
     }
 
+    private val _subtitleAutoMode = MutableLiveData(repository.getSubtitleAutoMode())
+    val subtitleAutoMode: LiveData<Int> = _subtitleAutoMode
+
+    fun setSubtitleAutoMode(mode: Int) {
+        repository.setSubtitleAutoMode(mode)
+        _subtitleAutoMode.value = mode
+    }
+
     private val _audioTrackMemoryMode = MutableLiveData(repository.getAudioTrackMemoryMode())
     val audioTrackMemoryMode: LiveData<Int> = _audioTrackMemoryMode
 

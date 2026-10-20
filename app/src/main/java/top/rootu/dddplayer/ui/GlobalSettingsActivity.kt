@@ -101,6 +101,8 @@ class GlobalSettingsActivity : AppCompatActivity() {
     private lateinit var textAudioLangValue: TextView
     private lateinit var itemSubLang: LinearLayout
     private lateinit var textSubLangValue: TextView
+    private lateinit var itemSubtitleAuto: LinearLayout
+    private lateinit var textSubtitleAutoValue: TextView
     private lateinit var itemCalibrateVr: LinearLayout
     private lateinit var itemCalibrateAnaglyph: LinearLayout
     private lateinit var itemDownmix: LinearLayout
@@ -350,6 +352,8 @@ class GlobalSettingsActivity : AppCompatActivity() {
         textAudioLangValue = findViewById(R.id.text_audio_lang_value)
         itemSubLang = findViewById(R.id.item_sub_lang)
         textSubLangValue = findViewById(R.id.text_sub_lang_value)
+        itemSubtitleAuto = findViewById(R.id.item_subtitle_auto)
+        textSubtitleAutoValue = findViewById(R.id.text_subtitle_auto_value)
         itemCalibrateVr = findViewById(R.id.item_calibrate_vr)
         itemCalibrateAnaglyph = findViewById(R.id.item_calibrate_anaglyph)
         itemDownmix = findViewById(R.id.item_downmix)
@@ -540,6 +544,16 @@ class GlobalSettingsActivity : AppCompatActivity() {
 
         itemStartupPlaylist.setOnClickListener { showUrlInputDialog() }
         itemLiveMode.setOnClickListener { settingsViewModel.toggleLiveMode(!switchLiveMode.isChecked) }
+        itemSubtitleAuto.setOnClickListener {
+            // Порядок пунктов совпадает с SettingsRepository.SUB_AUTO_*
+            val options = listOf(
+                getString(R.string.sub_auto_default), getString(R.string.sub_auto_off),
+                getString(R.string.sub_auto_forced), getString(R.string.sub_auto_full)
+            )
+            showSingleChoiceDialog(getString(R.string.pref_subtitle_auto), options, settingsViewModel.subtitleAutoMode.value ?: SettingsRepository.SUB_AUTO_DEFAULT) {
+                settingsViewModel.setSubtitleAutoMode(it)
+            }
+        }
         itemRememberAudio.setOnClickListener {
             // Порядок пунктов совпадает с SettingsRepository.AUDIO_MEMORY_*
             val options = listOf(getString(R.string.audio_memory_off), getString(R.string.audio_memory_playlist), getString(R.string.audio_memory_all))
@@ -716,6 +730,14 @@ class GlobalSettingsActivity : AppCompatActivity() {
             textStartupPlaylistValue.text = if (uri.isNullOrEmpty()) getString(R.string.pref_startup_playlist_not_set) else uri
         }
         settingsViewModel.isLiveModeEnabled.observe(this) { switchLiveMode.isChecked = it }
+        settingsViewModel.subtitleAutoMode.observe(this) { mode ->
+            textSubtitleAutoValue.text = when (mode) {
+                SettingsRepository.SUB_AUTO_OFF -> getString(R.string.sub_auto_off)
+                SettingsRepository.SUB_AUTO_FORCED -> getString(R.string.sub_auto_forced)
+                SettingsRepository.SUB_AUTO_FULL -> getString(R.string.sub_auto_full)
+                else -> getString(R.string.sub_auto_default)
+            }
+        }
         settingsViewModel.audioTrackMemoryMode.observe(this) { mode ->
             textRememberAudioValue.text = when (mode) {
                 SettingsRepository.AUDIO_MEMORY_PLAYLIST -> getString(R.string.audio_memory_playlist)

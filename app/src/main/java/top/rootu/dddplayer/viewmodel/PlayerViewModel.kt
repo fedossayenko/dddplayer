@@ -6,6 +6,7 @@ import android.net.Uri
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import androidx.core.os.LocaleListCompat
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
@@ -259,6 +260,10 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     private var sessionAudioSignature: String? = null
     // Дорожка для текущего видео уже определена (сохраненная, выбранная или найденная среди последних)
     private var audioTrackResolved = false
+    // Субтитры для текущего видео уже выбраны (сохраненные, пользователем или автовключением)
+    private var subtitleResolved = false
+    // Настройки видео из базы прочитаны (автовключение ждет их, чтобы не перебить сохраненные субтитры)
+    private var videoSettingsChecked = false
 
     // Internal
     private var audioOptions = listOf<TrackOption>()
@@ -604,6 +609,8 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         audioChosenByUser = false
         audioChoicePendingStat = false
         audioTrackResolved = false
+        subtitleResolved = false
+        videoSettingsChecked = false
 
         player?.let { p ->
             val title = mediaItem?.mediaMetadata?.title?.toString()
@@ -651,12 +658,19 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                     } else {
                         loadGlobalDefaults()
                     }
+                    videoSettingsChecked = true
+                    // Дорожки могли прийти раньше настроек: применяем автовключение субтитров сейчас
+                    if (!subtitleResolved && repository.getSubtitleAutoMode() != SettingsRepository.SUB_AUTO_DEFAULT) {
+                        player?.let { updateTracksInfo(it.currentTracks) }
+                    }
                     if (!isFirstItemLoaded) {
                         handleResumeLogic(saved)
                     }
                     // Помечаем, что первое видео обработавано.
                     isFirstItemLoaded = true
                 }
+            } else {
+                videoSettingsChecked = true
             }
         }
     }
@@ -918,6 +932,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             if (foundIdx != -1) {
                 pendingSubtitleLabel = null
                 pendingSubtitleId = null
+                subtitleResolved = true
                 finalSubIdx = foundIdx
                 selectTrackByIndex(C.TRACK_TYPE_TEXT, foundIdx)
             }
@@ -926,13 +941,33 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             // Специальная обработка для "Выкл"
             if (id == "disabled") {
                 finalSubIdx = 0
+                subtitleResolved = true
                 selectTrackByIndex(C.TRACK_TYPE_TEXT, 0)
             } else {
                 val foundIdx = subtitleOptions.indexOfFirst { it.format?.id == id }
                 if (foundIdx != -1) {
                     finalSubIdx = foundIdx
+                    subtitleResolved = true
                     selectTrackByIndex(C.TRACK_TYPE_TEXT, foundIdx)
                 }
+            }
+        }
+        // Автовключение субтитров по настройке: один раз на видео, если субтитры не сохранены для него.
+        // Ждем появления дорожек субтитров: в HLS они могут прийти позже видео и звука
+        if (!subtitleResolved && videoSettingsChecked && pendingSubtitleId == null && pendingSubtitleLabel == null &&
+            subtitleOptions.any { !it.isOff }
+        ) {
+            subtitleResolved = true
+            val mode = repository.getSubtitleAutoMode()
+            if (mode != SettingsRepository.SUB_AUTO_DEFAULT) {
+                val audioLang = audioOptions.getOrNull(finalAudioIdx)?.format?.language
+                TrackLogic.autoSubtitleIndex(subtitleOptions, mode, preferredSubtitleLanguages(), audioLang)
+                    ?.let { idx ->
+                        if (idx != finalSubIdx) {
+                            finalSubIdx = idx
+                            selectTrackByIndex(C.TRACK_TYPE_TEXT, idx)
+                        }
+                    }
             }
         }
         currentSubtitleIndex = finalSubIdx
@@ -1466,6 +1501,16 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         return null
     }
 
+    private fun preferredSubtitleLanguages(): List<String> =
+        when (val pref = repository.getPreferredSubLang()) {
+            SettingsRepository.TRACK_DEFAULT -> emptyList()
+            SettingsRepository.TRACK_DEVICE -> {
+                val locales = LocaleListCompat.getAdjustedDefault()
+                (0 until locales.size()).mapNotNull { locales.get(it)?.language }
+            }
+            else -> listOf(pref)
+        }
+
     /** @param fromUser выбор из меню/OSD (запоминается для других видео) */
     fun selectTrackByIndex(trackType: Int, index: Int, fromUser: Boolean = false) {
         val options = if (trackType == C.TRACK_TYPE_AUDIO) audioOptions else subtitleOptions
@@ -1483,6 +1528,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                 currentAudioIndex = index
                 _currentAudioTrack.value = option
             } else {
+                if (fromUser) subtitleResolved = true
                 currentSubtitleIndex = index
                 _currentSubtitleTrack.value = option
             }
@@ -1578,7 +1624,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                 val options = subtitleOptions
                 if (options.isNotEmpty()) {
                     val nextIndex = (currentSubtitleIndex + direction + options.size) % options.size
-                    selectTrackByIndex(C.TRACK_TYPE_TEXT, nextIndex)
+                    selectTrackByIndex(C.TRACK_TYPE_TEXT, nextIndex, fromUser = true)
                 }
             }
         }

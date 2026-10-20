@@ -723,7 +723,7 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
                 sideMenuDialog?.dismiss()
                 openSubtitleFile()
             } else {
-                selected.id.toIntOrNull()?.let { viewModel.selectTrackByIndex(C.TRACK_TYPE_TEXT, it) }
+                selected.id.toIntOrNull()?.let { viewModel.selectTrackByIndex(C.TRACK_TYPE_TEXT, it, fromUser = true) }
                 sideMenuDialog?.dismiss()
             }
         }

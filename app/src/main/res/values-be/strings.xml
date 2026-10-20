@@ -147,6 +147,12 @@
     <string name="pref_language_track_device">Мовы прылады</string>
     <string name="pref_sub_lang_default">Мова субцітраў па змаўчанні</string>
     <string name="pref_sub_lang_default_desc">Пераважныя субцітры (калі ёсць)</string>
+    <string name="pref_subtitle_auto">Аўтаўключэнне субцітраў</string>
+    <string name="pref_subtitle_auto_desc">Пры запуску відэа. Захаваныя для відэа субцітры і ручны выбар важнейшыя</string>
+    <string name="sub_auto_default">Як вырашыць плэер</string>
+    <string name="sub_auto_off">Не</string>
+    <string name="sub_auto_forced">Толькі фарсіраваныя</string>
+    <string name="sub_auto_full">Поўныя</string>
     <string name="pref_calibration_3d">Каліброўка 3D</string>
     <string name="pref_cardboard_vr">Налада Cardboard VR</string>
     <string name="pref_anaglyph">Налада Анагліфа</string>

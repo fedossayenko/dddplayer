@@ -168,6 +168,12 @@
     <string name="language_code_format" translatable="false">%1$s (%2$s)</string>
     <string name="pref_sub_lang_default">Default Subtitle Language</string>
     <string name="pref_sub_lang_default_desc">Preferred subtitles (if available)</string>
+    <string name="pref_subtitle_auto">Auto-enable subtitles</string>
+    <string name="pref_subtitle_auto_desc">When a video starts. Subtitles saved for the video and a manual choice take priority</string>
+    <string name="sub_auto_default">Player default</string>
+    <string name="sub_auto_off">Off</string>
+    <string name="sub_auto_forced">Forced only</string>
+    <string name="sub_auto_full">Full</string>
     <string name="pref_calibration_3d">3D Calibration</string>
     <string name="pref_cardboard_vr">Cardboard VR Setup</string>
     <string name="pref_cardboard_vr_desc">Wizard for lens, zoom, and IPD settings</string>

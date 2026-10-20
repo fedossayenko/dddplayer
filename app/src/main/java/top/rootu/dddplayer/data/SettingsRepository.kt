@@ -59,6 +59,11 @@ class SettingsRepository private constructor(context: Context) {
         const val AUDIO_MEMORY_PLAYLIST = 1 // Выбранная дорожка - для следующих элементов плейлиста
         const val AUDIO_MEMORY_ALL = 2 // + наиболее используемые дорожки для любых видео (экспериментально)
         const val MAX_AUDIO_TRACK_STATS = 20
+        // Автовключение субтитров при загрузке видео
+        const val SUB_AUTO_DEFAULT = 0 // Как решит плеер (прежнее поведение)
+        const val SUB_AUTO_OFF = 1
+        const val SUB_AUTO_FORCED = 2 // Только форсированные
+        const val SUB_AUTO_FULL = 3 // Полные на предпочитаемом языке
 
         // Совместимость с Dolby Vision: подмена декодера DV на HEVC (базовый слой HDR10/HLG)
         const val DV_MODE_OFF = 0 // Системный DV декодер
@@ -233,6 +238,9 @@ class SettingsRepository private constructor(context: Context) {
 
     fun getPreferredSubLang(): String = prefs.getString("pref_sub_lang", TRACK_DEFAULT) ?: TRACK_DEFAULT
     fun setPreferredSubLang(lang: String) = prefs.edit { putString("pref_sub_lang", lang) }
+
+    fun getSubtitleAutoMode(): Int = prefs.getInt("subtitle_auto_mode", SUB_AUTO_DEFAULT)
+    fun setSubtitleAutoMode(mode: Int) = prefs.edit { putInt("subtitle_auto_mode", mode) }
 
     fun getLoudnessBoost(): Int = prefs.getInt("loudness_boost", 0)
     fun setLoudnessBoost(boost: Int) = prefs.edit { putInt("loudness_boost", boost) }
