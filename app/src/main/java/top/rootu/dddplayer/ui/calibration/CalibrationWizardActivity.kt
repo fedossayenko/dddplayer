@@ -214,7 +214,14 @@ class CalibrationWizardActivity : AppCompatActivity(), OnSurfaceReadyListener {
 
     private fun glassesLabel(option: Glasses): String {
         val (a, b) = lensNames(option.group)
-        return if (option.swapped) getString(R.string.wizard_lenses, b, a) else getString(R.string.wizard_lenses, a, b)
+        val label = if (option.swapped) getString(R.string.wizard_lenses, b, a) else getString(R.string.wizard_lenses, a, b)
+        // Для красно-синих очков есть только черно-белый фильтр
+        return if (AnaglyphLogic.isCalibratable(option.group)) label else getString(R.string.wizard_lenses_mono, label)
+    }
+
+    private fun glassesStepText(): String {
+        val text = getString(R.string.wizard_ana_glasses_text)
+        return if (AnaglyphLogic.isCalibratable(glasses.group)) text else text + "\n\n" + getString(R.string.wizard_ana_rb_note)
     }
 
     private fun isCalibratable() = AnaglyphLogic.isCalibratable(glasses.group)
@@ -246,7 +253,7 @@ class CalibrationWizardActivity : AppCompatActivity(), OnSurfaceReadyListener {
 
     private fun buildAnaglyphSteps(): List<Step> = listOf(
         Step(
-            R.string.wizard_ana_glasses_title, { getString(R.string.wizard_ana_glasses_text) }, Pattern.DEPTH,
+            R.string.wizard_ana_glasses_title, { glassesStepText() }, Pattern.DEPTH,
             listOf(Param({ getString(R.string.wizard_param_glasses) }, { glassesLabel(glasses) }, { d ->
                 val group = glasses.group
                 glassesIndex = (glassesIndex + d + glassesOptions.size) % glassesOptions.size

@@ -51,7 +51,7 @@
     <string name="glasses_rc">Red - Cyan</string>
     <string name="glasses_yb">Yellow - Blue</string>
     <string name="glasses_gm">Green - Magenta</string>
-    <string name="glasses_rb">Red - Blue</string>
+    <string name="glasses_rb">Red - Blue (B/W)</string>
 
     <!-- OSD Settings Titles -->
     <string name="setting_video_type">Video Type</string>
@@ -402,4 +402,6 @@
     <string name="reset_calibration_all">Everything</string>
     <string name="reset_calibration_done">Calibration reset to defaults</string>
     <string name="filter_calibrated">Calibrated</string>
+    <string name="wizard_lenses_mono">%1$s (B/W only)</string>
+    <string name="wizard_ana_rb_note">Red-blue glasses show only a black and white picture. Check the lens color: blue is easy to confuse with cyan (red-cyan glasses) or magenta (green-magenta glasses), which support color filters.</string>
 </resources>

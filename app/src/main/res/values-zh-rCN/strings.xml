@@ -46,7 +46,7 @@
     <string name="glasses_rc">红 - 青</string>
     <string name="glasses_yb">黄 - 蓝</string>
     <string name="glasses_gm">绿 - 品红</string>
-    <string name="glasses_rb">红 - 蓝</string>
+    <string name="glasses_rb">红 - 蓝（黑白）</string>
 
     <!-- OSD 设置标题 -->
     <string name="setting_video_type">视频类型</string>
@@ -385,4 +385,6 @@
     <string name="reset_calibration_all">全部</string>
     <string name="reset_calibration_done">校准已重置</string>
     <string name="filter_calibrated">已校准</string>
+    <string name="wizard_lenses_mono">%1$s（仅黑白）</string>
+    <string name="wizard_ana_rb_note">红蓝眼镜只能显示黑白画面。请检查镜片颜色：蓝色容易与青色（红青眼镜）或品红色（绿品红眼镜）混淆，后两者支持彩色滤镜。</string>
 </resources>

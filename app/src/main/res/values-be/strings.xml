@@ -45,7 +45,7 @@
     <string name="glasses_rc">Red - Cyan</string>
     <string name="glasses_yb">Yellow - Blue</string>
     <string name="glasses_gm">Green - Magenta</string>
-    <string name="glasses_rb">Red - Blue</string>
+    <string name="glasses_rb">Red - Blue (Ч/Б)</string>
 
     <!-- Загалоўкі налад OSD -->
     <string name="setting_video_type">Тып відэа</string>
@@ -370,4 +370,6 @@
     <string name="reset_calibration_all">Усё</string>
     <string name="reset_calibration_done">Каліброўка скінута</string>
     <string name="filter_calibrated">Каліброўка</string>
+    <string name="wizard_lenses_mono">%1$s (толькі Ч/Б)</string>
+    <string name="wizard_ana_rb_note">З чырвона-сінімі акулярамі даступная толькі чорна-белая выява. Праверце колер лінзы: сінюю лёгка зблытаць з блакітнай (чырвона-блакітныя акуляры) або пурпурнай — мадэнта (зялёна-пурпурныя акуляры), для іх ёсць каляровыя фільтры.</string>
 </resources>

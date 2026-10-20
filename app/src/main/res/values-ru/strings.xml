@@ -33,7 +33,7 @@
     <string name="glasses_rc">Red - Cyan</string>
     <string name="glasses_yb">Yellow - Blue</string>
     <string name="glasses_gm">Green - Magenta</string>
-    <string name="glasses_rb">Red - Blue</string>
+    <string name="glasses_rb">Red - Blue (Ч/Б)</string>
 
     <!-- Заголовки настроек OSD -->
     <string name="setting_video_type">Тип видео</string>
@@ -399,4 +399,6 @@
     <string name="reset_calibration_all">Все</string>
     <string name="reset_calibration_done">Калибровка сброшена</string>
     <string name="filter_calibrated">Калибровка</string>
+    <string name="wizard_lenses_mono">%1$s (только Ч/Б)</string>
+    <string name="wizard_ana_rb_note">С красно-синими очками доступно только черно-белое изображение. Проверьте цвет линзы: синюю легко спутать с голубой (красно-голубые очки) или пурпурной — магента (зелено-пурпурные очки), для них есть цветные фильтры.</string>
 </resources>
