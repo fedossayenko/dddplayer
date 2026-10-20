@@ -6,8 +6,12 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
 import top.rootu.dddplayer.viewmodel.TrackOption
 
+// Format.Builder нормализует код языка через Android API - нужен Robolectric
+@RunWith(RobolectricTestRunner::class)
 class TrackLogicTest {
 
     private fun audio(label: String?, language: String?, mime: String, channels: Int) =
