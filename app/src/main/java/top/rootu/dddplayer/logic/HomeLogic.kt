@@ -34,6 +34,15 @@ object HomeLogic {
         else -> "${formatTime(positionMs)} / ${formatTime(durationMs)}"
     }
 
+    /** Источник истории для папки медиасервера: адрес описания сервера и id папки. */
+    fun dlnaSource(serverLocation: String, objectId: String): String = "$serverLocation\n$objectId"
+
+    fun parseDlnaSource(source: String): Pair<String, String>? {
+        val location = source.substringBefore('\n')
+        val objectId = source.substringAfter('\n', "")
+        return if (location.isNotEmpty() && objectId.isNotEmpty()) location to objectId else null
+    }
+
     /** Имя по умолчанию для плейлиста по ссылке: хост или имя файла. */
     fun defaultPlaylistName(url: String): String {
         val uri = Uri.parse(url)

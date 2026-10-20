@@ -408,6 +408,12 @@
     <string name="home_playlist_url_empty">Вкажіть посилання на плейлист</string>
     <string name="home_delete">ВИДАЛИТИ</string>
     <string name="home_unavailable">Джерело недоступне (наприклад, USB-диск від’єднано)</string>
+    <string name="home_network">Мережа</string>
+    <string name="home_dlna_server">Медіасервер DLNA</string>
+    <string name="home_dlna_searching">Пошук медіасерверів…</string>
+    <string name="home_dlna_not_found">Медіасервери не знайдено. Шукати знову</string>
+    <string name="home_dlna_search_again">Шукати знову</string>
+    <string name="home_dlna_search_desc">Сервери DLNA у локальній мережі (NAS, комп’ютер, роутер)</string>
     <string-array name="file_size_units">
         <item>Б</item>
         <item>КБ</item>

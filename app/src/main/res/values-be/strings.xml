@@ -408,6 +408,12 @@
     <string name="home_playlist_url_empty">Укажыце спасылку на плэйліст</string>
     <string name="home_delete">ВЫДАЛІЦЬ</string>
     <string name="home_unavailable">Крыніца недаступная (напрыклад, USB-дыск адключаны)</string>
+    <string name="home_network">Сетка</string>
+    <string name="home_dlna_server">Медыясервер DLNA</string>
+    <string name="home_dlna_searching">Пошук медыясервераў…</string>
+    <string name="home_dlna_not_found">Медыясерверы не знойдзены. Шукаць зноў</string>
+    <string name="home_dlna_search_again">Шукаць зноў</string>
+    <string name="home_dlna_search_desc">Серверы DLNA у лакальнай сетцы (NAS, камп’ютар, роўтар)</string>
     <string-array name="file_size_units">
         <item>Б</item>
         <item>КБ</item>

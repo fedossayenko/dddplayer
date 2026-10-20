@@ -440,6 +440,12 @@
     <string name="home_playlist_url_empty">Enter the playlist link</string>
     <string name="home_delete" tools:ignore="ButtonCase">DELETE</string>
     <string name="home_unavailable">Source is not available (for example, the USB drive is disconnected)</string>
+    <string name="home_network">Network</string>
+    <string name="home_dlna_server">DLNA media server</string>
+    <string name="home_dlna_searching">Searching for media servers…</string>
+    <string name="home_dlna_not_found">No media servers found. Search again</string>
+    <string name="home_dlna_search_again">Search again</string>
+    <string name="home_dlna_search_desc">DLNA servers in the local network (NAS, PC, router)</string>
     <string-array name="file_size_units">
         <item>B</item>
         <item>KB</item>

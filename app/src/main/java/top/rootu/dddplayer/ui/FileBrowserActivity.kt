@@ -29,16 +29,21 @@ import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import top.rootu.dddplayer.R
 import top.rootu.dddplayer.data.SettingsRepository
+import top.rootu.dddplayer.logic.DlnaEntry
+import top.rootu.dddplayer.logic.DlnaLogic
+import top.rootu.dddplayer.logic.DlnaServer
 import top.rootu.dddplayer.logic.FileBrowserLogic
 import top.rootu.dddplayer.logic.FileEntry
 import top.rootu.dddplayer.logic.HomeLogic
 import top.rootu.dddplayer.model.HistoryEntry
 import top.rootu.dddplayer.model.HistorySource
 import top.rootu.dddplayer.model.SavedPlaylist
+import top.rootu.dddplayer.player.DlnaClient
 import top.rootu.dddplayer.utils.IntentUtils
 import top.rootu.dddplayer.utils.StorageRoot
 import top.rootu.dddplayer.utils.StorageRoots
@@ -46,15 +51,16 @@ import java.io.File
 import java.util.UUID
 
 /**
- * Стартовый экран и встроенный файловый браузер. На главном экране: "Продолжить просмотр" (история по
- * источникам), плейлисты по ссылке и хранилища (внутренняя память, SD-карты, USB-диски).
- * Плеер получает обычный путь к файлу (file://), поэтому перемотка работает всегда,
+ * Стартовый экран и встроенный браузер. На главном экране: "Продолжить просмотр" (история по
+ * источникам), плейлисты по ссылке, хранилища (внутренняя память, SD-карты, USB-диски) и медиасерверы DLNA.
+ * Локальные видео плеер получает обычным путем (file://), поэтому перемотка работает всегда,
  * а субтитры рядом с видео находятся автоматически. Видео из папки открываются плейлистом.
  */
 class FileBrowserActivity : AppCompatActivity() {
 
     private enum class RowType {
-        HEADER, HISTORY, HISTORY_TOGGLE, SAVED_PLAYLIST, ADD_PLAYLIST, ACCESS, STORAGE, PARENT, DIR, VIDEO, PLAYLIST
+        HEADER, HISTORY, HISTORY_TOGGLE, SAVED_PLAYLIST, ADD_PLAYLIST, ACCESS, STORAGE,
+        DLNA_SERVER, DLNA_SEARCH, PARENT, DIR, VIDEO, PLAYLIST, DLNA_FOLDER, DLNA_VIDEO
     }
 
     private data class Row(
@@ -65,7 +71,15 @@ class FileBrowserActivity : AppCompatActivity() {
         val data: Any? = null
     )
 
+    /** Где мы: главный экран, локальная папка или папка медиасервера. */
+    private sealed class Location {
+        object Home : Location()
+        data class Local(val path: String) : Location()
+        data class Dlna(val server: DlnaServer, val objectId: String, val title: String, val parent: Dlna?) : Location()
+    }
+
     private lateinit var repository: SettingsRepository
+    private lateinit var dlnaClient: DlnaClient
     private lateinit var header: TextView
     private lateinit var pathView: TextView
     private lateinit var emptyView: TextView
@@ -74,14 +88,18 @@ class FileBrowserActivity : AppCompatActivity() {
     private val adapter = FileAdapter()
 
     private var roots: List<StorageRoot> = emptyList()
-    // null - список хранилищ
-    private var currentDir: String? = null
+    private var location: Location = Location.Home
     private var rows: List<Row> = emptyList()
+    private var loadJob: Job? = null
     // Ждем возврата из экрана "Доступ ко всем файлам", чтобы обновить список
     private var waitingForAllFilesAccess = false
     // История развернута целиком (иначе первые HISTORY_PREVIEW записей)
     private var historyExpanded = false
     private var started = false
+
+    // Медиасерверы DLNA: ищутся один раз при открытии экрана (и по "Искать снова")
+    private var dlnaServers: List<DlnaServer> = emptyList()
+    private var dlnaSearching = false
 
     private val sizeUnits by lazy { resources.getStringArray(R.array.file_size_units).toList() }
 
@@ -94,6 +112,7 @@ class FileBrowserActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_file_browser)
         repository = SettingsRepository.getInstance(this)
+        dlnaClient = DlnaClient(this)
 
         header = findViewById(R.id.files_header)
         pathView = findViewById(R.id.files_path)
@@ -109,8 +128,11 @@ class FileBrowserActivity : AppCompatActivity() {
 
         // Назад - на уровень выше, с главного экрана - выход
         onBackPressedDispatcher.addCallback(this) {
-            val dir = currentDir
-            if (dir == null) finish() else openDir(parentOf(dir), focusPath = dir)
+            when (val current = location) {
+                Location.Home -> finish()
+                is Location.Local -> open(parentOf(current.path), focusPath = current.path)
+                is Location.Dlna -> open(current.parent ?: Location.Home, focusPath = dlnaKey(current))
+            }
         }
 
         if (hasReadPermission()) openInitial() else permissionLauncher.launch(readPermission())
@@ -120,10 +142,10 @@ class FileBrowserActivity : AppCompatActivity() {
         super.onResume()
         if (waitingForAllFilesAccess) {
             waitingForAllFilesAccess = false
-            openDir(currentDir)
-        } else if (started && currentDir == null) {
+            open(location)
+        } else if (started && location == Location.Home) {
             // Возврат из плеера: история обновилась
-            openDir(null, focusPath = focusedPath())
+            open(Location.Home, focusPath = focusedPath())
         }
     }
 
@@ -164,7 +186,8 @@ class FileBrowserActivity : AppCompatActivity() {
     private fun openInitial() {
         roots = StorageRoots.list(this)
         started = true
-        openDir(null)
+        open(Location.Home)
+        searchDlna()
     }
 
     // Путь строки под фокусом, чтобы вернуть на нее фокус после обновления списка
@@ -175,26 +198,41 @@ class FileBrowserActivity : AppCompatActivity() {
 
     private fun isRoot(path: String) = roots.any { it.path == path }
 
-    // Выше корня хранилища - список хранилищ
-    private fun parentOf(path: String): String? =
-        if (isRoot(path)) null else File(path).parent?.takeIf { parent -> roots.any { parent.startsWith(it.path) } }
+    // Выше корня хранилища - главный экран
+    private fun parentOf(path: String): Location {
+        if (isRoot(path)) return Location.Home
+        val parent = File(path).parent?.takeIf { parent -> roots.any { parent.startsWith(it.path) } }
+        return if (parent != null) Location.Local(parent) else Location.Home
+    }
 
-    private fun openDir(path: String?, focusPath: String? = null) {
-        currentDir = path
-        if (path == null) roots = StorageRoots.list(this)
-        header.text = when {
-            path == null -> getString(R.string.app_name)
-            else -> roots.firstOrNull { it.path == path }?.title ?: File(path).name
+    private fun dlnaKey(location: Location.Dlna) = "dlna:${location.server.controlUrl}#${location.objectId}"
+
+    private fun open(target: Location, focusPath: String? = null) {
+        location = target
+        if (target == Location.Home) roots = StorageRoots.list(this)
+        header.text = when (target) {
+            Location.Home -> getString(R.string.app_name)
+            is Location.Local -> roots.firstOrNull { it.path == target.path }?.title ?: File(target.path).name
+            is Location.Dlna -> target.title
         }
-        pathView.text = path.orEmpty()
-        pathView.isVisible = path != null
+        pathView.text = when (target) {
+            Location.Home -> ""
+            is Location.Local -> target.path
+            is Location.Dlna -> target.server.name
+        }
+        pathView.isVisible = target != Location.Home
         progress.isVisible = true
         emptyView.isVisible = false
 
-        lifecycleScope.launch {
-            val newRows = withContext(Dispatchers.IO) { if (path == null) rootRows() else dirRows(path) }
+        loadJob?.cancel()
+        loadJob = lifecycleScope.launch {
+            val newRows = when (target) {
+                Location.Home -> withContext(Dispatchers.IO) { rootRows() }
+                is Location.Local -> withContext(Dispatchers.IO) { dirRows(target.path) }
+                is Location.Dlna -> dlnaRows(target)
+            }
             // Пользователь мог уйти в другую папку, пока читали эту
-            if (currentDir != path) return@launch
+            if (location != target) return@launch
             progress.isVisible = false
             rows = newRows ?: emptyList()
             adapter.notifyDataSetChanged()
@@ -206,7 +244,7 @@ class FileBrowserActivity : AppCompatActivity() {
         }
     }
 
-    /** Главный экран: продолжить просмотр, плейлисты по ссылке, хранилища. */
+    /** Главный экран: продолжить просмотр, плейлисты по ссылке, устройства, сеть. */
     private fun rootRows(): List<Row> {
         val result = mutableListOf<Row>()
 
@@ -237,7 +275,29 @@ class FileBrowserActivity : AppCompatActivity() {
             result.add(Row(RowType.ACCESS, getString(R.string.files_all_access_title), getString(R.string.files_all_access_desc), "access"))
         }
         roots.forEach { result.add(Row(RowType.STORAGE, it.title, it.path, it.path)) }
+
+        result.add(Row(RowType.HEADER, getString(R.string.home_network), "", ""))
+        dlnaServers.forEach { server ->
+            result.add(Row(RowType.DLNA_SERVER, server.name, getString(R.string.home_dlna_server), "dlna_server:${server.controlUrl}", server))
+        }
+        val searchTitle = when {
+            dlnaSearching -> getString(R.string.home_dlna_searching)
+            dlnaServers.isEmpty() -> getString(R.string.home_dlna_not_found)
+            else -> getString(R.string.home_dlna_search_again)
+        }
+        result.add(Row(RowType.DLNA_SEARCH, searchTitle, getString(R.string.home_dlna_search_desc), "dlna_search"))
         return result
+    }
+
+    private fun searchDlna() {
+        if (dlnaSearching) return
+        dlnaSearching = true
+        if (location == Location.Home) open(Location.Home, focusPath = focusedPath())
+        lifecycleScope.launch {
+            dlnaServers = dlnaClient.discover()
+            dlnaSearching = false
+            if (location == Location.Home) open(Location.Home, focusPath = focusedPath())
+        }
     }
 
     /** Содержимое папки или null, если ее не прочитать. */
@@ -247,9 +307,8 @@ class FileBrowserActivity : AppCompatActivity() {
             files.map { FileEntry(it.name, it.absolutePath, it.isDirectory, if (it.isDirectory) 0L else it.length()) }
         )
         val parent = parentOf(path)
-        val result = mutableListOf(
-            Row(RowType.PARENT, "..", parent ?: getString(R.string.app_name), parent ?: "")
-        )
+        val parentTitle = (parent as? Location.Local)?.path ?: getString(R.string.app_name)
+        val result = mutableListOf(Row(RowType.PARENT, "..", parentTitle, (parent as? Location.Local)?.path.orEmpty()))
         entries.forEach { entry ->
             result.add(
                 when {
@@ -258,6 +317,26 @@ class FileBrowserActivity : AppCompatActivity() {
                     else -> Row(RowType.VIDEO, entry.name, FileBrowserLogic.formatSize(entry.size, sizeUnits), entry.path)
                 }
             )
+        }
+        return result
+    }
+
+    /** Содержимое папки медиасервера: сначала папки, потом видео, по имени с учетом чисел. */
+    private suspend fun dlnaRows(target: Location.Dlna): List<Row>? {
+        val entries = dlnaClient.browse(target.server, target.objectId) ?: return null
+        val parentTitle = target.parent?.title ?: getString(R.string.app_name)
+        val result = mutableListOf(Row(RowType.PARENT, "..", parentTitle, ""))
+        val sorted = entries.sortedWith(compareBy<DlnaEntry> { !it.isContainer }.then { a, b ->
+            FileBrowserLogic.naturalCompare(a.title, b.title)
+        })
+        sorted.forEach { entry ->
+            if (entry.isContainer) {
+                val child = Location.Dlna(target.server, entry.id, entry.title, target)
+                result.add(Row(RowType.DLNA_FOLDER, entry.title, getString(R.string.files_folder), dlnaKey(child), entry))
+            } else {
+                val size = if (entry.size > 0) FileBrowserLogic.formatSize(entry.size, sizeUnits) else ""
+                result.add(Row(RowType.DLNA_VIDEO, entry.title, size, entry.url.orEmpty(), entry))
+            }
         }
         return result
     }
@@ -278,16 +357,29 @@ class FileBrowserActivity : AppCompatActivity() {
             RowType.HISTORY -> resume(row.data as HistoryEntry)
             RowType.HISTORY_TOGGLE -> {
                 historyExpanded = !historyExpanded
-                openDir(null, focusPath = row.path)
+                open(Location.Home, focusPath = row.path)
             }
             RowType.SAVED_PLAYLIST -> (row.data as SavedPlaylist).let {
                 playUrl(it.url, HistorySource(HistoryEntry.KIND_PLAYLIST, it.url, it.name))
             }
             RowType.ADD_PLAYLIST -> showPlaylistDialog(null)
             RowType.ACCESS -> requestAllFilesAccess()
-            RowType.STORAGE, RowType.DIR -> openDir(row.path)
-            RowType.PARENT -> openDir(row.path.ifEmpty { null }, focusPath = currentDir)
+            RowType.STORAGE, RowType.DIR -> open(Location.Local(row.path))
+            RowType.DLNA_SERVER -> (row.data as DlnaServer).let {
+                open(Location.Dlna(it, DlnaLogic.ROOT_ID, it.name, null))
+            }
+            RowType.DLNA_SEARCH -> searchDlna()
+            RowType.PARENT -> when (val current = location) {
+                is Location.Local -> open(parentOf(current.path), focusPath = current.path)
+                is Location.Dlna -> open(current.parent ?: Location.Home, focusPath = dlnaKey(current))
+                Location.Home -> Unit
+            }
+            RowType.DLNA_FOLDER -> (location as? Location.Dlna)?.let { current ->
+                val entry = row.data as DlnaEntry
+                open(Location.Dlna(current.server, entry.id, entry.title, current))
+            }
             RowType.VIDEO -> playFolder(row)
+            RowType.DLNA_VIDEO -> playDlnaFolder(row)
             RowType.PLAYLIST -> {
                 val uri = Uri.fromFile(File(row.path))
                 play(listOf(uri), listOf(row.title), 0, HistorySource(HistoryEntry.KIND_PLAYLIST, uri.toString(), row.title))
@@ -303,7 +395,7 @@ class FileBrowserActivity : AppCompatActivity() {
                 val entry = row.data as HistoryEntry
                 ChoiceDialog.show(this, entry.title, listOf(getString(R.string.home_history_remove)), -1) {
                     repository.removeWatchHistory(entry.key)
-                    openDir(null)
+                    open(Location.Home)
                 }
             }
             else -> return false
@@ -311,10 +403,12 @@ class FileBrowserActivity : AppCompatActivity() {
         return true
     }
 
+    // ==================== ВОСПРОИЗВЕДЕНИЕ ====================
+
     // Видео папки открываются плейлистом с выбранного: следующая серия запускается сама
     private fun playFolder(selected: Row) {
+        val dir = (location as? Location.Local)?.path ?: return
         val videos = rows.filter { it.type == RowType.VIDEO }
-        val dir = currentDir ?: return
         play(
             videos.map { Uri.fromFile(File(it.path)) },
             videos.map { it.title },
@@ -323,19 +417,36 @@ class FileBrowserActivity : AppCompatActivity() {
         )
     }
 
+    private fun playDlnaFolder(selected: Row) {
+        val current = location as? Location.Dlna ?: return
+        val videos = rows.filter { it.type == RowType.DLNA_VIDEO }.map { it.data as DlnaEntry }
+        playDlna(videos, videos.indexOf(selected.data as DlnaEntry).coerceAtLeast(0), current.server, current.objectId, current.title)
+    }
+
+    private fun playDlna(videos: List<DlnaEntry>, startIndex: Int, server: DlnaServer, objectId: String, title: String) {
+        val source = HistorySource(HistoryEntry.KIND_DLNA, HomeLogic.dlnaSource(server.location, objectId), title)
+        val intent = playerIntent(videos.map { Uri.parse(it.url) }, videos.map { it.title }, startIndex, source, titlesAreNames = true)
+        // Субтитры, которые отдает сервер (например, .srt рядом с видео у MiniDLNA)
+        if (videos.any { it.subtitleUrls.isNotEmpty() }) {
+            intent.putParcelableArrayListExtra("video_list.subtitles", ArrayList(videos.map { video ->
+                Bundle().apply {
+                    putParcelableArray("uris", video.subtitleUrls.map { Uri.parse(it) }.toTypedArray())
+                    putStringArray("names", video.subtitleUrls.map { Uri.parse(it).lastPathSegment.orEmpty() }.toTypedArray())
+                }
+            }))
+        }
+        startActivity(intent)
+    }
+
     /** Продолжить просмотр: папка снова открывается плейлистом с последнего видео, плейлист - по ссылке. */
     private fun resume(entry: HistoryEntry) {
         val source = HistorySource(entry.kind, entry.source, entry.sourceName)
         when (entry.kind) {
             HistoryEntry.KIND_FOLDER -> {
-                val dir = File(entry.source)
-                val files = dir.listFiles()
-                if (files == null) {
-                    Toast.makeText(this, R.string.home_unavailable, Toast.LENGTH_LONG).show()
-                    return
-                }
-                val videos = FileBrowserLogic.visibleEntries(files.map { FileEntry(it.name, it.absolutePath, it.isDirectory) })
-                    .filter { it.isVideo }
+                val files = File(entry.source).listFiles()
+                val videos = files?.let { list ->
+                    FileBrowserLogic.visibleEntries(list.map { FileEntry(it.name, it.absolutePath, it.isDirectory) }).filter { it.isVideo }
+                }.orEmpty()
                 val uris = videos.map { Uri.fromFile(File(it.path)) }
                 val index = uris.indexOfFirst { it.toString() == entry.uri }
                 if (index < 0) {
@@ -344,13 +455,33 @@ class FileBrowserActivity : AppCompatActivity() {
                 }
                 play(uris, videos.map { it.name }, index, source)
             }
+            HistoryEntry.KIND_DLNA -> resumeDlna(entry)
             else -> playUrl(entry.source, source)
+        }
+    }
+
+    // DLNA: заново читаем папку сервера (адрес сервера в сети мог смениться) и ищем видео по ссылке или имени
+    private fun resumeDlna(entry: HistoryEntry) {
+        val (serverLocation, objectId) = HomeLogic.parseDlnaSource(entry.source) ?: return
+        progress.isVisible = true
+        lifecycleScope.launch {
+            val server = dlnaClient.describe(serverLocation)
+            val videos = server?.let { dlnaClient.browse(it, objectId) }?.filter { !it.isContainer }
+                ?.sortedWith { a, b -> FileBrowserLogic.naturalCompare(a.title, b.title) }
+            progress.isVisible = false
+            val index = videos?.indexOfFirst { it.url == entry.uri }?.takeIf { it >= 0 }
+                ?: videos?.indexOfFirst { it.title == entry.title }?.takeIf { it >= 0 }
+            if (server == null || videos == null || index == null) {
+                Toast.makeText(this@FileBrowserActivity, R.string.home_unavailable, Toast.LENGTH_LONG).show()
+                return@launch
+            }
+            playDlna(videos, index, server, objectId, entry.sourceName)
         }
     }
 
     // Плейлист по ссылке: содержимое проверяется как M3U даже без расширения (get.php?...)
     private fun playUrl(url: String, source: HistorySource) {
-        val intent = playerIntent(listOf(Uri.parse(url)), listOf(source.name), 0, source)
+        val intent = playerIntent(listOf(Uri.parse(url)), listOf(source.name), 0, source, titlesAreNames = true)
             .putExtra(IntentUtils.EXTRA_FORCE_M3U, true)
         startActivity(intent)
     }
@@ -359,12 +490,21 @@ class FileBrowserActivity : AppCompatActivity() {
         startActivity(playerIntent(uris, fileNames, startIndex, source))
     }
 
-    private fun playerIntent(uris: List<Uri>, fileNames: List<String>, startIndex: Int, source: HistorySource): Intent =
+    /**
+     * @param titlesAreNames названия уже без расширения (DLNA, плейлист), иначе это имена файлов
+     */
+    private fun playerIntent(
+        uris: List<Uri>,
+        names: List<String>,
+        startIndex: Int,
+        source: HistorySource,
+        titlesAreNames: Boolean = false
+    ): Intent =
         // Ссылки передаем в extras, а не в data: file:// в data система запрещает (FileUriExposedException)
         Intent(this, PlayerActivity::class.java).apply {
             putParcelableArrayListExtra("video_list", ArrayList(uris))
-            putExtra("video_list.name", fileNames.map { it.substringBeforeLast('.') }.toTypedArray())
-            putExtra("video_list.filename", fileNames.toTypedArray())
+            putExtra("video_list.name", names.map { if (titlesAreNames) it else it.substringBeforeLast('.') }.toTypedArray())
+            if (!titlesAreNames) putExtra("video_list.filename", names.toTypedArray())
             putExtra("start_index", startIndex)
             putExtra(IntentUtils.EXTRA_HISTORY_KIND, source.kind)
             putExtra(IntentUtils.EXTRA_HISTORY_SOURCE, source.source)
@@ -372,6 +512,8 @@ class FileBrowserActivity : AppCompatActivity() {
             // Если плеер уже открыт под этим экраном, возвращаемся в него, а не открываем второй
             addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
         }
+
+    // ==================== ПЛЕЙЛИСТЫ ПО ССЫЛКЕ ====================
 
     // Добавление (playlist = null) или изменение плейлиста по ссылке
     private fun showPlaylistDialog(playlist: SavedPlaylist?) {
@@ -390,7 +532,7 @@ class FileBrowserActivity : AppCompatActivity() {
         btnDelete.setOnClickListener {
             playlist?.let { repository.removeSavedPlaylist(it.id) }
             dialog.dismiss()
-            openDir(null)
+            open(Location.Home)
         }
         dialog.findViewById<Button>(R.id.btn_cancel).setOnClickListener { dialog.dismiss() }
         dialog.findViewById<Button>(R.id.btn_save).setOnClickListener {
@@ -403,7 +545,7 @@ class FileBrowserActivity : AppCompatActivity() {
             val id = playlist?.id ?: UUID.randomUUID().toString()
             repository.putSavedPlaylist(SavedPlaylist(id, name, url))
             dialog.dismiss()
-            openDir(null, focusPath = "playlist:$id")
+            open(Location.Home, focusPath = "playlist:$id")
         }
         dialog.show()
         (if (playlist == null) editUrl else editName).requestFocus()
@@ -446,15 +588,15 @@ class FileBrowserActivity : AppCompatActivity() {
             holder.icon.setImageResource(
                 when (row.type) {
                     RowType.HEADER, RowType.HISTORY -> R.drawable.ic_play_arrow
-                    RowType.HISTORY_TOGGLE -> R.drawable.ic_playlist_play
-                    RowType.SAVED_PLAYLIST -> R.drawable.ic_playlist_play
+                    RowType.HISTORY_TOGGLE, RowType.SAVED_PLAYLIST, RowType.PLAYLIST -> R.drawable.ic_playlist_play
                     RowType.ADD_PLAYLIST -> R.drawable.ic_add
                     RowType.ACCESS -> R.drawable.ic_lock_open
                     RowType.STORAGE -> R.drawable.ic_storage
+                    RowType.DLNA_SERVER -> R.drawable.ic_dlna
+                    RowType.DLNA_SEARCH -> R.drawable.ic_update
                     RowType.PARENT -> R.drawable.ic_arrow_left
-                    RowType.DIR -> R.drawable.ic_folder
-                    RowType.VIDEO -> R.drawable.ic_video_file
-                    RowType.PLAYLIST -> R.drawable.ic_playlist_play
+                    RowType.DIR, RowType.DLNA_FOLDER -> R.drawable.ic_folder
+                    RowType.VIDEO, RowType.DLNA_VIDEO -> R.drawable.ic_video_file
                 }
             )
             holder.itemView.setOnClickListener { onRowClick(row) }

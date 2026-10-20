@@ -38,4 +38,11 @@ class HomeLogicTest {
         assertEquals("iptv.example.com", HomeLogic.defaultPlaylistName("http://iptv.example.com/get.php?u=1"))
         assertEquals("tv.m3u", HomeLogic.defaultPlaylistName("file:///storage/emulated/0/tv.m3u"))
     }
+
+    @Test
+    fun `dlna source keeps the server and the folder`() {
+        val source = HomeLogic.dlnaSource("http://192.168.1.10:8200/rootDesc.xml", "64$1")
+        assertEquals("http://192.168.1.10:8200/rootDesc.xml" to "64$1", HomeLogic.parseDlnaSource(source))
+        assertEquals(null, HomeLogic.parseDlnaSource("http://only-location"))
+    }
 }

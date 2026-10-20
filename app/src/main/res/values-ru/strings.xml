@@ -437,6 +437,12 @@
     <string name="home_playlist_url_empty">Укажите ссылку на плейлист</string>
     <string name="home_delete">УДАЛИТЬ</string>
     <string name="home_unavailable">Источник недоступен (например, USB-диск отключен)</string>
+    <string name="home_network">Сеть</string>
+    <string name="home_dlna_server">Медиасервер DLNA</string>
+    <string name="home_dlna_searching">Поиск медиасерверов…</string>
+    <string name="home_dlna_not_found">Медиасерверы не найдены. Искать снова</string>
+    <string name="home_dlna_search_again">Искать снова</string>
+    <string name="home_dlna_search_desc">Серверы DLNA в локальной сети (NAS, компьютер, роутер)</string>
     <string-array name="file_size_units">
         <item>Б</item>
         <item>КБ</item>

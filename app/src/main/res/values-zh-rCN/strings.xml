@@ -423,6 +423,12 @@
     <string name="home_playlist_url_empty">请输入播放列表链接</string>
     <string name="home_delete">删除</string>
     <string name="home_unavailable">来源不可用（例如 USB 驱动器已断开）</string>
+    <string name="home_network">网络</string>
+    <string name="home_dlna_server">DLNA 媒体服务器</string>
+    <string name="home_dlna_searching">正在搜索媒体服务器…</string>
+    <string name="home_dlna_not_found">未找到媒体服务器。重新搜索</string>
+    <string name="home_dlna_search_again">重新搜索</string>
+    <string name="home_dlna_search_desc">局域网中的 DLNA 服务器（NAS、电脑、路由器）</string>
     <string-array name="file_size_units">
         <item>B</item>
         <item>KB</item>

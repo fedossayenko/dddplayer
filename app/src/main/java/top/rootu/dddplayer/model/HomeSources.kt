@@ -10,8 +10,9 @@ data class SavedPlaylist(val id: String, val name: String, val url: String)
  * Запись истории "Продолжить просмотр". Одна запись на источник: при переключении серии в папке
  * запись обновляется (новое видео и позиция), а не добавляется новая.
  *
- * @param kind тип источника: [KIND_FOLDER] - папка (видео папки открываются плейлистом), [KIND_PLAYLIST] - плейлист по ссылке
- * @param source путь к папке или ссылка на плейлист
+ * @param kind тип источника: [KIND_FOLDER] - папка (видео папки открываются плейлистом), [KIND_PLAYLIST] - плейлист
+ * по ссылке, [KIND_DLNA] - папка медиасервера
+ * @param source путь к папке, ссылка на плейлист или папка медиасервера (HomeLogic.dlnaSource)
  * @param sourceName название источника для подписи (имя папки или плейлиста)
  * @param title название текущего видео
  * @param uri ссылка на текущее видео
@@ -31,5 +32,6 @@ data class HistoryEntry(
     companion object {
         const val KIND_FOLDER = "folder"
         const val KIND_PLAYLIST = "playlist"
+        const val KIND_DLNA = "dlna"
     }
 }
