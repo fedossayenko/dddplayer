@@ -90,6 +90,8 @@
 
     <!-- Повідомлення та помилки в плеєрі -->
     <string name="error_playback_title">Помилка відтворення</string>
+    <string name="error_copied">Подробиці помилки скопійовано</string>
+    <string name="error_hint_content_source">Застосунок, через який відкрито файл (файловий менеджер, SMB-клієнт), не зміг віддати дані. Такі застосунки часто віддають файл без перемотування, а MP4 з індексом у кінці так не відкрити. Спробуйте інший файловий менеджер або перепакуйте файл із faststart.</string>
     <string name="error_video_decoder">Помилка відеодекодера.\nВідтворюється тільки аудіо.</string>
     <string name="error_audio_disabled">Помилка аудіо. Звук вимкнено.\n%s</string>
     <string name="error_audio_disabled_hint">Помилка аудіо. Звук вимкнено.\nСпробуйте іншу доріжку.\n%s</string>

@@ -2,6 +2,8 @@ package top.rootu.dddplayer.ui
 
 import android.annotation.SuppressLint
 import android.app.Dialog
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Context
 import android.content.ActivityNotFoundException
 import android.content.Intent
@@ -533,6 +535,13 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
         }
     }
     private fun setupControls() {
+        // Долгое нажатие на подробности ошибки копирует их (чтобы приложить к issue)
+        ui.errorDetails.setOnLongClickListener {
+            val clipboard = requireContext().getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+            clipboard?.setPrimaryClip(ClipData.newPlainText(getString(R.string.error), ui.errorDetails.text))
+            Toast.makeText(requireContext(), R.string.error_copied, Toast.LENGTH_SHORT).show()
+            true
+        }
         ui.buttonPip.isVisible = (activity as? PlayerActivity)?.supportsPictureInPicture == true
         ui.buttonPip.setOnClickListener {
             (activity as? PlayerActivity)?.enterPlayerPictureInPicture(showError = true)

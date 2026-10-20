@@ -27,6 +27,7 @@ import androidx.recyclerview.widget.RecyclerView
 import coil.load
 import top.rootu.dddplayer.R
 import top.rootu.dddplayer.data.SettingsRepository
+import top.rootu.dddplayer.logic.PlaybackErrorLogic
 import top.rootu.dddplayer.model.MediaItem
 import top.rootu.dddplayer.model.ResizeMode
 import top.rootu.dddplayer.model.StereoInputType
@@ -120,6 +121,7 @@ class PlayerUiController(private val rootView: View) {
     val errorScreen: View = rootView.findViewById(R.id.error_screen)
     val errorText: TextView = rootView.findViewById(R.id.error_text)
     val errorDetails: TextView = rootView.findViewById(R.id.error_details)
+    val errorHint: TextView = rootView.findViewById(R.id.error_hint)
 
     val buttonUpdate: TextView = controlsView.findViewById(R.id.button_update)
 
@@ -418,6 +420,7 @@ class PlayerUiController(private val rootView: View) {
     fun showFatalError(error: PlaybackException) {
         errorText.text = rootView.context.getString(R.string.error_playback_title)
         errorDetails.text = formatErrorDetails(error)
+        showErrorHint(error)
         errorScreen.isVisible = true
         errorScreen.setBackgroundColor("#CC000000".toColorInt())
         bufferingContainer.isVisible = false
@@ -427,6 +430,7 @@ class PlayerUiController(private val rootView: View) {
     fun showVideoErrorState(error: PlaybackException) {
         errorText.text = rootView.context.getString(R.string.error_video_decoder)
         errorDetails.text = formatErrorDetails(error)
+        showErrorHint(error)
         errorScreen.isVisible = true
         errorScreen.setBackgroundColor("#80000000".toColorInt())
         bufferingContainer.isVisible = false
@@ -435,6 +439,14 @@ class PlayerUiController(private val rootView: View) {
 
     fun hideError() {
         errorScreen.isVisible = false
+    }
+
+    // Подсказка для известных причин: файл не отдало приложение-источник (content://)
+    private fun showErrorHint(error: PlaybackException) {
+        val isIoError = error.errorCode in 2000..2999
+        val showHint = isIoError && PlaybackErrorLogic.isContentSourceError(error)
+        errorHint.isVisible = showHint
+        if (showHint) errorHint.setText(R.string.error_hint_content_source)
     }
 
     private fun formatErrorDetails(error: PlaybackException): String {
@@ -462,7 +474,9 @@ class PlayerUiController(private val rootView: View) {
         val msg = error.message ?: ""
         val displayMsg = if (msg.length > 303) msg.take(300) + "..." else msg
 
-        return "${error.errorCodeName} (${error.errorCode})\n$displayMsg"
+        // Причины ниже кода ошибки: там видно, что именно не удалось (например, ответ файлового менеджера)
+        val causes = PlaybackErrorLogic.causeLines(error).joinToString("") { "\n→ $it" }
+        return "${error.errorCodeName} (${error.errorCode})\n$displayMsg$causes"
     }
 
     fun updateSettingsOptions(optionsData: Pair<List<String>, Int>?) {
