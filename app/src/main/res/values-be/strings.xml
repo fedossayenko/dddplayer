@@ -197,9 +197,6 @@
     <string name="swipe_release_exit">Адпусціце для выхаду</string>
     <string name="pref_pause_dim">Зацьмняць экран на паўзе</string>
     <string name="pref_pause_dim_desc">Абараняе OLED экраны ад выгарання</string>
-    <string name="pref_startup_playlist">Плэйліст пры запуску</string>
-    <string name="pref_startup_playlist_desc">Спасылка на M3U плэйліст</string>
-    <string name="pref_startup_playlist_not_set">Не зададзены</string>
     <string name="dialog_input_url_title">Увядзіце спасылку на плэйліст</string>
     <string name="dialog_input_url_hint">http://...</string>
     <string name="save">Захаваць</string>
@@ -398,8 +395,19 @@
     <string name="files_all_access_unavailable">На гэтай прыладзе няма экрана для выдачы доступу да ўсіх файлаў</string>
     <string name="files_permission_denied">Без доступу да сховішча файлы не бачныя</string>
     <string name="files_folder">Папка</string>
-    <string name="menu_files_title">Файлы</string>
-    <string name="menu_files_desc">Адкрыць відэа з памяці прылады або з USB-дыска</string>
+    <string name="home_continue">Працягнуць прагляд</string>
+    <string name="home_playlists">Плэйлісты</string>
+    <string name="home_devices">Прылады</string>
+    <string name="home_history_all">Уся гісторыя (%1$d)</string>
+    <string name="home_history_collapse">Згарнуць</string>
+    <string name="home_history_remove">Выдаліць з гісторыі</string>
+    <string name="home_playlist_add">Дадаць плэйліст</string>
+    <string name="home_playlist_add_desc">Спасылка на M3U, напрыклад IPTV. Доўгае націсканне — змяніць</string>
+    <string name="home_playlist_edit">Плэйліст</string>
+    <string name="home_playlist_name_hint">Назва</string>
+    <string name="home_playlist_url_empty">Укажыце спасылку на плэйліст</string>
+    <string name="home_delete">ВЫДАЛІЦЬ</string>
+    <string name="home_unavailable">Крыніца недаступная (напрыклад, USB-дыск адключаны)</string>
     <string-array name="file_size_units">
         <item>Б</item>
         <item>КБ</item>

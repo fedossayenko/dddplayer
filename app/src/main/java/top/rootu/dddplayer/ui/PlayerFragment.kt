@@ -694,10 +694,6 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
                     sideMenuDialog?.dismiss()
                     startActivity(Intent(requireContext(), GlobalSettingsActivity::class.java))
                 }
-                "files" -> {
-                    sideMenuDialog?.dismiss()
-                    startActivity(Intent(requireContext(), FileBrowserActivity::class.java))
-                }
             }
         }
     }

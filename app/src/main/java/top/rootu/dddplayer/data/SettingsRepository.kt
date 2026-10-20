@@ -8,13 +8,17 @@ import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
 import top.rootu.dddplayer.logic.AnaglyphLogic
+import top.rootu.dddplayer.logic.HomeLogic
 import top.rootu.dddplayer.model.AnaglyphCalibration
 import top.rootu.dddplayer.model.AudioTrackStat
+import top.rootu.dddplayer.model.HistoryEntry
+import top.rootu.dddplayer.model.SavedPlaylist
 import top.rootu.dddplayer.model.StereoOutputMode
 import top.rootu.dddplayer.model.SubtitleStyle
 import top.rootu.dddplayer.player.NetworkBufferLoadControl
 import top.rootu.dddplayer.renderer.StereoRenderer
 import top.rootu.dddplayer.viewmodel.GlassesGroup
+import java.util.UUID
 
 class SettingsRepository private constructor(context: Context) {
 
@@ -116,8 +120,91 @@ class SettingsRepository private constructor(context: Context) {
 
     // --- Playlist Settings ---
     // Плейлист, который открывается при запуске из лаунчера
-    fun getStartupPlaylistUri(): String? = prefs.getString("startup_playlist_uri", null)
-    fun setStartupPlaylistUri(uri: String?) = prefs.edit { putString("startup_playlist_uri", uri) }
+    // --- Стартовый экран: плейлисты по ссылке и история просмотра ---
+
+    /**
+     * Плейлисты стартового экрана. Прежний "стартовый плейлист" (startup_playlist_uri) переносится сюда
+     * один раз отдельным пунктом.
+     */
+    fun getSavedPlaylists(): List<SavedPlaylist> {
+        migrateStartupPlaylist()
+        val json = prefs.getString("saved_playlists", null) ?: return emptyList()
+        return try {
+            val array = JSONArray(json)
+            (0 until array.length()).map { i ->
+                val obj = array.getJSONObject(i)
+                SavedPlaylist(obj.getString("id"), obj.optString("name"), obj.getString("url"))
+            }
+        } catch (e: JSONException) {
+            emptyList()
+        }
+    }
+
+    fun saveSavedPlaylists(playlists: List<SavedPlaylist>) {
+        val array = JSONArray()
+        playlists.forEach { array.put(JSONObject().put("id", it.id).put("name", it.name).put("url", it.url)) }
+        prefs.edit { putString("saved_playlists", array.toString()) }
+    }
+
+    /** Добавляет новый плейлист или заменяет плейлист с тем же id. */
+    fun putSavedPlaylist(playlist: SavedPlaylist) {
+        val list = getSavedPlaylists()
+        val updated = if (list.any { it.id == playlist.id }) list.map { if (it.id == playlist.id) playlist else it } else list + playlist
+        saveSavedPlaylists(updated)
+    }
+
+    fun removeSavedPlaylist(id: String) = saveSavedPlaylists(getSavedPlaylists().filter { it.id != id })
+
+    private fun migrateStartupPlaylist() {
+        if (!prefs.contains("startup_playlist_uri")) return
+        val url = prefs.getString("startup_playlist_uri", null)?.trim()
+        prefs.edit { remove("startup_playlist_uri") }
+        if (url.isNullOrEmpty()) return
+        val json = prefs.getString("saved_playlists", null)
+        val array = try { if (json != null) JSONArray(json) else JSONArray() } catch (e: JSONException) { JSONArray() }
+        array.put(JSONObject().put("id", UUID.randomUUID().toString()).put("name", HomeLogic.defaultPlaylistName(url)).put("url", url))
+        prefs.edit { putString("saved_playlists", array.toString()) }
+    }
+
+    /** История "Продолжить просмотр", новые сверху. */
+    fun getWatchHistory(): List<HistoryEntry> {
+        val json = prefs.getString("watch_history", null) ?: return emptyList()
+        return try {
+            val array = JSONArray(json)
+            (0 until array.length()).map { i ->
+                val obj = array.getJSONObject(i)
+                HistoryEntry(
+                    kind = obj.getString("kind"),
+                    source = obj.getString("source"),
+                    sourceName = obj.optString("sourceName"),
+                    title = obj.optString("title"),
+                    uri = obj.getString("uri"),
+                    positionMs = obj.optLong("position"),
+                    durationMs = obj.optLong("duration"),
+                    updatedAt = obj.optLong("updatedAt")
+                )
+            }
+        } catch (e: JSONException) {
+            emptyList()
+        }
+    }
+
+    private fun saveWatchHistory(history: List<HistoryEntry>) {
+        val array = JSONArray()
+        history.forEach {
+            array.put(
+                JSONObject().put("kind", it.kind).put("source", it.source).put("sourceName", it.sourceName)
+                    .put("title", it.title).put("uri", it.uri).put("position", it.positionMs)
+                    .put("duration", it.durationMs).put("updatedAt", it.updatedAt)
+            )
+        }
+        prefs.edit { putString("watch_history", array.toString()) }
+    }
+
+    /** Обновляет запись источника (серия в той же папке заменяет прежнюю запись). */
+    fun recordWatchHistory(entry: HistoryEntry) = saveWatchHistory(HomeLogic.upsertHistory(getWatchHistory(), entry))
+
+    fun removeWatchHistory(key: String) = saveWatchHistory(getWatchHistory().filter { it.key != key })
 
     // Последний канал M3U плейлиста (восстанавливается только по точному URI)
     fun getLastPlayedChannelUri(): String? = prefs.getString("last_channel_uri", null)
@@ -238,10 +325,6 @@ class SettingsRepository private constructor(context: Context) {
 
     fun getPreferredSubLang(): String = prefs.getString("pref_sub_lang", TRACK_DEFAULT) ?: TRACK_DEFAULT
     fun setPreferredSubLang(lang: String) = prefs.edit { putString("pref_sub_lang", lang) }
-
-    // Последняя открытая папка файлового браузера (служебное, null - список хранилищ)
-    fun getFileBrowserLastDir(): String? = prefs.getString("file_browser_last_dir", null)
-    fun setFileBrowserLastDir(path: String?) = prefs.edit { putString("file_browser_last_dir", path) }
 
     fun getSubtitleAutoMode(): Int = prefs.getInt("subtitle_auto_mode", SUB_AUTO_DEFAULT)
     fun setSubtitleAutoMode(mode: Int) = prefs.edit { putInt("subtitle_auto_mode", mode) }

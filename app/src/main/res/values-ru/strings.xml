@@ -213,9 +213,6 @@
     <string name="swipe_release_exit">Отпустите для выхода</string>
     <string name="pref_pause_dim">Затемнение экрана на паузе</string>
     <string name="pref_pause_dim_desc">Защищает OLED экраны от выгорания</string>
-    <string name="pref_startup_playlist">Плейлист при запуске</string>
-    <string name="pref_startup_playlist_desc">Ссылка на M3U плейлист</string>
-    <string name="pref_startup_playlist_not_set">Не задан</string>
     <string name="dialog_input_url_title">Введите ссылку на плейлист</string>
     <string name="dialog_input_url_hint">http://...</string>
     <string name="save">Сохранить</string>
@@ -427,8 +424,19 @@
     <string name="files_all_access_unavailable">На этом устройстве нет экрана для выдачи доступа ко всем файлам</string>
     <string name="files_permission_denied">Без доступа к хранилищу файлы не видны</string>
     <string name="files_folder">Папка</string>
-    <string name="menu_files_title">Файлы</string>
-    <string name="menu_files_desc">Открыть видео из памяти устройства или с USB-диска</string>
+    <string name="home_continue">Продолжить просмотр</string>
+    <string name="home_playlists">Плейлисты</string>
+    <string name="home_devices">Устройства</string>
+    <string name="home_history_all">Вся история (%1$d)</string>
+    <string name="home_history_collapse">Свернуть</string>
+    <string name="home_history_remove">Удалить из истории</string>
+    <string name="home_playlist_add">Добавить плейлист</string>
+    <string name="home_playlist_add_desc">Ссылка на M3U, например IPTV. Долгое нажатие — изменить</string>
+    <string name="home_playlist_edit">Плейлист</string>
+    <string name="home_playlist_name_hint">Название</string>
+    <string name="home_playlist_url_empty">Укажите ссылку на плейлист</string>
+    <string name="home_delete">УДАЛИТЬ</string>
+    <string name="home_unavailable">Источник недоступен (например, USB-диск отключен)</string>
     <string-array name="file_size_units">
         <item>Б</item>
         <item>КБ</item>

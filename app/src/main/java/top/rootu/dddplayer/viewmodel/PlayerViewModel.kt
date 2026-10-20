@@ -35,6 +35,8 @@ import top.rootu.dddplayer.logic.AnaglyphLogic
 import top.rootu.dddplayer.logic.SettingsMutator
 import top.rootu.dddplayer.logic.TrackLogic
 import top.rootu.dddplayer.model.AspectRatioMode
+import top.rootu.dddplayer.model.HistoryEntry
+import top.rootu.dddplayer.model.HistorySource
 import top.rootu.dddplayer.model.MediaItem
 import top.rootu.dddplayer.model.MenuItem
 import top.rootu.dddplayer.model.PlaybackSpeed
@@ -639,6 +641,8 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             if (_isM3uPlaylist.value == true && currentUri != null) {
                 repository.setLastPlayedChannelUri(currentUri)
             }
+            // Новая серия сразу заменяет запись истории источника
+            updateWatchHistory()
 
             // Инфопанель при смене элемента: по настройке или в эфирном режиме
             if (p.mediaItemCount > 1 && (repository.isShowInfoOnTrackChange() || isOverallLiveMode())) {
@@ -1182,9 +1186,41 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         anaglyphDelegate.updateAnaglyphMatrix(anaglyphType)
     }
 
+    // Источник видео со стартового экрана: по нему обновляется история "Продолжить просмотр"
+    private var historySource: HistorySource? = null
+
+    fun setHistorySource(source: HistorySource?) {
+        historySource = source
+    }
+
+    /**
+     * Запись истории для источника: текущее видео и позиция. Серия в той же папке заменяет запись источника,
+     * а не добавляет новую.
+     */
+    private fun updateWatchHistory() {
+        val source = historySource ?: return
+        val p = player ?: return
+        val item = getPlayingItem() ?: return
+        val isLive = p.isCurrentMediaItemLive
+        val duration = p.duration.takeIf { it > 0 && it != C.TIME_UNSET && !isLive } ?: 0L
+        repository.recordWatchHistory(
+            HistoryEntry(
+                kind = source.kind,
+                source = source.source,
+                sourceName = source.name,
+                title = item.title ?: item.uri.lastPathSegment.orEmpty(),
+                uri = item.uri.toString(),
+                positionMs = if (isLive) 0L else p.currentPosition.coerceAtLeast(0L),
+                durationMs = duration,
+                updatedAt = System.currentTimeMillis()
+            )
+        )
+    }
+
     fun saveCurrentSettings() {
         val uri = currentUri ?: return
         val p = player ?: return
+        updateWatchHistory()
 
         val positionToSave = if (p.isCurrentMediaItemLive) 0L else p.currentPosition
         // Получаем ID текущих дорожек
@@ -1365,12 +1401,6 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                 context.getString(R.string.menu_quick_settings_title),
                 context.getString(R.string.menu_quick_settings_desc),
                 R.drawable.ic_settings_3d
-            ),
-            MenuItem(
-                "files",
-                context.getString(R.string.menu_files_title),
-                context.getString(R.string.menu_files_desc),
-                R.drawable.ic_folder
             ),
             MenuItem(
                 "global_settings",

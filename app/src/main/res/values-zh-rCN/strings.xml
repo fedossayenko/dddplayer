@@ -206,9 +206,6 @@
     <string name="swipe_release_exit">松开退出</string>
     <string name="pref_pause_dim">暂停时调暗屏幕</string>
     <string name="pref_pause_dim_desc">保护 OLED 屏幕免受烧屏影响</string>
-    <string name="pref_startup_playlist">启动播放列表</string>
-    <string name="pref_startup_playlist_desc">M3U播放列表链接</string>
-    <string name="pref_startup_playlist_not_set">未设置</string>
     <string name="dialog_input_url_title">输入播放列表链接</string>
     <string name="dialog_input_url_hint">http://...</string>
     <string name="save">保存</string>
@@ -413,8 +410,19 @@
     <string name="files_all_access_unavailable">此设备没有授予所有文件访问权限的界面</string>
     <string name="files_permission_denied">没有存储访问权限，无法看到文件</string>
     <string name="files_folder">文件夹</string>
-    <string name="menu_files_title">文件</string>
-    <string name="menu_files_desc">从设备存储或 USB 驱动器打开视频</string>
+    <string name="home_continue">继续观看</string>
+    <string name="home_playlists">播放列表</string>
+    <string name="home_devices">设备</string>
+    <string name="home_history_all">全部历史（%1$d）</string>
+    <string name="home_history_collapse">收起</string>
+    <string name="home_history_remove">从历史记录中删除</string>
+    <string name="home_playlist_add">添加播放列表</string>
+    <string name="home_playlist_add_desc">M3U 链接，例如 IPTV。长按可编辑</string>
+    <string name="home_playlist_edit">播放列表</string>
+    <string name="home_playlist_name_hint">名称</string>
+    <string name="home_playlist_url_empty">请输入播放列表链接</string>
+    <string name="home_delete">删除</string>
+    <string name="home_unavailable">来源不可用（例如 USB 驱动器已断开）</string>
     <string-array name="file_size_units">
         <item>B</item>
         <item>KB</item>

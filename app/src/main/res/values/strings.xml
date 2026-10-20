@@ -223,9 +223,6 @@
     <string name="swipe_release_exit">Release to exit</string>
     <string name="pref_pause_dim">Dim screen on pause</string>
     <string name="pref_pause_dim_desc">Protects OLED screens from burn-in</string>
-    <string name="pref_startup_playlist">Startup Playlist</string>
-    <string name="pref_startup_playlist_desc">URL to M3U playlist</string>
-    <string name="pref_startup_playlist_not_set">Not set</string>
     <string name="dialog_input_url_title">Enter Playlist URL</string>
     <string name="dialog_input_url_hint">http://...</string>
     <string name="save">Save</string>
@@ -430,8 +427,19 @@
     <string name="files_all_access_unavailable">This device has no screen to grant all files access</string>
     <string name="files_permission_denied">Without storage access files are not visible</string>
     <string name="files_folder">Folder</string>
-    <string name="menu_files_title">Files</string>
-    <string name="menu_files_desc">Open a video from the device storage or a USB drive</string>
+    <string name="home_continue">Continue watching</string>
+    <string name="home_playlists">Playlists</string>
+    <string name="home_devices">Devices</string>
+    <string name="home_history_all">All history (%1$d)</string>
+    <string name="home_history_collapse">Collapse</string>
+    <string name="home_history_remove">Remove from history</string>
+    <string name="home_playlist_add">Add playlist</string>
+    <string name="home_playlist_add_desc">M3U link, e.g. IPTV. Long press to edit</string>
+    <string name="home_playlist_edit">Playlist</string>
+    <string name="home_playlist_name_hint">Name</string>
+    <string name="home_playlist_url_empty">Enter the playlist link</string>
+    <string name="home_delete" tools:ignore="ButtonCase">DELETE</string>
+    <string name="home_unavailable">Source is not available (for example, the USB drive is disconnected)</string>
     <string-array name="file_size_units">
         <item>B</item>
         <item>KB</item>

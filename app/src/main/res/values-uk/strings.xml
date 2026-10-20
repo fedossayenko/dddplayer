@@ -197,9 +197,6 @@
     <string name="swipe_release_exit">Відпустіть для виходу</string>
     <string name="pref_pause_dim">Затемнювати екран на паузі</string>
     <string name="pref_pause_dim_desc">Захищає OLED екрани від вигоряння</string>
-    <string name="pref_startup_playlist">Плейлист при запуску</string>
-    <string name="pref_startup_playlist_desc">Посилання на M3U плейлист</string>
-    <string name="pref_startup_playlist_not_set">Не задано</string>
     <string name="dialog_input_url_title">Введіть посилання на плейлист</string>
     <string name="dialog_input_url_hint">http://...</string>
     <string name="save">Зберегти</string>
@@ -398,8 +395,19 @@
     <string name="files_all_access_unavailable">На цьому пристрої немає екрана для надання доступу до всіх файлів</string>
     <string name="files_permission_denied">Без доступу до сховища файли не видно</string>
     <string name="files_folder">Тека</string>
-    <string name="menu_files_title">Файли</string>
-    <string name="menu_files_desc">Відкрити відео з пам’яті пристрою або з USB-диска</string>
+    <string name="home_continue">Продовжити перегляд</string>
+    <string name="home_playlists">Плейлисти</string>
+    <string name="home_devices">Пристрої</string>
+    <string name="home_history_all">Уся історія (%1$d)</string>
+    <string name="home_history_collapse">Згорнути</string>
+    <string name="home_history_remove">Видалити з історії</string>
+    <string name="home_playlist_add">Додати плейлист</string>
+    <string name="home_playlist_add_desc">Посилання на M3U, наприклад IPTV. Довге натискання — змінити</string>
+    <string name="home_playlist_edit">Плейлист</string>
+    <string name="home_playlist_name_hint">Назва</string>
+    <string name="home_playlist_url_empty">Вкажіть посилання на плейлист</string>
+    <string name="home_delete">ВИДАЛИТИ</string>
+    <string name="home_unavailable">Джерело недоступне (наприклад, USB-диск від’єднано)</string>
     <string-array name="file_size_units">
         <item>Б</item>
         <item>КБ</item>

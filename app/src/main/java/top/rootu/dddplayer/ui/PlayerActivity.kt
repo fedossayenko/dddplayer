@@ -199,12 +199,8 @@ class PlayerActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val settingsRepo = SettingsRepository.getInstance(this)
-        val startupUri = settingsRepo.getStartupPlaylistUri()
-
-        // Проверяем, как запущено приложение
-        if (isLaunchedFromLauncher(intent) && startupUri.isNullOrEmpty() && !BuildConfig.DEBUG) {
-            // Запуск из лаунчера, плейлист НЕ задан, и это РЕЛИЗ -> файловый браузер (оттуда есть вход в настройки)
+        // Запуск из лаунчера -> стартовый экран (история, плейлисты, хранилища, вход в настройки)
+        if (isLaunchedFromLauncher(intent)) {
             startActivity(Intent(this, FileBrowserActivity::class.java))
             finish()
             return
@@ -341,21 +337,13 @@ class PlayerActivity : AppCompatActivity() {
 
         val (playlist, startIndex) = IntentUtils.parseIntent(this, intent)
 
-        if (playlist.isNotEmpty()) {
-            viewModel.loadMedia(playlist, startIndex)
-        } else {
-            // Если интент пустой, проверяем настройку стартового плейлиста
-            val settingsRepo = SettingsRepository.getInstance(this)
-            val startupUri = settingsRepo.getStartupPlaylistUri()
+        // История "Продолжить просмотр" ведется только для видео со стартового экрана
+        viewModel.setHistorySource(IntentUtils.parseHistorySource(intent))
 
-            if (!startupUri.isNullOrEmpty()) {
-                // Ссылка на плейлист может быть без расширения .m3u (например, get.php?...)
-                viewModel.loadMedia(
-                    listOf(top.rootu.dddplayer.model.MediaItem(startupUri.toUri())),
-                    0,
-                    forceM3uProbe = true
-                )
-            } else if (BuildConfig.DEBUG) {
+        if (playlist.isNotEmpty()) {
+            viewModel.loadMedia(playlist, startIndex, forceM3uProbe = IntentUtils.isForceM3u(intent))
+        } else {
+            if (BuildConfig.DEBUG) {
                 // Дефолтное видео для теста (только в DEBUG)
                 val defaultUri = "http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
 //                val defaultUri = "http://devstreaming-cdn.apple.com/videos/streaming/examples/img_bipbop_adv_example_fmp4/master.m3u8"
