@@ -1,5 +1,6 @@
 package top.rootu.dddplayer.logic
 
+import java.text.Collator
 import java.util.Locale
 
 /** Элемент списка файлового браузера. */
@@ -34,36 +35,36 @@ object FileBrowserLogic {
      * Что показываем: папки (кроме скрытых), видео и плейлисты. Папки сверху, дальше по имени
      * с учетом чисел ("Серия 2" раньше "Серия 10").
      */
-    fun visibleEntries(entries: List<FileEntry>): List<FileEntry> = entries
-        .filter { !it.name.startsWith(".") && (it.isDirectory || it.isVideo || it.isPlaylist) }
-        .sortedWith(compareBy<FileEntry> { !it.isDirectory }.then { a, b -> naturalCompare(a.name, b.name) })
-
-    /** Сравнение строк без учета регистра, числа сравниваются по значению. */
-    fun naturalCompare(a: String, b: String): Int {
-        var i = 0
-        var j = 0
-        while (i < a.length && j < b.length) {
-            val ca = a[i]
-            val cb = b[j]
-            if (ca.isDigit() && cb.isDigit()) {
-                val startA = i
-                val startB = j
-                while (i < a.length && a[i].isDigit()) i++
-                while (j < b.length && b[j].isDigit()) j++
-                val numA = a.substring(startA, i).trimStart('0')
-                val numB = b.substring(startB, j).trimStart('0')
-                if (numA.length != numB.length) return numA.length - numB.length
-                val cmp = numA.compareTo(numB)
-                if (cmp != 0) return cmp
-            } else {
-                val cmp = ca.lowercaseChar().compareTo(cb.lowercaseChar())
-                if (cmp != 0) return cmp
-                i++
-                j++
-            }
-        }
-        return (a.length - i) - (b.length - j)
+    fun visibleEntries(entries: List<FileEntry>): List<FileEntry> {
+        val collator = newCollator()
+        return entries
+            .filter { !it.name.startsWith(".") && (it.isDirectory || it.isVideo || it.isPlaylist) }
+            // Ключ сравнения считаем один раз на файл, а не в каждом сравнении
+            .map { it to collator.getCollationKey(sortKey(it.name)) }
+            .sortedWith(compareBy<Pair<FileEntry, java.text.CollationKey>> { !it.first.isDirectory }.thenBy { it.second })
+            .map { it.first }
     }
+
+    /**
+     * Сравнение имен с учетом чисел: s1e2 < s1e10, "Серия 2" < "Серия 10".
+     * Числа дополняются нулями до одной длины, а строки сравниваются по правилам языка (Collator)
+     * без учета регистра.
+     */
+    fun naturalCompare(a: String, b: String): Int {
+        val collator = newCollator()
+        return collator.compare(sortKey(a), sortKey(b))
+    }
+
+    private const val NUMBER_WIDTH = 32
+    private val NUMBER = Regex("\\d+")
+
+    // s1e2 -> s000...1e000...2: числа одной длины сравниваются как строки так же, как по значению.
+    // Нижний регистр - для надежности: Collator из JDK (тесты) не знает регистров кириллицы, в отличие от ICU в Android
+    private fun sortKey(name: String): String =
+        NUMBER.replace(name.lowercase(Locale.ROOT)) { it.value.trimStart('0').padStart(NUMBER_WIDTH, '0') }
+
+    // Collator не потокобезопасен: новый на каждую сортировку. SECONDARY - без учета регистра
+    private fun newCollator(): Collator = Collator.getInstance().apply { strength = Collator.SECONDARY }
 
     /** Размер файла: 734 Б, 12.4 МБ, 3.1 ГБ (единицы передаются из ресурсов). */
     fun formatSize(bytes: Long, units: List<String>): String {
