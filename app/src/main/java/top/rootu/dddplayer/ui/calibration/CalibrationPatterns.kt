@@ -20,13 +20,20 @@ object CalibrationPatterns {
     private const val EYE_W = FRAME_WIDTH.toFloat()
     private const val EYE_H = FRAME_HEIGHT.toFloat()
 
-    enum class Pattern { INTRO, CROSSHAIR, GRID, FRAME, DEPTH, CROSSTALK }
+    enum class Pattern { INTRO, CROSSHAIR, GRID, FRAME, DEPTH, MATCH }
 
     /**
-     * @param targetEye CROSSTALK: глаз, в изображении которого есть фигуры (у второго - ровный серый фон)
      * @param depthScale DEPTH: множитель параллакса (для анаглифа 1, в VR можно больше)
+     * @param ownPrimaries MATCH: основные цвета, которые пропускает проверяемый светофильтр (0=R, 1=G, 2=B)
+     * @param ownLevel MATCH: яркость своего цвета фильтра (значение sRGB 0..1)
      */
-    fun draw(canvas: Canvas, pattern: Pattern, targetEye: Int = 0, depthScale: Float = 1f) {
+    fun draw(
+        canvas: Canvas,
+        pattern: Pattern,
+        depthScale: Float = 1f,
+        ownPrimaries: Set<Int> = emptySet(),
+        ownLevel: Float = 0f
+    ) {
         canvas.drawColor(Color.BLACK)
         for (eye in 0..1) {
             canvas.save()
@@ -39,7 +46,7 @@ object CalibrationPatterns {
                 Pattern.GRID -> drawGrid(canvas)
                 Pattern.FRAME -> drawFrame(canvas)
                 Pattern.DEPTH -> drawDepth(canvas, eye, depthScale)
-                Pattern.CROSSTALK -> drawCrosstalk(canvas, eye == targetEye)
+                Pattern.MATCH -> drawMatch(canvas, ownPrimaries, ownLevel)
             }
             canvas.restore()
         }
@@ -157,20 +164,28 @@ object CalibrationPatterns {
     }
 
     /**
-     * Перекрестные помехи (двоение): серый фон у обоих глаз, светлые и темные фигуры - только в изображении
-     * одного глаза. Через светофильтр второго глаза фигуры должны быть не видны.
-     * Серый фон нужен для компенсации: на черном вычитать нечего.
+     * Измерение утечки светофильтра (показывается без анаглиф-обработки): в каждом прямоугольнике
+     * дополнительный цвет на полной яркости и свой цвет фильтра с регулируемой яркостью.
+     * Через фильтр обе половины одного оттенка; при равной яркости граница между ними исчезает.
+     * В нижнем прямоугольнике половины поменяны местами, чтобы не мешало положение на экране.
      */
-    private fun drawCrosstalk(canvas: Canvas, withShapes: Boolean) {
-        canvas.drawColor(0xFF808080.toInt())
-        if (!withShapes) return
-        val white = paint(Color.WHITE)
-        val black = paint(Color.BLACK)
-        canvas.drawCircle(EYE_W * 0.25f, EYE_H * 0.35f, 150f, white)
-        canvas.drawCircle(EYE_W * 0.75f, EYE_H * 0.35f, 150f, black)
-        canvas.drawRect(RectF(EYE_W * 0.25f - 140f, EYE_H * 0.72f - 140f, EYE_W * 0.25f + 140f, EYE_H * 0.72f + 140f), black)
-        canvas.drawRect(RectF(EYE_W * 0.75f - 140f, EYE_H * 0.72f - 140f, EYE_W * 0.75f + 140f, EYE_H * 0.72f + 140f), white)
-        // Полосы средней яркости для остаточного двоения
-        canvas.drawRect(RectF(EYE_W * 0.45f, EYE_H * 0.15f, EYE_W * 0.55f, EYE_H * 0.85f), paint(0xFFC0C0C0.toInt()))
+    private fun drawMatch(canvas: Canvas, own: Set<Int>, ownLevel: Float) {
+        fun color(primaries: Set<Int>, level: Float): Int {
+            val v = (level.coerceIn(0f, 1f) * 255).toInt()
+            return Color.rgb(if (0 in primaries) v else 0, if (1 in primaries) v else 0, if (2 in primaries) v else 0)
+        }
+        val foreign = (0..2).filter { it !in own }.toSet()
+        val complement = paint(color(foreign, 1f))
+        val ownPaint = paint(color(own, ownLevel))
+
+        val w = EYE_W * 0.6f
+        val h = EYE_H * 0.3f
+        val left = (EYE_W - w) / 2
+        listOf(EYE_H * 0.14f to true, EYE_H * 0.56f to false).forEach { (top, complementFirst) ->
+            val half = RectF(left, top, left + w / 2, top + h)
+            val other = RectF(left + w / 2, top, left + w, top + h)
+            canvas.drawRect(half, if (complementFirst) complement else ownPaint)
+            canvas.drawRect(other, if (complementFirst) ownPaint else complement)
+        }
     }
 }

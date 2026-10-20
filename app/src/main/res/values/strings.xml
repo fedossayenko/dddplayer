@@ -395,8 +395,6 @@
     <string name="wizard_filter_left">%1$s filter on the left</string>
     <string name="wizard_filter_right">%1$s filter on the right</string>
     <string name="wizard_glasses_label">%1$s: %2$s</string>
-    <string name="wizard_param_leak">Leak</string>
-    <string name="wizard_param_hue">Hue</string>
     <string name="wizard_view">View</string>
     <string name="wizard_controls_view">“View” hides the instructions so you can look at the picture; OK or Back bring them back.</string>
     <string name="wizard_controls_touch_view">Touch: tap the screen to show the instructions again</string>
@@ -404,7 +402,8 @@
     <string name="wizard_ana_rb_note">Red - Blue glasses show only a black and white picture. Check the filter color: blue is easy to confuse with cyan (Red - Cyan) or magenta (Green - Magenta), which support color filters.</string>
     <string name="wizard_ana_filter_title">Filter</string>
     <string name="wizard_ana_filter_title_format">Filter: %1$s</string>
-    <string name="wizard_ana_filter_text">Close the eye behind the %2$s filter and look only through the %1$s filter. The shapes on the gray background belong to the other eye and must not be visible through this filter. Filters are not perfect: a red filter usually passes noticeable cyan light, while a cyan filter passes almost no red. Increase or decrease “Leak” (how much foreign light the filter passes) until the shapes almost disappear, then remove the rest with “Hue”.</string>
     <string name="wizard_ana_check_text">Look with both eyes. The circles should go from behind the screen (left) to in front of it (right), the square stays at screen level. If the depth is reversed, the filter sides are mixed up: swap them (◀ ▶ in adjust mode). “Save” adds the “Calibrated” filter for these glasses and makes it the default one.</string>
     <string name="wizard_vr_check_text">Press “View” and look through the headset: the circles should go from behind the screen (left) to in front of it (right), the square stays at screen level, nothing doubles. If something is wrong, go back to the previous steps. “Save” stores the calibration.</string>
+    <string name="wizard_param_level">Brightness</string>
+    <string name="wizard_ana_match_text">The screen now shows pure colors without anaglyph processing: we measure the glasses themselves. Close the eye behind the “%2$s” filter and look only through the “%1$s” filter. Each rectangle has “%2$s” at full brightness next to “%1$s” with adjustable brightness. Through the filter both halves have the same tint: change the brightness (◀ ▶) until the border between them disappears. This measures how much foreign light the filter lets through.</string>
 </resources>

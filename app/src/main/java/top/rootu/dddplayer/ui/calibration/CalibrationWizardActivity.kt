@@ -31,6 +31,7 @@ import top.rootu.dddplayer.renderer.OnSurfaceReadyListener
 import top.rootu.dddplayer.renderer.StereoGLSurfaceView
 import top.rootu.dddplayer.renderer.StereoRenderer
 import top.rootu.dddplayer.ui.calibration.CalibrationPatterns.Pattern
+import top.rootu.dddplayer.utils.DuboisMath
 import top.rootu.dddplayer.viewmodel.GlassesGroup
 import java.util.Locale
 import kotlin.math.abs
@@ -61,14 +62,14 @@ class CalibrationWizardActivity : AppCompatActivity(), OnSurfaceReadyListener {
     private class Param(val label: () -> String, val value: () -> String, val change: (Int) -> Unit)
 
     /**
-     * @param targetEye для CROSSTALK: глаз, в изображении которого рисуются фигуры
+     * @param filter для MATCH: измеряемый светофильтр (0 - первого цвета группы, 1 - второго)
      */
     private class Step(
         val titleRes: Int,
         val text: () -> String,
         val pattern: Pattern,
         val params: List<Param> = emptyList(),
-        val targetEye: () -> Int = { 0 },
+        val filter: Int? = null,
         val isAvailable: () -> Boolean = { true }
     )
 
@@ -111,19 +112,19 @@ class CalibrationWizardActivity : AppCompatActivity(), OnSurfaceReadyListener {
     private var k2 = 0.10f
     private var scale = 1.2f
 
-    // Параметры анаглифа: A и B - светофильтры первого и второго цвета группы (например, красный и голубой)
+    // Параметры анаглифа: A и B - светофильтры первого и второго цвета группы (например, красный и голубой).
+    // Утечка измеряется яркостью своего цвета фильтра (%, значение sRGB), при которой он выглядит
+    // через фильтр так же, как полный дополнительный цвет
     private val glassesOptions = GlassesGroup.entries.flatMap { listOf(Glasses(it, true), Glasses(it, false)) }
     private var glassesIndex = 0
-    private var hueA = 0
-    private var hueB = 0
-    private var leakA = 0.2f
-    private var leakB = 0.2f
+    private var levelA = 0
+    private var levelB = 0
 
     private val glasses get() = glassesOptions[glassesIndex]
 
-    // Глаз за светофильтром A и за светофильтром B
-    private val eyeA get() = if (glasses.filterALeft) 0 else 1
-    private val eyeB get() = 1 - eyeA
+    private fun levelToLeak(level: Int) = DuboisMath.srgbToLinear(level / 100f)
+    private fun leakToLevel(leak: Float) = (DuboisMath.linearToSrgb(leak) * 100).roundToInt().coerceIn(0, 100)
+    private fun calibration() = AnaglyphCalibration(levelToLeak(levelA), levelToLeak(levelB))
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -180,12 +181,16 @@ class CalibrationWizardActivity : AppCompatActivity(), OnSurfaceReadyListener {
             renderer.setOutputMode(StereoOutputMode.CARDBOARD_VR)
             renderer.setDistortion(k1, k2, scale)
             renderer.setScreenSeparation(separation)
+        } else if (steps[stepIndex].pattern == Pattern.MATCH) {
+            // Измерение очков: чистые цвета экрана без анаглиф-обработки
+            renderer.setOutputMode(StereoOutputMode.LEFT_ONLY)
+            renderer.setScreenSeparation(0f)
         } else {
             val group = glasses.group
             val calibrated = AnaglyphLogic.calibratedFilter(group)
             val type = calibrated ?: AnaglyphLogic.defaultFilter(group)
             val matrices = if (calibrated != null) {
-                AnaglyphLogic.calculateCalibrated(group, AnaglyphCalibration(hueA, hueB, leakA, leakB))
+                AnaglyphLogic.calculateCalibrated(group, calibration())
             } else {
                 AnaglyphLogic.calculateMatrix(type, 0, 0, 0f, 0f, false)
             }
@@ -208,10 +213,12 @@ class CalibrationWizardActivity : AppCompatActivity(), OnSurfaceReadyListener {
         try {
             val canvas = surface.lockCanvas(null)
             try {
+                val primaries = AnaglyphLogic.filterPrimaries(glasses.group)
                 CalibrationPatterns.draw(
                     canvas, step.pattern,
-                    targetEye = step.targetEye(),
-                    depthScale = if (isVr) VR_DEPTH_SCALE else 1f
+                    depthScale = if (isVr) VR_DEPTH_SCALE else 1f,
+                    ownPrimaries = if (step.filter == 1) primaries.second else primaries.first,
+                    ownLevel = (if (step.filter == 1) levelB else levelA) / 100f
                 )
             } finally {
                 surface.unlockCanvasAndPost(canvas)
@@ -290,32 +297,23 @@ class CalibrationWizardActivity : AppCompatActivity(), OnSurfaceReadyListener {
         })
         return listOf(
             Step(R.string.wizard_ana_glasses_title, { glassesStepText() }, Pattern.DEPTH, listOf(glassesParam)),
-            // Светофильтр A: фигуры только в изображении для глаза за фильтром B, через фильтр A их не должно быть видно
+            // Светофильтр A: яркость его цвета, при которой он выглядит как полный дополнительный цвет
             Step(
                 R.string.wizard_ana_filter_title,
-                { filterNames(glasses.group).let { (a, b) -> getString(R.string.wizard_ana_filter_text, a, b) } },
-                Pattern.CROSSTALK,
-                listOf(
-                    Param({ getString(R.string.wizard_param_leak) }, { "${(leakA * 100).roundToInt()}%" },
-                        { d -> leakA = SettingsMutator.modifyFloat(leakA, d, 0.01f, 0f, 0.5f) }),
-                    Param({ getString(R.string.wizard_param_hue) }, { String.format(Locale.US, "%+d", hueA) },
-                        { d -> hueA = SettingsMutator.modifyInt(hueA, d, 1, -100, 100) })
-                ),
-                targetEye = { eyeB },
+                { filterNames(glasses.group).let { (a, b) -> getString(R.string.wizard_ana_match_text, a, b) } },
+                Pattern.MATCH,
+                listOf(Param({ getString(R.string.wizard_param_level) }, { "$levelA%" },
+                    { d -> levelA = SettingsMutator.modifyInt(levelA, d, 1, 0, 100) })),
+                filter = 0,
                 isAvailable = { isCalibratable() }
             ),
-            // Светофильтр B: фигуры только в изображении для глаза за фильтром A
             Step(
                 R.string.wizard_ana_filter_title,
-                { filterNames(glasses.group).let { (a, b) -> getString(R.string.wizard_ana_filter_text, b, a) } },
-                Pattern.CROSSTALK,
-                listOf(
-                    Param({ getString(R.string.wizard_param_leak) }, { "${(leakB * 100).roundToInt()}%" },
-                        { d -> leakB = SettingsMutator.modifyFloat(leakB, d, 0.01f, 0f, 0.5f) }),
-                    Param({ getString(R.string.wizard_param_hue) }, { String.format(Locale.US, "%+d", hueB) },
-                        { d -> hueB = SettingsMutator.modifyInt(hueB, d, 1, -100, 100) })
-                ),
-                targetEye = { eyeA },
+                { filterNames(glasses.group).let { (a, b) -> getString(R.string.wizard_ana_match_text, b, a) } },
+                Pattern.MATCH,
+                listOf(Param({ getString(R.string.wizard_param_level) }, { "$levelB%" },
+                    { d -> levelB = SettingsMutator.modifyInt(levelB, d, 1, 0, 100) })),
+                filter = 1,
                 isAvailable = { isCalibratable() }
             ),
             Step(
@@ -429,10 +427,10 @@ class CalibrationWizardActivity : AppCompatActivity(), OnSurfaceReadyListener {
 
         panels.forEach { panel ->
             panel.step.text = getString(R.string.wizard_step, position, available.size)
-            panel.title.text = if (step.pattern == Pattern.CROSSTALK) {
+            panel.title.text = if (step.filter != null) {
                 // Шаг светофильтра: в заголовке его цвет
                 val (a, b) = filterNames(glasses.group)
-                getString(R.string.wizard_ana_filter_title_format, if (step.targetEye() == eyeB) a else b)
+                getString(R.string.wizard_ana_filter_title_format, if (step.filter == 0) a else b)
             } else {
                 getString(step.titleRes)
             }
@@ -532,10 +530,8 @@ class CalibrationWizardActivity : AppCompatActivity(), OnSurfaceReadyListener {
     // Сохраненная калибровка выбранной группы очков (или начальные значения группы)
     private fun loadCalibration() {
         val calibration = repository.getAnaglyphCalibration(glasses.group) ?: AnaglyphLogic.defaultCalibration(glasses.group)
-        hueA = calibration.hueA
-        hueB = calibration.hueB
-        leakA = calibration.leakA
-        leakB = calibration.leakB
+        levelA = leakToLevel(calibration.leakA)
+        levelB = leakToLevel(calibration.leakB)
     }
 
     private fun save() {
@@ -548,7 +544,7 @@ class CalibrationWizardActivity : AppCompatActivity(), OnSurfaceReadyListener {
             // Калибровка - отдельный фильтр "Калибровка" группы очков; встроенные фильтры и Custom не меняются
             val type = AnaglyphLogic.calibratedFilter(glasses.group) ?: AnaglyphLogic.defaultFilter(glasses.group)
             if (isCalibratable()) {
-                repository.setAnaglyphCalibration(glasses.group, AnaglyphCalibration(hueA, hueB, leakA, leakB))
+                repository.setAnaglyphCalibration(glasses.group, calibration())
             }
             // Фильтр по умолчанию - для новых видео и для этой группы очков
             repository.putGlobalInt("pref_filter_${glasses.group.name}", type.ordinal)

@@ -378,8 +378,6 @@
     <string name="wizard_filter_left">%1$s滤光片在左</string>
     <string name="wizard_filter_right">%1$s滤光片在右</string>
     <string name="wizard_glasses_label">%1$s：%2$s</string>
-    <string name="wizard_param_leak">串扰</string>
-    <string name="wizard_param_hue">色调</string>
     <string name="wizard_view">查看</string>
     <string name="wizard_controls_view">“查看”隐藏说明以观看画面，OK 或返回键恢复说明。</string>
     <string name="wizard_controls_touch_view">触摸：点击屏幕重新显示说明</string>
@@ -387,7 +385,8 @@
     <string name="wizard_ana_rb_note">Red - Blue 眼镜只能显示黑白画面。请检查滤光片颜色：蓝色容易与青色（Red - Cyan）或品红色（Green - Magenta）混淆，后两者支持彩色滤镜。</string>
     <string name="wizard_ana_filter_title">滤光片</string>
     <string name="wizard_ana_filter_title_format">滤光片：%1$s</string>
-    <string name="wizard_ana_filter_text">闭上%2$s滤光片后的眼睛，只透过%1$s滤光片观看。灰色背景上的图形属于另一只眼睛，透过这个滤光片应该看不到。滤光片并不完美：红色滤光片通常会明显透过青色光，而青色滤光片几乎不透过红色光。调整“串扰”（滤光片透过多少别的颜色的光），直到图形几乎消失，再用“色调”消除残余。</string>
     <string name="wizard_ana_check_text">用双眼观看。圆形应从屏幕后方（左）延伸到屏幕前方（右），方块位于屏幕平面。如果深度相反，说明滤光片左右弄反了：在调整模式下用 ◀ ▶ 交换。“保存”将为这副眼镜添加“已校准”滤镜并设为默认。</string>
     <string name="wizard_vr_check_text">按“查看”并透过头显观看：圆形应从屏幕后方（左）延伸到屏幕前方（右），方块位于屏幕平面，没有重影。如有问题，请返回前面的步骤。“保存”将保存校准。</string>
+    <string name="wizard_param_level">亮度</string>
+    <string name="wizard_ana_match_text">屏幕现在显示未经红蓝处理的纯色，用于测量眼镜本身。闭上%2$s滤光片后的眼睛，只透过%1$s滤光片观看。每个矩形中，全亮度的“%2$s”旁边是亮度可调的“%1$s”。透过滤光片两半色调相同：调整亮度（◀ ▶）直到两者之间的分界线消失。这样即可测出滤光片透过了多少别的颜色的光。</string>
 </resources>

@@ -348,8 +348,6 @@ class SettingsRepository private constructor(context: Context) {
         if (!prefs.getBoolean("${key}set", false)) return null
         val def = AnaglyphCalibration()
         return AnaglyphCalibration(
-            hueA = prefs.getInt("${key}hue_a", def.hueA),
-            hueB = prefs.getInt("${key}hue_b", def.hueB),
             leakA = prefs.getFloat("${key}leak_a", def.leakA),
             leakB = prefs.getFloat("${key}leak_b", def.leakB)
         )
@@ -359,8 +357,6 @@ class SettingsRepository private constructor(context: Context) {
         val key = "calib_${group.name.lowercase()}_"
         prefs.edit {
             putBoolean("${key}set", true)
-            putInt("${key}hue_a", calibration.hueA)
-            putInt("${key}hue_b", calibration.hueB)
             putFloat("${key}leak_a", calibration.leakA)
             putFloat("${key}leak_b", calibration.leakB)
         }

@@ -41,18 +41,32 @@ class AnaglyphLogicTest {
     }
 
     @Test
-    fun `calibration uses the group lens colors with hue offsets and leaks`() {
-        val calibration = AnaglyphCalibration(hueA = 10, hueB = -10, leakA = 0.1f, leakB = 0.25f)
+    fun `calibration uses the filter primaries of the group and the measured leaks`() {
+        val calibration = AnaglyphCalibration(leakA = 0.1f, leakB = 0.02f)
         val result = AnaglyphLogic.calculateCalibrated(GlassesGroup.RED_CYAN, calibration)
-        val expected = DuboisMath.calculate(
-            DuboisMath.DuboisParams(
-                AnaglyphLogic.applyHueOffset(Color.RED, 10),
-                AnaglyphLogic.applyHueOffset(Color.CYAN, -10),
-                0.1f, 0.25f, false
-            )
-        )
+        val expected = DuboisMath.calculateWithLeaks(setOf(0), setOf(1, 2), 0.1f, 0.02f)
         assertArrayEquals(expected.left, result.left, 1e-6f)
         assertArrayEquals(expected.right, result.right, 1e-6f)
+    }
+
+    @Test
+    fun `leak based matrices keep white and depend on the leaks`() {
+        val ideal = DuboisMath.calculateWithLeaks(setOf(0), setOf(1, 2), 0f, 0f)
+        val leaky = DuboisMath.calculateWithLeaks(setOf(0), setOf(1, 2), 0.1f, 0.02f)
+        assertTrue(ideal.isValid && leaky.isValid)
+        // Белый в обоих глазах дает белый на экране (сумма строк L и R = 1)
+        for (row in 0..2) {
+            val sum = (0..2).sumOf { (leaky.left[row * 3 + it] + leaky.right[row * 3 + it]).toDouble() }
+            assertEquals(1.0, sum, 1e-4)
+        }
+        assertFalse(ideal.left.contentEquals(leaky.left))
+    }
+
+    @Test
+    fun `srgb and linear conversions are inverse`() {
+        for (v in listOf(0f, 0.02f, 0.15f, 0.35f, 0.5f, 1f)) {
+            assertEquals(v, DuboisMath.linearToSrgb(DuboisMath.srgbToLinear(v)), 1e-4f)
+        }
     }
 
     @Test

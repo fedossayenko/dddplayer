@@ -78,12 +78,15 @@ object AnaglyphLogic {
         else -> type.name
     }
 
-    /** Базовые цвета линз группы (A, B). */
-    fun groupBaseColors(group: GlassesGroup): Pair<Int, Int> = when (group) {
-        GlassesGroup.RED_CYAN -> Pair(Color.RED, Color.CYAN)
-        GlassesGroup.YELLOW_BLUE -> Pair(Color.YELLOW, Color.BLUE)
-        GlassesGroup.GREEN_MAGENTA -> Pair(Color.GREEN, Color.MAGENTA)
-        GlassesGroup.RED_BLUE -> Pair(Color.RED, Color.BLUE)
+    /**
+     * Основные цвета экрана, которые пропускают светофильтры группы (A, B): 0=R, 1=G, 2=B.
+     * Дополнительный (чужой) цвет фильтра - остальные основные цвета.
+     */
+    fun filterPrimaries(group: GlassesGroup): Pair<Set<Int>, Set<Int>> = when (group) {
+        GlassesGroup.RED_CYAN -> setOf(0) to setOf(1, 2)
+        GlassesGroup.YELLOW_BLUE -> setOf(0, 1) to setOf(2)
+        GlassesGroup.GREEN_MAGENTA -> setOf(1) to setOf(0, 2)
+        GlassesGroup.RED_BLUE -> setOf(0) to setOf(2)
     }
 
     /**
@@ -91,20 +94,17 @@ object AnaglyphLogic {
      * пропускает голубой свет, а голубой почти не пропускает красный.
      */
     fun defaultCalibration(group: GlassesGroup): AnaglyphCalibration = when (group) {
-        GlassesGroup.RED_CYAN -> AnaglyphCalibration(leakA = 0.20f, leakB = 0.05f)
+        GlassesGroup.RED_CYAN -> AnaglyphCalibration(
+            leakA = DuboisMath.srgbToLinear(0.35f),
+            leakB = DuboisMath.srgbToLinear(0.15f)
+        )
         else -> AnaglyphCalibration()
     }
 
-    /** Матрицы фильтра "Калибровка" (расчет в линейном RGB, как у Dubois и Custom). */
+    /** Матрицы фильтра "Калибровка" по измеренным утечкам светофильтров. */
     fun calculateCalibrated(group: GlassesGroup, calibration: AnaglyphCalibration): DuboisMath.ResultMatrices {
-        val (baseA, baseB) = groupBaseColors(group)
-        return DuboisMath.calculate(
-            DuboisMath.DuboisParams(
-                applyHueOffset(baseA, calibration.hueA),
-                applyHueOffset(baseB, calibration.hueB),
-                calibration.leakA, calibration.leakB, false
-            )
-        )
+        val (ownA, ownB) = filterPrimaries(group)
+        return DuboisMath.calculateWithLeaks(ownA, ownB, calibration.leakA, calibration.leakB)
     }
 
     fun getCustomPrefix(type: StereoRenderer.AnaglyphType): String {

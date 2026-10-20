@@ -67,28 +67,60 @@ object DuboisMath {
         // Составляем матрицу Q (6x3)
         // Q = [ Basis * effL ]
         //     [ Basis * effR ]
-        val q = Array(6) { FloatArray(3) }
-        for (row in 0 until 3) {
-            q[row][0] = mBasis[row][0] * effL[0]
-            q[row][1] = mBasis[row][1] * effL[1]
-            q[row][2] = mBasis[row][2] * effL[2]
-        }
-        for (row in 0 until 3) {
-            q[row + 3][0] = mBasis[row][0] * effR[0]
-            q[row + 3][1] = mBasis[row][1] * effR[1]
-            q[row + 3][2] = mBasis[row][2] * effR[2]
-        }
+        val qL = Array(3) { row -> FloatArray(3) { c -> mBasis[row][c] * effL[c] } }
+        val qR = Array(3) { row -> FloatArray(3) { c -> mBasis[row][c] * effR[c] } }
 
-        // Least Squares: (Q^T * Q)^-1 * Q^T
-        val qt = transpose(q) // 3x6
-        val qtq = multiply(qt, q) // 3x3
-
-        // Если инверсия не удалась, возвращаем цвета и помечаем как Invalid
-        val qtqInv = invert3x3(qtq) ?: return ResultMatrices(
+        return solve(qL, qR, mBasis) ?: ResultMatrices(
+            // Если инверсия не удалась, возвращаем цвета и помечаем как Invalid
             floatArrayOf(cL[0], 0f, 0f, 0f, cL[1], 0f, 0f, 0f, cL[2]),
             floatArrayOf(cR[0], 0f, 0f, 0f, cR[1], 0f, 0f, 0f, cR[2]),
             isValid = false
         )
+    }
+
+    /**
+     * Матрицы по измеренным утечкам светофильтров (калибровка в визарде).
+     *
+     * Свои цвета фильтра - основные цвета экрана (ownA/ownB: индексы 0=R, 1=G, 2=B).
+     * Чужой свет, прошедший через фильтр, выглядит цветом самого фильтра (зеленый через красный фильтр -
+     * тусклый красный), поэтому его столбец - это XYZ своего цвета фильтра, умноженный на утечку.
+     * Утечка измеряется для дополнительного цвета целиком (голубой через красный фильтр выглядит как
+     * красный с линейной яркостью leak) и делится между чужими основными цветами пропорционально их яркости.
+     * Без утечек получается классический Dubois для идеальных фильтров.
+     */
+    fun calculateWithLeaks(ownA: Set<Int>, ownB: Set<Int>, leakA: Float, leakB: Float): ResultMatrices {
+        val qA = filterResponse(ownA, leakA)
+        val qB = filterResponse(ownB, leakB)
+        return solve(qA, qB, mXYZ) ?: ResultMatrices(
+            FloatArray(9) { if (it % 4 == 0 && it / 4 in ownA) 1f else 0f },
+            FloatArray(9) { if (it % 4 == 0 && it / 4 in ownB) 1f else 0f },
+            isValid = false
+        )
+    }
+
+    // XYZ, видимый через фильтр, для каждого основного цвета экрана (столбцы)
+    private fun filterResponse(own: Set<Int>, leak: Float): Array<FloatArray> {
+        val ownXyz = FloatArray(3) { row -> own.sumOf { mXYZ[row][it].toDouble() }.toFloat() }
+        val foreignY = (0..2).filter { it !in own }.sumOf { mXYZ[1][it].toDouble() }.toFloat()
+        return Array(3) { row ->
+            FloatArray(3) { c ->
+                if (c in own) mXYZ[row][c]
+                else if (foreignY > 0f) leak * (mXYZ[1][c] / foreignY) * ownXyz[row]
+                else 0f
+            }
+        }
+    }
+
+    /**
+     * Метод наименьших квадратов Dubois: Q = [qL; qR] (6x3), P = (Q^T Q)^-1 Q^T, итог = P * Basis.
+     * @return null, если матрица вырождена
+     */
+    private fun solve(qL: Array<FloatArray>, qR: Array<FloatArray>, mBasis: Array<FloatArray>): ResultMatrices? {
+        val q = Array(6) { row -> if (row < 3) qL[row] else qR[row - 3] }
+
+        val qt = transpose(q) // 3x6
+        val qtq = multiply(qt, q) // 3x3
+        val qtqInv = invert3x3(qtq) ?: return null
 
         val mPInv = multiply(qtqInv, qt) // 3x6
 
@@ -100,12 +132,18 @@ object DuboisMath {
         val finalL = multiply3x3(pLeft, mBasis)
         val finalR = multiply3x3(pRight, mBasis)
 
-
         // Normalize (White balance fix)
         normalize(finalL, finalR)
 
         return ResultMatrices(flatten(finalL), flatten(finalR), true)
     }
+
+    /** Значение sRGB (0..1) -> линейная яркость (0..1). */
+    fun srgbToLinear(x: Float): Float = sRGBtoLinear(x)
+
+    /** Линейная яркость (0..1) -> значение sRGB (0..1). */
+    fun linearToSrgb(x: Float): Float =
+        if (x <= 0.0031308f) x * 12.92f else 1.055f * x.pow(1f / 2.4f) - 0.055f
 
     private fun sRGBtoLinear(x: Float): Float {
         return if (x <= 0.04045f) x / 12.92f else ((x + 0.055f) / 1.055f).pow(2.4f)

@@ -125,7 +125,7 @@ class SettingsRepositoryTest {
         val repo = repo()
         assertNull(repo.getAnaglyphCalibration(GlassesGroup.RED_CYAN))
 
-        val calibration = AnaglyphCalibration(hueA = 5, hueB = -3, leakA = 0.12f, leakB = 0.3f)
+        val calibration = AnaglyphCalibration(leakA = 0.12f, leakB = 0.3f)
         repo.setAnaglyphCalibration(GlassesGroup.RED_CYAN, calibration)
         repo.setAnaglyphLensSwapped(true)
         repo.putGlobalInt("def_anaglyph_type", StereoRenderer.AnaglyphType.RC_CALIBRATED.ordinal)
