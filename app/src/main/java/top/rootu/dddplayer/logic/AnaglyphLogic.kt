@@ -1,6 +1,8 @@
 package top.rootu.dddplayer.logic
 
+import android.content.Context
 import android.graphics.Color
+import top.rootu.dddplayer.R
 import top.rootu.dddplayer.model.AnaglyphCalibration
 import top.rootu.dddplayer.renderer.StereoRenderer
 import top.rootu.dddplayer.utils.DuboisMath
@@ -21,7 +23,17 @@ object AnaglyphLogic {
         }
     }
 
-    fun getFiltersForGroup(group: GlassesGroup): List<StereoRenderer.AnaglyphType> {
+    /**
+     * Фильтры группы очков. Откалиброванный в визарде фильтр (если калибровка есть) идет первым:
+     * он же выбирается по умолчанию.
+     */
+    fun getFiltersForGroup(group: GlassesGroup, includeCalibrated: Boolean = false): List<StereoRenderer.AnaglyphType> {
+        val calibrated = calibratedFilter(group)
+        val filters = baseFilters(group)
+        return if (includeCalibrated && calibrated != null) listOf(calibrated) + filters else filters
+    }
+
+    private fun baseFilters(group: GlassesGroup): List<StereoRenderer.AnaglyphType> {
         return when (group) {
             GlassesGroup.RED_CYAN -> listOf(
                 StereoRenderer.AnaglyphType.RC_DUBOIS, StereoRenderer.AnaglyphType.RC_COLOR,
@@ -44,16 +56,27 @@ object AnaglyphLogic {
 
     fun isCustomType(type: StereoRenderer.AnaglyphType) = type.name.endsWith("_CUSTOM")
 
-    /** Фильтр по умолчанию группы очков: его матрицу заменяет калибровка из визарда. */
-    fun defaultFilter(group: GlassesGroup): StereoRenderer.AnaglyphType = when (group) {
-        GlassesGroup.RED_CYAN -> StereoRenderer.AnaglyphType.RC_DUBOIS
-        GlassesGroup.YELLOW_BLUE -> StereoRenderer.AnaglyphType.YB_DUBOIS
-        GlassesGroup.GREEN_MAGENTA -> StereoRenderer.AnaglyphType.GM_DUBOIS
-        GlassesGroup.RED_BLUE -> StereoRenderer.AnaglyphType.RB_MONO // Для красно-синих есть только Mono
+    fun isCalibratedType(type: StereoRenderer.AnaglyphType) = type.name.endsWith("_CALIBRATED")
+
+    /** Встроенный фильтр группы по умолчанию (замена откалиброванному, если калибровку сбросили). */
+    fun defaultFilter(group: GlassesGroup): StereoRenderer.AnaglyphType = baseFilters(group).first()
+
+    /** Фильтр "Калибровка" группы очков (для красно-синих калибровки нет - только Mono). */
+    fun calibratedFilter(group: GlassesGroup): StereoRenderer.AnaglyphType? = when (group) {
+        GlassesGroup.RED_CYAN -> StereoRenderer.AnaglyphType.RC_CALIBRATED
+        GlassesGroup.YELLOW_BLUE -> StereoRenderer.AnaglyphType.YB_CALIBRATED
+        GlassesGroup.GREEN_MAGENTA -> StereoRenderer.AnaglyphType.GM_CALIBRATED
+        GlassesGroup.RED_BLUE -> null
     }
 
-    /** Калибровка доступна для групп с фильтром Dubois. */
-    fun isCalibratable(group: GlassesGroup) = defaultFilter(group).name.endsWith("_DUBOIS")
+    fun isCalibratable(group: GlassesGroup) = calibratedFilter(group) != null
+
+    /** Название фильтра в настройках. */
+    fun filterLabel(context: Context, type: StereoRenderer.AnaglyphType): String = when {
+        isCustomType(type) -> context.getString(R.string.val_custom)
+        isCalibratedType(type) -> context.getString(R.string.filter_calibrated)
+        else -> type.name
+    }
 
     /** Базовые цвета линз группы (A, B). */
     fun groupBaseColors(group: GlassesGroup): Pair<Int, Int> = when (group) {
@@ -63,7 +86,7 @@ object AnaglyphLogic {
         GlassesGroup.RED_BLUE -> Pair(Color.RED, Color.BLUE)
     }
 
-    /** Матрицы фильтра Dubois по калибровке из визарда (расчет в линейном RGB, как у Custom). */
+    /** Матрицы фильтра "Калибровка" (расчет в линейном RGB, как у Dubois и Custom). */
     fun calculateCalibrated(group: GlassesGroup, calibration: AnaglyphCalibration): DuboisMath.ResultMatrices {
         val (baseA, baseB) = groupBaseColors(group)
         return DuboisMath.calculate(

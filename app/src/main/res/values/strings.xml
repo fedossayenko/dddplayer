@@ -394,11 +394,12 @@
     <string name="wizard_ana_colors_title">Colors</string>
     <string name="wizard_ana_colors_text">Look with both eyes. Adjust the hue of each lens so the colors look more natural and the picture is equally bright for both eyes.</string>
     <string name="wizard_ana_check_title">Check</string>
-    <string name="wizard_ana_check_text">The red circle should be in front of the screen and the grid behind it. If it is the other way round, swap the lenses (◀ ▶ in adjust mode). “Save” stores the calibration for these glasses; it becomes the default filter.</string>
+    <string name="wizard_ana_check_text">The red circle should be in front of the screen and the grid behind it. If it is the other way round, swap the lenses (◀ ▶ in adjust mode). “Save” adds the “Calibrated” filter for these glasses and makes it the default one.</string>
     <string name="pref_reset_calibration">Reset calibration</string>
     <string name="pref_reset_calibration_desc">Restore the app defaults for Cardboard VR and/or anaglyph glasses</string>
     <string name="reset_calibration_vr">Cardboard VR</string>
     <string name="reset_calibration_anaglyph">Anaglyph glasses</string>
     <string name="reset_calibration_all">Everything</string>
     <string name="reset_calibration_done">Calibration reset to defaults</string>
+    <string name="filter_calibrated">Calibrated</string>
 </resources>

@@ -47,7 +47,7 @@
 | `app_language` | `system` | Язык интерфейса |
 | `def_output_mode`, `def_anaglyph_type` | ANAGLYPH, RC_DUBOIS | Вывод по умолчанию для нового стерео-видео |
 | `pref_filter_<GROUP>` | — | Последний фильтр в группе очков |
-| `calib_<group>_set/hue_a/hue_b/leak_a/leak_b`, `anaglyph_lens_swap`, `calibration_version` | — | Калибровка анаглиф-очков из визарда (заменяет матрицу Dubois группы), порядок линз, версия для перечитывания в плеере |
+| `calib_<group>_set/hue_a/hue_b/leak_a/leak_b`, `anaglyph_lens_swap`, `calibration_version` | — | Калибровка анаглиф-очков из визарда (фильтр «Калибровка» группы), порядок линз, версия для перечитывания в плеере |
 | `vr_k1`, `vr_k2`, `vr_scale`, `global_screen_separation_pct` | 0.34, 0.10, 1.2, 0 | Параметры VR |
 
 Полный список смотрите в `SettingsRepository.kt`.

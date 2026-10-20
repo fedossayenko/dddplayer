@@ -83,15 +83,17 @@ class AnaglyphDelegate(private val repository: SettingsRepository) {
     }
 
     fun updateAnaglyphMatrix(anaglyphType: StereoRenderer.AnaglyphType) {
-        // Фильтр по умолчанию группы очков, откалиброванный в визарде, считается по калибровке
-        val group = AnaglyphLogic.getGlassesGroup(anaglyphType)
-        val calibration = if (anaglyphType == AnaglyphLogic.defaultFilter(group) && AnaglyphLogic.isCalibratable(group)) {
-            repository.getAnaglyphCalibration(group)
-        } else null
-        if (calibration != null) {
-            val calibrated = AnaglyphLogic.calculateCalibrated(group, calibration)
-            _currentMatrices.value = Pair(calibrated.left, calibrated.right)
-            _isMatrixValid.value = calibrated.isValid
+        // Фильтр "Калибровка": матрицы по калибровке из визарда, а если ее сбросили - встроенный фильтр группы
+        if (AnaglyphLogic.isCalibratedType(anaglyphType)) {
+            val group = AnaglyphLogic.getGlassesGroup(anaglyphType)
+            val calibration = repository.getAnaglyphCalibration(group)
+            val result = if (calibration != null) {
+                AnaglyphLogic.calculateCalibrated(group, calibration)
+            } else {
+                AnaglyphLogic.calculateMatrix(AnaglyphLogic.defaultFilter(group), 0, 0, 0f, 0f, false)
+            }
+            _currentMatrices.value = Pair(result.left, result.right)
+            _isMatrixValid.value = result.isValid
             return
         }
         val matrices = AnaglyphLogic.calculateMatrix(

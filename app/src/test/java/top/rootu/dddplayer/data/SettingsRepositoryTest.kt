@@ -13,6 +13,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import top.rootu.dddplayer.model.AnaglyphCalibration
 import top.rootu.dddplayer.model.SubtitleStyle
+import top.rootu.dddplayer.renderer.StereoRenderer
 import top.rootu.dddplayer.viewmodel.GlassesGroup
 
 @RunWith(RobolectricTestRunner::class)
@@ -127,6 +128,8 @@ class SettingsRepositoryTest {
         val calibration = AnaglyphCalibration(hueA = 5, hueB = -3, leakA = 0.12f, leakB = 0.3f)
         repo.setAnaglyphCalibration(GlassesGroup.RED_CYAN, calibration)
         repo.setAnaglyphLensSwapped(true)
+        repo.putGlobalInt("def_anaglyph_type", StereoRenderer.AnaglyphType.RC_CALIBRATED.ordinal)
+        repo.putGlobalInt("pref_filter_RED_CYAN", StereoRenderer.AnaglyphType.RC_CALIBRATED.ordinal)
         val version = repo.getCalibrationVersion()
 
         assertEquals(calibration, repo.getAnaglyphCalibration(GlassesGroup.RED_CYAN))
@@ -135,6 +138,9 @@ class SettingsRepositoryTest {
         repo.resetAnaglyphCalibration()
         assertNull(repo.getAnaglyphCalibration(GlassesGroup.RED_CYAN))
         assertFalse(repo.isAnaglyphLensSwapped())
+        // Выбранный фильтр "Калибровка" заменяется встроенным фильтром группы
+        assertEquals(StereoRenderer.AnaglyphType.RC_DUBOIS.ordinal, repo.getGlobalInt("def_anaglyph_type", -1))
+        assertEquals(StereoRenderer.AnaglyphType.RC_DUBOIS.ordinal, repo.getGlobalInt("pref_filter_RED_CYAN", -1))
         // Плеер перечитывает калибровку по смене версии
         assertTrue(repo.getCalibrationVersion() > version)
     }

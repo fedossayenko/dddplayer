@@ -1421,8 +1421,7 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
                 else getString(R.string.api_gles3)
             }
             SettingType.FILTER_MODE -> {
-                val name = viewModel.anaglyphType.value?.name ?: ""
-                if (name.endsWith("_CUSTOM")) getString(R.string.val_custom) else name
+                viewModel.anaglyphType.value?.let { AnaglyphLogic.filterLabel(requireContext(), it) } ?: ""
             }
             SettingType.CUSTOM_HUE_L -> {
                 val offset = viewModel.anaglyphDelegate.customHueOffsetL.value ?: 0

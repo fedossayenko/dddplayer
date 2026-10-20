@@ -166,7 +166,7 @@ class CalibrationWizardActivity : AppCompatActivity(), OnSurfaceReadyListener {
             renderer.setDistortion(k1, k2, scale)
             renderer.setScreenSeparation(separation)
         } else {
-            val type = AnaglyphLogic.defaultFilter(glasses.group)
+            val type = AnaglyphLogic.calibratedFilter(glasses.group) ?: AnaglyphLogic.defaultFilter(glasses.group)
             val matrices = if (AnaglyphLogic.isCalibratable(glasses.group)) {
                 AnaglyphLogic.calculateCalibrated(glasses.group, AnaglyphCalibration(hueA, hueB, leakA, leakB))
             } else {
@@ -484,8 +484,8 @@ class CalibrationWizardActivity : AppCompatActivity(), OnSurfaceReadyListener {
             repository.putGlobalFloat("vr_k2", k2)
             repository.putGlobalFloat("vr_scale", scale)
         } else {
-            // Калибровка заменяет матрицу фильтра по умолчанию (Dubois), Custom остается для ручной настройки
-            val type = AnaglyphLogic.defaultFilter(glasses.group)
+            // Калибровка - отдельный фильтр "Калибровка" группы очков; встроенные фильтры и Custom не меняются
+            val type = AnaglyphLogic.calibratedFilter(glasses.group) ?: AnaglyphLogic.defaultFilter(glasses.group)
             if (isCalibratable()) {
                 repository.setAnaglyphCalibration(glasses.group, AnaglyphCalibration(hueA, hueB, leakA, leakB))
             }

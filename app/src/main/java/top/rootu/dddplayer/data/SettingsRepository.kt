@@ -7,6 +7,7 @@ import androidx.media3.exoplayer.DefaultRenderersFactory
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
+import top.rootu.dddplayer.logic.AnaglyphLogic
 import top.rootu.dddplayer.model.AnaglyphCalibration
 import top.rootu.dddplayer.model.AudioTrackStat
 import top.rootu.dddplayer.model.StereoOutputMode
@@ -373,6 +374,16 @@ class SettingsRepository private constructor(context: Context) {
                 listOf("set", "hue_a", "hue_b", "leak_a", "leak_b").forEach { remove(key + it) }
             }
             remove("anaglyph_lens_swap")
+            // Выбранный фильтр "Калибровка" заменяем встроенным фильтром группы
+            val types = StereoRenderer.AnaglyphType.entries
+            fun reset(key: String) {
+                val type = types.getOrNull(prefs.getInt(key, -1)) ?: return
+                if (AnaglyphLogic.isCalibratedType(type)) {
+                    putInt(key, AnaglyphLogic.defaultFilter(AnaglyphLogic.getGlassesGroup(type)).ordinal)
+                }
+            }
+            reset("def_anaglyph_type")
+            GlassesGroup.entries.forEach { reset("pref_filter_${it.name}") }
         }
         bumpCalibrationVersion()
     }

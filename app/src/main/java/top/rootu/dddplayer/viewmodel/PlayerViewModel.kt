@@ -1527,7 +1527,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             }
             SettingType.FILTER_MODE -> {
                 val currentGroup = AnaglyphLogic.getGlassesGroup(_anaglyphType.value!!)
-                val filters = AnaglyphLogic.getFiltersForGroup(currentGroup)
+                val filters = filtersForGroup(currentGroup)
                 val nextFilter = SettingsMutator.cycleList(_anaglyphType.value!!, filters, direction)
                 _anaglyphType.value = nextFilter
                 savePreferredFilter(nextFilter)
@@ -1633,12 +1633,8 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             }
             SettingType.FILTER_MODE -> {
                 val currentGroup = AnaglyphLogic.getGlassesGroup(_anaglyphType.value!!)
-                val filters = AnaglyphLogic.getFiltersForGroup(currentGroup)
-                val list = filters.map {
-                    if (it.name.endsWith("_CUSTOM"))
-                        context.getString(R.string.val_custom) // Используем контекст, переданный из Fragment
-                    else it.name
-                }
+                val filters = filtersForGroup(currentGroup)
+                val list = filters.map { AnaglyphLogic.filterLabel(context, it) }
                 val index = filters.indexOf(_anaglyphType.value!!)
                 Pair(list, index)
             }
@@ -1783,8 +1779,12 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                 if (AnaglyphLogic.getGlassesGroup(savedType) == group) return savedType
             }
         }
-        return AnaglyphLogic.getFiltersForGroup(group).first()
+        return filtersForGroup(group).first()
     }
+
+    // Фильтры группы очков; "Калибровка" - только если очки откалиброваны в визарде
+    private fun filtersForGroup(group: GlassesGroup) =
+        AnaglyphLogic.getFiltersForGroup(group, includeCalibrated = repository.getAnaglyphCalibration(group) != null)
 
     // Версия калибровки (визарды VR и анаглифа), с которой загружены параметры
     private var calibrationVersion = repository.getCalibrationVersion()

@@ -362,11 +362,12 @@
     <string name="wizard_ana_colors_title">Кольори</string>
     <string name="wizard_ana_colors_text">Дивіться обома очима. Підбирайте відтінок кожної лінзи, щоб кольори виглядали природніше, а зображення було однаково яскравим для обох очей.</string>
     <string name="wizard_ana_check_title">Перевірка</string>
-    <string name="wizard_ana_check_text">Червоне коло має бути перед екраном, сітка — за ним. Якщо навпаки — переставте лінзи (◀ ▶ у режимі налаштування). «Зберегти» — зберегти калібрування для цих окулярів, воно стане фільтром за замовчуванням.</string>
+    <string name="wizard_ana_check_text">Червоне коло має бути перед екраном, сітка — за ним. Якщо навпаки — переставте лінзи (◀ ▶ у режимі налаштування). «Зберегти» — додати для цих окулярів фільтр «Калібрування» й вибрати його за замовчуванням.</string>
     <string name="pref_reset_calibration">Скинути калібрування</string>
     <string name="pref_reset_calibration_desc">Повернути значення застосунку для Cardboard VR та/або анагліф-окулярів</string>
     <string name="reset_calibration_vr">Cardboard VR</string>
     <string name="reset_calibration_anaglyph">Анагліф-окуляри</string>
     <string name="reset_calibration_all">Усе</string>
     <string name="reset_calibration_done">Калібрування скинуто</string>
+    <string name="filter_calibrated">Калібрування</string>
 </resources>

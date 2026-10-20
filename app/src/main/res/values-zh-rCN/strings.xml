@@ -377,11 +377,12 @@
     <string name="wizard_ana_colors_title">颜色</string>
     <string name="wizard_ana_colors_text">用双眼观看。调整每个镜片的色调，使颜色看起来更自然，并且两只眼睛看到的画面亮度一致。</string>
     <string name="wizard_ana_check_title">检查</string>
-    <string name="wizard_ana_check_text">红色圆应在屏幕前方，网格在其后方。如果相反，请交换镜片（调整模式下按 ◀ ▶）。“保存”将保存这副眼镜的校准，并作为默认滤镜。</string>
+    <string name="wizard_ana_check_text">红色圆应在屏幕前方，网格在其后方。如果相反，请交换镜片（调整模式下按 ◀ ▶）。“保存”将为这副眼镜添加“已校准”滤镜并设为默认。</string>
     <string name="pref_reset_calibration">重置校准</string>
     <string name="pref_reset_calibration_desc">恢复 Cardboard VR 和/或红蓝眼镜的应用默认值</string>
     <string name="reset_calibration_vr">Cardboard VR</string>
     <string name="reset_calibration_anaglyph">红蓝眼镜</string>
     <string name="reset_calibration_all">全部</string>
     <string name="reset_calibration_done">校准已重置</string>
+    <string name="filter_calibrated">已校准</string>
 </resources>

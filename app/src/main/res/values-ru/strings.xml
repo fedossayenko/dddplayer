@@ -391,11 +391,12 @@
     <string name="wizard_ana_colors_title">Цвета</string>
     <string name="wizard_ana_colors_text">Смотрите обоими глазами. Подбирайте оттенок каждой линзы, чтобы цвета выглядели естественнее, а изображение было одинаково ярким для обоих глаз.</string>
     <string name="wizard_ana_check_title">Проверка</string>
-    <string name="wizard_ana_check_text">Красный круг должен быть перед экраном, сетка — за ним. Если наоборот — переставьте линзы (◀ ▶ в режиме настройки). «Сохранить» — сохранить калибровку для этих очков, она станет фильтром по умолчанию.</string>
+    <string name="wizard_ana_check_text">Красный круг должен быть перед экраном, сетка — за ним. Если наоборот — переставьте линзы (◀ ▶ в режиме настройки). «Сохранить» — добавить для этих очков фильтр «Калибровка» и выбрать его по умолчанию.</string>
     <string name="pref_reset_calibration">Сбросить калибровку</string>
     <string name="pref_reset_calibration_desc">Вернуть значения приложения для Cardboard VR и/или анаглиф-очков</string>
     <string name="reset_calibration_vr">Cardboard VR</string>
     <string name="reset_calibration_anaglyph">Анаглиф-очки</string>
     <string name="reset_calibration_all">Все</string>
     <string name="reset_calibration_done">Калибровка сброшена</string>
+    <string name="filter_calibrated">Калибровка</string>
 </resources>
