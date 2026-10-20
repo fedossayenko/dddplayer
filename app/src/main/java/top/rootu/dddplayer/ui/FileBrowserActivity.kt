@@ -40,10 +40,14 @@ import top.rootu.dddplayer.logic.DlnaServer
 import top.rootu.dddplayer.logic.FileBrowserLogic
 import top.rootu.dddplayer.logic.FileEntry
 import top.rootu.dddplayer.logic.HomeLogic
+import top.rootu.dddplayer.logic.SmbAddress
+import top.rootu.dddplayer.logic.SmbLogic
 import top.rootu.dddplayer.model.HistoryEntry
 import top.rootu.dddplayer.model.HistorySource
 import top.rootu.dddplayer.model.SavedPlaylist
+import top.rootu.dddplayer.model.SmbServer
 import top.rootu.dddplayer.player.DlnaClient
+import top.rootu.dddplayer.player.SmbConnections
 import top.rootu.dddplayer.utils.IntentUtils
 import top.rootu.dddplayer.utils.StorageRoot
 import top.rootu.dddplayer.utils.StorageRoots
@@ -60,7 +64,8 @@ class FileBrowserActivity : AppCompatActivity() {
 
     private enum class RowType {
         HEADER, HISTORY, HISTORY_TOGGLE, SAVED_PLAYLIST, ADD_PLAYLIST, ACCESS, STORAGE,
-        DLNA_SERVER, DLNA_SEARCH, PARENT, DIR, VIDEO, PLAYLIST, DLNA_FOLDER, DLNA_VIDEO
+        DLNA_SERVER, DLNA_SEARCH, SMB_SERVER, ADD_SMB, PARENT, DIR, VIDEO, PLAYLIST, DLNA_FOLDER, DLNA_VIDEO,
+        SMB_DIR, SMB_VIDEO
     }
 
     private data class Row(
@@ -76,6 +81,7 @@ class FileBrowserActivity : AppCompatActivity() {
         object Home : Location()
         data class Local(val path: String) : Location()
         data class Dlna(val server: DlnaServer, val objectId: String, val title: String, val parent: Dlna?) : Location()
+        data class Smb(val server: SmbServer, val address: SmbAddress) : Location()
     }
 
     private lateinit var repository: SettingsRepository
@@ -100,6 +106,8 @@ class FileBrowserActivity : AppCompatActivity() {
     // Медиасерверы DLNA: ищутся один раз при открытии экрана (и по "Искать снова")
     private var dlnaServers: List<DlnaServer> = emptyList()
     private var dlnaSearching = false
+    // Имена файлов открытой сетевой папки SMB: из них берутся субтитры рядом с видео
+    private var smbFileNames: List<String> = emptyList()
 
     private val sizeUnits by lazy { resources.getStringArray(R.array.file_size_units).toList() }
 
@@ -113,6 +121,7 @@ class FileBrowserActivity : AppCompatActivity() {
         setContentView(R.layout.activity_file_browser)
         repository = SettingsRepository.getInstance(this)
         dlnaClient = DlnaClient(this)
+        SmbConnections.init(this)
 
         header = findViewById(R.id.files_header)
         pathView = findViewById(R.id.files_path)
@@ -132,6 +141,7 @@ class FileBrowserActivity : AppCompatActivity() {
                 Location.Home -> finish()
                 is Location.Local -> open(parentOf(current.path), focusPath = current.path)
                 is Location.Dlna -> open(current.parent ?: Location.Home, focusPath = dlnaKey(current))
+                is Location.Smb -> open(smbParent(current), focusPath = smbKey(current))
             }
         }
 
@@ -207,6 +217,15 @@ class FileBrowserActivity : AppCompatActivity() {
 
     private fun dlnaKey(location: Location.Dlna) = "dlna:${location.server.controlUrl}#${location.objectId}"
 
+    private fun smbKey(location: Location.Smb) = SmbConnections.uriOf(location.address).toString()
+
+    // Выше папки, указанной в адресе сетевой папки, - главный экран
+    private fun smbParent(location: Location.Smb): Location {
+        val base = SmbLogic.parseAddress(location.server.address)?.path.orEmpty()
+        if (location.address.path.length <= base.length) return Location.Home
+        return location.copy(address = location.address.copy(path = SmbLogic.parentPath(location.address.path)))
+    }
+
     private fun open(target: Location, focusPath: String? = null) {
         location = target
         if (target == Location.Home) roots = StorageRoots.list(this)
@@ -214,11 +233,13 @@ class FileBrowserActivity : AppCompatActivity() {
             Location.Home -> getString(R.string.app_name)
             is Location.Local -> roots.firstOrNull { it.path == target.path }?.title ?: File(target.path).name
             is Location.Dlna -> target.title
+            is Location.Smb -> target.address.path.substringAfterLast('/').ifEmpty { target.server.name }
         }
         pathView.text = when (target) {
             Location.Home -> ""
             is Location.Local -> target.path
             is Location.Dlna -> target.server.name
+            is Location.Smb -> SmbLogic.format(target.address)
         }
         pathView.isVisible = target != Location.Home
         progress.isVisible = true
@@ -230,6 +251,7 @@ class FileBrowserActivity : AppCompatActivity() {
                 Location.Home -> withContext(Dispatchers.IO) { rootRows() }
                 is Location.Local -> withContext(Dispatchers.IO) { dirRows(target.path) }
                 is Location.Dlna -> dlnaRows(target)
+                is Location.Smb -> withContext(Dispatchers.IO) { smbRows(target) }
             }
             // Пользователь мог уйти в другую папку, пока читали эту
             if (location != target) return@launch
@@ -277,6 +299,10 @@ class FileBrowserActivity : AppCompatActivity() {
         roots.forEach { result.add(Row(RowType.STORAGE, it.title, it.path, it.path)) }
 
         result.add(Row(RowType.HEADER, getString(R.string.home_network), "", ""))
+        repository.getSmbServers().forEach { server ->
+            result.add(Row(RowType.SMB_SERVER, server.name, server.address, "smb_server:${server.id}", server))
+        }
+        result.add(Row(RowType.ADD_SMB, getString(R.string.home_smb_add), getString(R.string.home_smb_add_desc), "smb_add"))
         dlnaServers.forEach { server ->
             result.add(Row(RowType.DLNA_SERVER, server.name, getString(R.string.home_dlna_server), "dlna_server:${server.controlUrl}", server))
         }
@@ -341,6 +367,30 @@ class FileBrowserActivity : AppCompatActivity() {
         return result
     }
 
+    /** Содержимое сетевой папки SMB или null, если не удалось подключиться или прочитать ее. */
+    private fun smbRows(target: Location.Smb): List<Row>? {
+        val entries = try {
+            SmbConnections.list(target.address, target.server)
+        } catch (e: Exception) {
+            val message = e.message ?: e.javaClass.simpleName
+            runOnUiThread { Toast.makeText(this, getString(R.string.home_smb_error, message), Toast.LENGTH_LONG).show() }
+            return null
+        }
+        smbFileNames = entries.filter { !it.isDirectory }.map { it.name }
+        val parent = smbParent(target)
+        val parentTitle = (parent as? Location.Smb)?.let { SmbLogic.format(it.address) } ?: getString(R.string.app_name)
+        val result = mutableListOf(Row(RowType.PARENT, "..", parentTitle, ""))
+        FileBrowserLogic.visibleEntries(entries.map { FileEntry(it.name, it.name, it.isDirectory, it.size) }).forEach { entry ->
+            val address = target.address.copy(path = SmbLogic.childPath(target.address.path, entry.name))
+            val key = SmbConnections.uriOf(address).toString()
+            when {
+                entry.isDirectory -> result.add(Row(RowType.SMB_DIR, entry.name, getString(R.string.files_folder), key, address))
+                entry.isVideo -> result.add(Row(RowType.SMB_VIDEO, entry.name, FileBrowserLogic.formatSize(entry.size, sizeUnits), key, address))
+            }
+        }
+        return result
+    }
+
     // Фокус на строку после загрузки списка (для пульта): сначала прокрутка, затем фокус после разметки
     private fun focusRow(index: Int) {
         if (index !in rows.indices) return
@@ -369,9 +419,16 @@ class FileBrowserActivity : AppCompatActivity() {
                 open(Location.Dlna(it, DlnaLogic.ROOT_ID, it.name, null))
             }
             RowType.DLNA_SEARCH -> searchDlna()
+            RowType.SMB_SERVER -> (row.data as SmbServer).let { server ->
+                SmbLogic.parseAddress(server.address)?.let { open(Location.Smb(server, it)) }
+            }
+            RowType.ADD_SMB -> showSmbDialog(null)
+            RowType.SMB_DIR -> (location as? Location.Smb)?.let { open(it.copy(address = row.data as SmbAddress)) }
+            RowType.SMB_VIDEO -> playSmbFolder(row)
             RowType.PARENT -> when (val current = location) {
                 is Location.Local -> open(parentOf(current.path), focusPath = current.path)
                 is Location.Dlna -> open(current.parent ?: Location.Home, focusPath = dlnaKey(current))
+                is Location.Smb -> open(smbParent(current), focusPath = smbKey(current))
                 Location.Home -> Unit
             }
             RowType.DLNA_FOLDER -> (location as? Location.Dlna)?.let { current ->
@@ -391,6 +448,7 @@ class FileBrowserActivity : AppCompatActivity() {
     private fun onRowLongClick(row: Row): Boolean {
         when (row.type) {
             RowType.SAVED_PLAYLIST -> showPlaylistDialog(row.data as SavedPlaylist)
+            RowType.SMB_SERVER -> showSmbDialog(row.data as SmbServer)
             RowType.HISTORY -> {
                 val entry = row.data as HistoryEntry
                 ChoiceDialog.show(this, entry.title, listOf(getString(R.string.home_history_remove)), -1) {
@@ -438,6 +496,55 @@ class FileBrowserActivity : AppCompatActivity() {
         startActivity(intent)
     }
 
+    private fun playSmbFolder(selected: Row) {
+        val current = location as? Location.Smb ?: return
+        val videos = rows.filter { it.type == RowType.SMB_VIDEO }
+        playSmb(videos.map { it.data as SmbAddress }, videos.indexOf(selected).coerceAtLeast(0), current.address, smbFileNames)
+    }
+
+    private fun playSmb(videos: List<SmbAddress>, startIndex: Int, folder: SmbAddress, fileNames: List<String>) {
+        val folderName = folder.path.substringAfterLast('/').ifEmpty { folder.share }
+        val source = HistorySource(HistoryEntry.KIND_SMB, SmbConnections.uriOf(folder).toString(), folderName)
+        val names = videos.map { it.path.substringAfterLast('/') }
+        val intent = playerIntent(videos.map { SmbConnections.uriOf(it) }, names, startIndex, source)
+        // Субтитры рядом с видео в той же сетевой папке
+        val subtitles = names.map { SmbLogic.subtitlesFor(it, fileNames) }
+        if (subtitles.any { it.isNotEmpty() }) {
+            intent.putParcelableArrayListExtra("video_list.subtitles", ArrayList(subtitles.map { list ->
+                Bundle().apply {
+                    putParcelableArray("uris", list.map { SmbConnections.uriOf(folder.copy(path = SmbLogic.childPath(folder.path, it))) }.toTypedArray())
+                    putStringArray("names", list.toTypedArray())
+                }
+            }))
+        }
+        startActivity(intent)
+    }
+
+    // SMB: заново читаем сетевую папку и открываем ее видео с последнего просмотренного
+    private fun resumeSmb(entry: HistoryEntry) {
+        val folder = SmbConnections.addressOf(Uri.parse(entry.source)) ?: return
+        progress.isVisible = true
+        lifecycleScope.launch {
+            val entries = withContext(Dispatchers.IO) {
+                try {
+                    SmbConnections.list(folder)
+                } catch (e: Exception) {
+                    null
+                }
+            }
+            progress.isVisible = false
+            val videos = entries?.let { list ->
+                FileBrowserLogic.visibleEntries(list.map { FileEntry(it.name, it.name, it.isDirectory, it.size) }).filter { it.isVideo }
+            }.orEmpty().map { folder.copy(path = SmbLogic.childPath(folder.path, it.name)) }
+            val index = videos.indexOfFirst { SmbConnections.uriOf(it).toString() == entry.uri }
+            if (entries == null || index < 0) {
+                Toast.makeText(this@FileBrowserActivity, R.string.home_unavailable, Toast.LENGTH_LONG).show()
+                return@launch
+            }
+            playSmb(videos, index, folder, entries.filter { !it.isDirectory }.map { it.name })
+        }
+    }
+
     /** Продолжить просмотр: папка снова открывается плейлистом с последнего видео, плейлист - по ссылке. */
     private fun resume(entry: HistoryEntry) {
         val source = HistorySource(entry.kind, entry.source, entry.sourceName)
@@ -456,6 +563,7 @@ class FileBrowserActivity : AppCompatActivity() {
                 play(uris, videos.map { it.name }, index, source)
             }
             HistoryEntry.KIND_DLNA -> resumeDlna(entry)
+            HistoryEntry.KIND_SMB -> resumeSmb(entry)
             else -> playUrl(entry.source, source)
         }
     }
@@ -551,6 +659,53 @@ class FileBrowserActivity : AppCompatActivity() {
         (if (playlist == null) editUrl else editName).requestFocus()
     }
 
+    // ==================== СЕТЕВЫЕ ПАПКИ SMB ====================
+
+    // Добавление (server = null) или изменение сетевой папки
+    private fun showSmbDialog(server: SmbServer?) {
+        val dialog = Dialog(this, R.style.Theme_App_Dialog)
+        dialog.setContentView(R.layout.dialog_smb_server)
+        val title = dialog.findViewById<TextView>(R.id.dialog_title)
+        val editName = dialog.findViewById<EditText>(R.id.edit_name)
+        val editAddress = dialog.findViewById<EditText>(R.id.edit_address)
+        val editUser = dialog.findViewById<EditText>(R.id.edit_user)
+        val editPassword = dialog.findViewById<EditText>(R.id.edit_password)
+        val btnDelete = dialog.findViewById<Button>(R.id.btn_delete)
+
+        title.setText(if (server == null) R.string.home_smb_add else R.string.home_smb_title)
+        editName.setText(server?.name.orEmpty())
+        editAddress.setText(server?.address.orEmpty())
+        editUser.setText(server?.user.orEmpty())
+        editPassword.setText(server?.password.orEmpty())
+        btnDelete.isVisible = server != null
+
+        btnDelete.setOnClickListener {
+            server?.let { repository.removeSmbServer(it.id) }
+            dialog.dismiss()
+            open(Location.Home)
+        }
+        dialog.findViewById<Button>(R.id.btn_cancel).setOnClickListener { dialog.dismiss() }
+        dialog.findViewById<Button>(R.id.btn_save).setOnClickListener {
+            val address = SmbLogic.parseAddress(editAddress.text.toString())
+            if (address == null) {
+                Toast.makeText(this, R.string.home_smb_address_invalid, Toast.LENGTH_LONG).show()
+                return@setOnClickListener
+            }
+            val formatted = SmbLogic.format(address)
+            val name = editName.text.toString().trim().ifEmpty { formatted.removePrefix("smb://") }
+            val id = server?.id ?: UUID.randomUUID().toString()
+            // Имя пользователя вида DOMAIN\user - домен отдельно
+            val userInput = editUser.text.toString().trim()
+            val domain = if (userInput.contains('\\')) userInput.substringBefore('\\') else ""
+            val user = userInput.substringAfter('\\')
+            repository.putSmbServer(SmbServer(id, name, formatted, user, editPassword.text.toString(), domain))
+            dialog.dismiss()
+            open(Location.Home, focusPath = "smb_server:$id")
+        }
+        dialog.show()
+        (if (server == null) editAddress else editName).requestFocus()
+    }
+
     // ==================== СПИСОК ====================
 
     private inner class FileAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
@@ -592,11 +747,12 @@ class FileBrowserActivity : AppCompatActivity() {
                     RowType.ADD_PLAYLIST -> R.drawable.ic_add
                     RowType.ACCESS -> R.drawable.ic_lock_open
                     RowType.STORAGE -> R.drawable.ic_storage
-                    RowType.DLNA_SERVER -> R.drawable.ic_dlna
+                    RowType.DLNA_SERVER, RowType.SMB_SERVER -> R.drawable.ic_dlna
+                    RowType.ADD_SMB -> R.drawable.ic_add
                     RowType.DLNA_SEARCH -> R.drawable.ic_update
                     RowType.PARENT -> R.drawable.ic_arrow_left
-                    RowType.DIR, RowType.DLNA_FOLDER -> R.drawable.ic_folder
-                    RowType.VIDEO, RowType.DLNA_VIDEO -> R.drawable.ic_video_file
+                    RowType.DIR, RowType.DLNA_FOLDER, RowType.SMB_DIR -> R.drawable.ic_folder
+                    RowType.VIDEO, RowType.DLNA_VIDEO, RowType.SMB_VIDEO -> R.drawable.ic_video_file
                 }
             )
             holder.itemView.setOnClickListener { onRowClick(row) }

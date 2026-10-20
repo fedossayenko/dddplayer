@@ -414,6 +414,14 @@
     <string name="home_dlna_not_found">Медіасервери не знайдено. Шукати знову</string>
     <string name="home_dlna_search_again">Шукати знову</string>
     <string name="home_dlna_search_desc">Сервери DLNA у локальній мережі (NAS, комп’ютер, роутер)</string>
+    <string name="home_smb_add">Додати мережеву теку (SMB)</string>
+    <string name="home_smb_add_desc">Наприклад smb://192.168.1.5/Video. Довге натискання — змінити</string>
+    <string name="home_smb_title">Мережева тека</string>
+    <string name="home_smb_address_hint">smb://сервер/спільна_тека</string>
+    <string name="home_smb_user_hint">Користувач (порожньо — гість, ДОМЕН\\user)</string>
+    <string name="home_smb_password_hint">Пароль</string>
+    <string name="home_smb_address_invalid">Вкажіть адресу виду smb://сервер/спільна_тека</string>
+    <string name="home_smb_error">Не вдалося відкрити: %1$s</string>
     <string-array name="file_size_units">
         <item>Б</item>
         <item>КБ</item>

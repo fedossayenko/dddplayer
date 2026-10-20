@@ -429,6 +429,14 @@
     <string name="home_dlna_not_found">未找到媒体服务器。重新搜索</string>
     <string name="home_dlna_search_again">重新搜索</string>
     <string name="home_dlna_search_desc">局域网中的 DLNA 服务器（NAS、电脑、路由器）</string>
+    <string name="home_smb_add">添加网络文件夹（SMB）</string>
+    <string name="home_smb_add_desc">例如 smb://192.168.1.5/Video。长按可编辑</string>
+    <string name="home_smb_title">网络文件夹</string>
+    <string name="home_smb_address_hint">smb://服务器/共享文件夹</string>
+    <string name="home_smb_user_hint">用户（留空为访客，DOMAIN\\user）</string>
+    <string name="home_smb_password_hint">密码</string>
+    <string name="home_smb_address_invalid">请输入 smb://服务器/共享文件夹 格式的地址</string>
+    <string name="home_smb_error">无法打开：%1$s</string>
     <string-array name="file_size_units">
         <item>B</item>
         <item>KB</item>

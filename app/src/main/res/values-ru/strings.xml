@@ -443,6 +443,14 @@
     <string name="home_dlna_not_found">Медиасерверы не найдены. Искать снова</string>
     <string name="home_dlna_search_again">Искать снова</string>
     <string name="home_dlna_search_desc">Серверы DLNA в локальной сети (NAS, компьютер, роутер)</string>
+    <string name="home_smb_add">Добавить сетевую папку (SMB)</string>
+    <string name="home_smb_add_desc">Например smb://192.168.1.5/Video. Долгое нажатие — изменить</string>
+    <string name="home_smb_title">Сетевая папка</string>
+    <string name="home_smb_address_hint">smb://сервер/общая_папка</string>
+    <string name="home_smb_user_hint">Пользователь (пусто — гость, ДОМЕН\\user)</string>
+    <string name="home_smb_password_hint">Пароль</string>
+    <string name="home_smb_address_invalid">Укажите адрес вида smb://сервер/общая_папка</string>
+    <string name="home_smb_error">Не удалось открыть: %1$s</string>
     <string-array name="file_size_units">
         <item>Б</item>
         <item>КБ</item>

@@ -77,6 +77,11 @@ class PlayerManager(
     private val appContext = context.applicationContext
     private val settingsRepo = SettingsRepository.getInstance(appContext)
 
+    init {
+        // Учетные данные сетевых папок SMB берутся из настроек
+        SmbConnections.init(appContext)
+    }
+
     var exoPlayer: ExoPlayer? = null
         private set
 
@@ -186,7 +191,9 @@ class PlayerManager(
 
     // Ответы, уже скачанные при проверке ссылки на M3U: плеер получает их без повторного запроса
     private val prefetchStore = PrefetchStore()
-    private val prefetchingDataSourceFactory = PrefetchingDataSource.Factory(defaultDataSourceFactory, prefetchStore)
+    // smb:// (сетевые папки стартового экрана) читает SmbDataSource, остальное - универсальная фабрика
+    private val prefetchingDataSourceFactory =
+        PrefetchingDataSource.Factory(SmbRoutingDataSource.Factory(defaultDataSourceFactory), prefetchStore)
 
     // Типы, определенные при проверке ссылки (переживают очистку resolvedMediaTypes в loadPlaylist)
     private val probedMediaTypes = ConcurrentHashMap<String, String>()

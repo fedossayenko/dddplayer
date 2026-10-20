@@ -13,6 +13,7 @@ import top.rootu.dddplayer.model.AnaglyphCalibration
 import top.rootu.dddplayer.model.AudioTrackStat
 import top.rootu.dddplayer.model.HistoryEntry
 import top.rootu.dddplayer.model.SavedPlaylist
+import top.rootu.dddplayer.model.SmbServer
 import top.rootu.dddplayer.model.StereoOutputMode
 import top.rootu.dddplayer.model.SubtitleStyle
 import top.rootu.dddplayer.player.NetworkBufferLoadControl
@@ -165,6 +166,45 @@ class SettingsRepository private constructor(context: Context) {
         array.put(JSONObject().put("id", UUID.randomUUID().toString()).put("name", HomeLogic.defaultPlaylistName(url)).put("url", url))
         prefs.edit { putString("saved_playlists", array.toString()) }
     }
+
+    /** Сетевые папки SMB стартового экрана (пароль хранится в настройках приложения, недоступных другим приложениям). */
+    fun getSmbServers(): List<SmbServer> {
+        val json = prefs.getString("smb_servers", null) ?: return emptyList()
+        return try {
+            val array = JSONArray(json)
+            (0 until array.length()).map { i ->
+                val obj = array.getJSONObject(i)
+                SmbServer(
+                    id = obj.getString("id"),
+                    name = obj.optString("name"),
+                    address = obj.getString("address"),
+                    user = obj.optString("user"),
+                    password = obj.optString("password"),
+                    domain = obj.optString("domain")
+                )
+            }
+        } catch (e: JSONException) {
+            emptyList()
+        }
+    }
+
+    private fun saveSmbServers(servers: List<SmbServer>) {
+        val array = JSONArray()
+        servers.forEach {
+            array.put(
+                JSONObject().put("id", it.id).put("name", it.name).put("address", it.address)
+                    .put("user", it.user).put("password", it.password).put("domain", it.domain)
+            )
+        }
+        prefs.edit { putString("smb_servers", array.toString()) }
+    }
+
+    fun putSmbServer(server: SmbServer) {
+        val list = getSmbServers()
+        saveSmbServers(if (list.any { it.id == server.id }) list.map { if (it.id == server.id) server else it } else list + server)
+    }
+
+    fun removeSmbServer(id: String) = saveSmbServers(getSmbServers().filter { it.id != id })
 
     /** История "Продолжить просмотр", новые сверху. */
     fun getWatchHistory(): List<HistoryEntry> {

@@ -14,6 +14,7 @@ import org.robolectric.RuntimeEnvironment
 import top.rootu.dddplayer.model.AnaglyphCalibration
 import top.rootu.dddplayer.model.HistoryEntry
 import top.rootu.dddplayer.model.SavedPlaylist
+import top.rootu.dddplayer.model.SmbServer
 import top.rootu.dddplayer.model.StereoOutputMode
 import top.rootu.dddplayer.model.SubtitleStyle
 import top.rootu.dddplayer.renderer.StereoRenderer
@@ -224,5 +225,18 @@ class SettingsRepositoryTest {
         assertEquals(listOf("/series/e2.mkv", "/movies/m.mkv"), repo.getWatchHistory().map { it.uri })
         repo.removeWatchHistory("folder:/movies")
         assertEquals(1, repo.getWatchHistory().size)
+    }
+
+    @Test
+    fun `smb servers keep credentials`() {
+        val repo = repo()
+        repo.putSmbServer(SmbServer("1", "NAS", "smb://nas/Video", "user", "secret", "HOME"))
+        repo.putSmbServer(SmbServer("1", "NAS 2", "smb://nas/Video", "user", "secret2", "HOME"))
+        val saved = repo.getSmbServers().single()
+        assertEquals("NAS 2", saved.name)
+        assertEquals("secret2", saved.password)
+        assertEquals("HOME", saved.domain)
+        repo.removeSmbServer("1")
+        assertTrue(repo.getSmbServers().isEmpty())
     }
 }

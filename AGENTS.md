@@ -75,7 +75,7 @@ app/src/main/java/top/rootu/dddplayer/
 
 1. **Запуск:** `PlayerActivity.onCreate` разбирает Intent (`IntentUtils.parseIntent`) и вызывает
    `PlayerViewModel.loadMedia`. Запуск из лаунчера открывает стартовый экран `FileBrowserActivity`:
-   «Продолжить просмотр», плейлисты по ссылке (`forceM3uProbe = true`) и хранилища.
+   «Продолжить просмотр», плейлисты по ссылке (`forceM3uProbe = true`), хранилища, SMB и DLNA.
 2. **Загрузка:** `loadMedia` проверяет одиночную ссылку `.m3u`/`.m3u8` через `PlayerManager.expandM3u`.
    Ссылка скачивается один раз, HLS (`#EXT-X-`) отдается плееру из `PrefetchStore`.
    Затем `loadPlaylist` (VM) передает список в `PlayerManager.loadPlaylist`, а тот собирает `MediaSource`.

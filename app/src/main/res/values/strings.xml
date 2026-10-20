@@ -446,6 +446,14 @@
     <string name="home_dlna_not_found">No media servers found. Search again</string>
     <string name="home_dlna_search_again">Search again</string>
     <string name="home_dlna_search_desc">DLNA servers in the local network (NAS, PC, router)</string>
+    <string name="home_smb_add">Add network folder (SMB)</string>
+    <string name="home_smb_add_desc">For example smb://192.168.1.5/Video. Long press to edit</string>
+    <string name="home_smb_title">Network folder</string>
+    <string name="home_smb_address_hint">smb://server/shared_folder</string>
+    <string name="home_smb_user_hint">User (empty for guest, DOMAIN\\user)</string>
+    <string name="home_smb_password_hint">Password</string>
+    <string name="home_smb_address_invalid">Enter an address like smb://server/shared_folder</string>
+    <string name="home_smb_error">Could not open: %1$s</string>
     <string-array name="file_size_units">
         <item>B</item>
         <item>KB</item>

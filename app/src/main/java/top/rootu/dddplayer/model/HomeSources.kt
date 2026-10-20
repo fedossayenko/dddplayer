@@ -3,6 +3,20 @@ package top.rootu.dddplayer.model
 /** Откуда запущено видео со стартового экрана: по этому источнику ведется история просмотра. */
 data class HistorySource(val kind: String, val source: String, val name: String)
 
+/**
+ * Сетевая папка SMB на стартовом экране.
+ * @param address smb://host[:port]/share[/folder]
+ * @param user пустой - вход гостем
+ */
+data class SmbServer(
+    val id: String,
+    val name: String,
+    val address: String,
+    val user: String = "",
+    val password: String = "",
+    val domain: String = ""
+)
+
 /** Плейлист по ссылке на стартовом экране (M3U/IPTV). Имя задает пользователь. */
 data class SavedPlaylist(val id: String, val name: String, val url: String)
 
@@ -33,5 +47,6 @@ data class HistoryEntry(
         const val KIND_FOLDER = "folder"
         const val KIND_PLAYLIST = "playlist"
         const val KIND_DLNA = "dlna"
+        const val KIND_SMB = "smb"
     }
 }
