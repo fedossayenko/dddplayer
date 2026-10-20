@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Настройка стиля субтитров: название и значение со стрелками (Влево/Вправо на пульте или касание) -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    style="@style/SettingsItemContainer">
+
+    <TextView
+        android:id="@+id/option_title"
+        style="@style/SettingsItemTitle"
+        android:layout_width="0dp"
+        android:layout_weight="1" />
+
+    <ImageView
+        android:id="@+id/option_prev"
+        android:layout_width="28dp"
+        android:layout_height="28dp"
+        android:contentDescription="@string/sub_option_prev"
+        android:duplicateParentState="true"
+        android:padding="2dp"
+        android:src="@drawable/ic_arrow_left"
+        app:tint="@color/selector_settings_secondary" />
+
+    <TextView
+        android:id="@+id/option_value"
+        style="@style/SettingsItemValue"
+        android:layout_marginStart="4dp"
+        android:gravity="center"
+        android:minWidth="96dp" />
+
+    <ImageView
+        android:id="@+id/option_next"
+        android:layout_width="28dp"
+        android:layout_height="28dp"
+        android:layout_marginStart="4dp"
+        android:contentDescription="@string/sub_option_next"
+        android:duplicateParentState="true"
+        android:padding="2dp"
+        android:src="@drawable/ic_arrow_right"
+        app:tint="@color/selector_settings_secondary" />
+</LinearLayout>

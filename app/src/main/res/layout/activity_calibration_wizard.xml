@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Визард калибровки: тестовая картинка через StereoRenderer и панели инструкции поверх -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/wizard_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/black">
+
+    <top.rootu.dddplayer.renderer.StereoGLSurfaceView
+        android:id="@+id/wizard_gl"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <!-- Панели (по одной на глаз в VR, одна в анаглифе) заполняются в коде -->
+    <LinearLayout
+        android:id="@+id/wizard_overlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="horizontal" />
+</FrameLayout>

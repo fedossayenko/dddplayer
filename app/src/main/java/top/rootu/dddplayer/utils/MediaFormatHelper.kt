@@ -121,7 +121,12 @@ object MediaFormatHelper {
      */
     fun getSubtitleMimeType(uri: Uri): String? {
         val path = uri.path ?: return null
-        val extension = getFileExtension(path) ?: return MimeTypes.TEXT_UNKNOWN
+        return getSubtitleMimeTypeByName(path)
+    }
+
+    /** MIME-тип субтитров по имени файла (для content:// ссылок, где расширения в пути нет). */
+    fun getSubtitleMimeTypeByName(fileName: String): String? {
+        val extension = getFileExtension(fileName) ?: return MimeTypes.TEXT_UNKNOWN
 
         return when (extension) {
             // Форматы с явной поддержкой в ExoPlayer

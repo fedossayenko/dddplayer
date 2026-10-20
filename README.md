@@ -42,7 +42,7 @@ To experience the 3D effect, you will need **anaglyph glasses** (e.g., Red-Cyan)
 *   **Rendering**: OpenGL ES 3.0 shaders with linear-light anaglyph blending and automatic fallback to OpenGL ES 2.0 (can be forced in settings).
 *   **HDR Support**: Direct rendering via SurfaceView for native HDR / Dolby Vision playback on supported displays (when in 2D mode). Optional Dolby Vision → HEVC compatibility mode.
 *   **Audio**: AC3/DTS 5.1 passthrough to receivers via HDMI/Optical, built-in FFmpeg audio decoders, stereo downmix with an adjustable mixer, loudness boost, skip silence.
-*   **Advanced Subtitles**: Correctly renders subtitles in 3D modes, external subtitles via Intent.
+*   **Advanced Subtitles**: Correctly renders subtitles in 3D modes; external subtitles via Intent, from files next to a local video (`movie.srt`, `movie.en.srt`) or loaded from a file in the subtitles menu; customizable style (font, size, colors, background, outline, position) with live preview.
 *   **Playlists & IPTV**:
     *   Playlists passed by other apps (see Intent API) with posters and subtitles.
     *   M3U / M3U8 playlists with groups (`group-title`, `#EXTGRP`), logos and per-channel HTTP headers (`#EXTVLCOPT`, `#EXTHTTP`). HLS streams are detected and played without a second request.
@@ -55,12 +55,13 @@ To experience the 3D effect, you will need **anaglyph glasses** (e.g., Red-Cyan)
     *   Picture-in-Picture (optional auto PiP).
     *   Forced aspect ratio (4:3, 16:9, 1.85, 2.35, 2.39), fit / crop / stretch / custom zoom modes.
     *   Playback speed, audio and subtitle track selection with preferred languages.
-*   **TV-friendly UI**: remote-control navigation, configurable OK/Up buttons, on-screen clock, exit confirmation, pause dimming for OLED screens; touch gestures on phones (seek, volume, brightness, playlist swipe).
+*   **TV-friendly UI**: remote-control navigation, configurable OK/Up buttons, on-screen clock, exit confirmation, pause dimming for OLED screens; touch gestures on phones (seek, volume, brightness, playlist swipe, pinch to zoom and move the picture).
 *   **Customization**:
     *   Adjustable 3D depth (parallax).
     *   Swap Left/Right eyes.
     *   Custom anaglyph color tuning (Hue, Leakage).
     *   VR lens distortion parameters (K1, K2, Scale).
+*   **Calibration wizards** for Cardboard VR (screen separation, lens distortion, scale) and anaglyph glasses (lens colors and order, ghosting, hue) with generated test images; reset to defaults at any time.
 *   **Built-in updates** from GitHub Releases.
 *   **Languages**: English, Russian, Ukrainian, Belarusian, Chinese (Simplified).
 
@@ -128,11 +129,11 @@ To pass a playlist, use the `video_list` extra (ParcelableArray of URIs) along w
 | `video_list.filename` | String[] | List of filenames (used as titles if names are missing). |
 | `video_list.thumbnail` | String[] | List of poster URLs. |
 | `video_list.subtitles` | ArrayList&lt;Bundle&gt; | List of subtitles for each video item. |
-| `start_index` | Int | Index of the item to start from (default 0). |
+| `start_index` | Int | Fallback start item index, used only when the intent data does not match any item (otherwise the first item). |
 | `headers` | String[] | HTTP headers applied to every item. |
 | `position` | Long / Int / String | Start position for the item whose URI equals the intent data. |
 
-If the intent data (`setData`) matches one of the playlist items, playback starts from that item (it overrides `start_index`).
+**Start item:** playback starts from the item whose URI equals the intent data (`setDataAndType`). `start_index` is only a fallback for when the data is not set or not found in the list; if neither is given, the first item is played.
 
 **Playlist Subtitles Structure:**
 The `video_list.subtitles` extra is an `ArrayList` where each `Bundle` corresponds to a video at the same index.
@@ -157,10 +158,11 @@ val subsList = ArrayList<Bundle>()
 subsList.add(subs1)
 subsList.add(subs2)
 
+// Start from "Movie 2": the intent data selects the start item
+intent.setDataAndType(videoUris[1], "video/*")
 intent.putExtra("video_list", videoUris)
 intent.putExtra("video_list.name", titles)
 intent.putParcelableArrayListExtra("video_list.subtitles", subsList)
-intent.putExtra("start_index", 1) // start from "Movie 2"
 ```
 
 #### Playback Result
@@ -187,6 +189,7 @@ When started with `startActivityForResult` and `return_result = true`, the playe
 ### Building
 
 *   Requirements: JDK 17, Android SDK (compileSdk 36). Min SDK 23.
+*   Unit tests: `./gradlew testDebugUnitTest` (JUnit + Robolectric).
 *   Debug build: `./gradlew assembleDebug`. The APK is written to `app/build/outputs/apk/debug/`.
 *   The version is taken from git (`versionCode` = commit count, `versionName` = `git describe --tags`), so clone with full history.
 *   Every push and pull request to `main` is built by [GitHub Actions](https://github.com/usmanec/dddplayer/actions/workflows/android-build.yml); the debug APK is attached to the run as an artifact.

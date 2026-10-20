@@ -1,6 +1,9 @@
 package top.rootu.dddplayer.logic
 
+import android.content.Context
 import android.graphics.Color
+import top.rootu.dddplayer.R
+import top.rootu.dddplayer.model.AnaglyphCalibration
 import top.rootu.dddplayer.renderer.StereoRenderer
 import top.rootu.dddplayer.utils.DuboisMath
 import top.rootu.dddplayer.viewmodel.GlassesGroup
@@ -20,7 +23,17 @@ object AnaglyphLogic {
         }
     }
 
-    fun getFiltersForGroup(group: GlassesGroup): List<StereoRenderer.AnaglyphType> {
+    /**
+     * Фильтры группы очков. Откалиброванный в визарде фильтр (если калибровка есть) идет первым:
+     * он же выбирается по умолчанию.
+     */
+    fun getFiltersForGroup(group: GlassesGroup, includeCalibrated: Boolean = false): List<StereoRenderer.AnaglyphType> {
+        val calibrated = calibratedFilter(group)
+        val filters = baseFilters(group)
+        return if (includeCalibrated && calibrated != null) listOf(calibrated) + filters else filters
+    }
+
+    private fun baseFilters(group: GlassesGroup): List<StereoRenderer.AnaglyphType> {
         return when (group) {
             GlassesGroup.RED_CYAN -> listOf(
                 StereoRenderer.AnaglyphType.RC_DUBOIS, StereoRenderer.AnaglyphType.RC_COLOR,
@@ -42,6 +55,57 @@ object AnaglyphLogic {
     }
 
     fun isCustomType(type: StereoRenderer.AnaglyphType) = type.name.endsWith("_CUSTOM")
+
+    fun isCalibratedType(type: StereoRenderer.AnaglyphType) = type.name.endsWith("_CALIBRATED")
+
+    /** Встроенный фильтр группы по умолчанию (замена откалиброванному, если калибровку сбросили). */
+    fun defaultFilter(group: GlassesGroup): StereoRenderer.AnaglyphType = baseFilters(group).first()
+
+    /** Фильтр "Калибровка" группы очков (для красно-синих калибровки нет - только Mono). */
+    fun calibratedFilter(group: GlassesGroup): StereoRenderer.AnaglyphType? = when (group) {
+        GlassesGroup.RED_CYAN -> StereoRenderer.AnaglyphType.RC_CALIBRATED
+        GlassesGroup.YELLOW_BLUE -> StereoRenderer.AnaglyphType.YB_CALIBRATED
+        GlassesGroup.GREEN_MAGENTA -> StereoRenderer.AnaglyphType.GM_CALIBRATED
+        GlassesGroup.RED_BLUE -> null
+    }
+
+    fun isCalibratable(group: GlassesGroup) = calibratedFilter(group) != null
+
+    /** Название фильтра в настройках. */
+    fun filterLabel(context: Context, type: StereoRenderer.AnaglyphType): String = when {
+        isCustomType(type) -> context.getString(R.string.val_custom)
+        isCalibratedType(type) -> context.getString(R.string.filter_calibrated)
+        else -> type.name
+    }
+
+    /**
+     * Основные цвета экрана, которые пропускают светофильтры группы (A, B): 0=R, 1=G, 2=B.
+     * Дополнительный (чужой) цвет фильтра - остальные основные цвета.
+     */
+    fun filterPrimaries(group: GlassesGroup): Pair<Set<Int>, Set<Int>> = when (group) {
+        GlassesGroup.RED_CYAN -> setOf(0) to setOf(1, 2)
+        GlassesGroup.YELLOW_BLUE -> setOf(0, 1) to setOf(2)
+        GlassesGroup.GREEN_MAGENTA -> setOf(1) to setOf(0, 2)
+        GlassesGroup.RED_BLUE -> setOf(0) to setOf(2)
+    }
+
+    /**
+     * Начальная калибровка группы (до визарда). Светофильтры неидеальны: красный обычно заметно
+     * пропускает голубой свет, а голубой почти не пропускает красный.
+     */
+    fun defaultCalibration(group: GlassesGroup): AnaglyphCalibration = when (group) {
+        GlassesGroup.RED_CYAN -> AnaglyphCalibration(
+            leakA = DuboisMath.srgbToLinear(0.35f),
+            leakB = DuboisMath.srgbToLinear(0.15f)
+        )
+        else -> AnaglyphCalibration()
+    }
+
+    /** Матрицы фильтра "Калибровка": подавление двоения по утечкам светофильтров, подобранным в визарде. */
+    fun calculateCalibrated(group: GlassesGroup, calibration: AnaglyphCalibration): DuboisMath.ResultMatrices {
+        val (ownA, ownB) = filterPrimaries(group)
+        return DuboisMath.calculateWithCrosstalk(ownA, ownB, calibration.leakA, calibration.leakB)
+    }
 
     fun getCustomPrefix(type: StereoRenderer.AnaglyphType): String {
         return when (type) {

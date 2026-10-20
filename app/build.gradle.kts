@@ -92,6 +92,12 @@ android {
         sourceCompatibility = JavaVersion.VERSION_1_8
         targetCompatibility = JavaVersion.VERSION_1_8
     }
+    testOptions {
+        unitTests {
+            // Robolectric: Android API (Uri, SharedPreferences, org.json) в JVM тестах
+            isIncludeAndroidResources = true
+        }
+    }
     lint {
         disable.add("MissingTranslation")
         disable.add("UnsafeOptInUsageError")
@@ -143,6 +149,7 @@ dependencies {
     debugImplementation(libs.leakcanary.android)
 
     testImplementation(libs.junit)
+    testImplementation(libs.robolectric)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
 }

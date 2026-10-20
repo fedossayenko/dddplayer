@@ -4,9 +4,17 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.core.content.edit
 import androidx.media3.exoplayer.DefaultRenderersFactory
+import org.json.JSONArray
+import org.json.JSONException
+import org.json.JSONObject
+import top.rootu.dddplayer.logic.AnaglyphLogic
+import top.rootu.dddplayer.model.AnaglyphCalibration
+import top.rootu.dddplayer.model.AudioTrackStat
 import top.rootu.dddplayer.model.StereoOutputMode
+import top.rootu.dddplayer.model.SubtitleStyle
 import top.rootu.dddplayer.player.NetworkBufferLoadControl
 import top.rootu.dddplayer.renderer.StereoRenderer
+import top.rootu.dddplayer.viewmodel.GlassesGroup
 
 class SettingsRepository private constructor(context: Context) {
 
@@ -46,6 +54,21 @@ class SettingsRepository private constructor(context: Context) {
         const val BUFFER_DISPLAY_CLOCK = 2 // Рядом с часами (одиночные часы и инфопанель)
 
         const val BUFFER_SIZE_AUTO = -1
+        // Запоминание аудиодорожки
+        const val AUDIO_MEMORY_OFF = 0
+        const val AUDIO_MEMORY_PLAYLIST = 1 // Выбранная дорожка - для следующих элементов плейлиста
+        const val AUDIO_MEMORY_ALL = 2 // + наиболее используемые дорожки для любых видео (экспериментально)
+        const val MAX_AUDIO_TRACK_STATS = 20
+        // Автовключение субтитров при загрузке видео
+        const val SUB_AUTO_DEFAULT = 0 // Как решит плеер (прежнее поведение)
+        const val SUB_AUTO_OFF = 1
+        const val SUB_AUTO_FORCED = 2 // Только форсированные
+        const val SUB_AUTO_FULL = 3 // Полные на предпочитаемом языке
+
+        // Совместимость с Dolby Vision: подмена декодера DV на HEVC (базовый слой HDR10/HLG)
+        const val DV_MODE_OFF = 0 // Системный DV декодер
+        const val DV_MODE_AUTO = 1 // HEVC, только если экран или декодер не поддерживают Dolby Vision
+        const val DV_MODE_ALWAYS = 2 // Всегда HEVC
         const val RENDER_API_AUTO = 0
         const val RENDER_API_GLES2 = 1
 
@@ -171,8 +194,20 @@ class SettingsRepository private constructor(context: Context) {
     fun getMixMiddle(): Float = prefs.getFloat("mix_middle", 1.0f)
     fun setMixMiddle(value: Float) = prefs.edit { putFloat("mix_middle", value) }
 
-    fun isMapDvToHevcEnabled(): Boolean = prefs.getBoolean("map_dv_to_hevc", true)
-    fun setMapDvToHevcEnabled(enabled: Boolean) = prefs.edit { putBoolean("map_dv_to_hevc", enabled) }
+    // Совместимость с Dolby Vision (DV_MODE_*).
+    // Миграция со старого переключателя "map_dv_to_hevc" (вкл по умолчанию): вкл -> "Всегда", выкл -> "Выкл".
+    fun getDvMode(): Int {
+        if (!prefs.contains("dv_mode")) {
+            val migrated = if (prefs.getBoolean("map_dv_to_hevc", true)) DV_MODE_ALWAYS else DV_MODE_OFF
+            prefs.edit {
+                putInt("dv_mode", migrated)
+                remove("map_dv_to_hevc")
+            }
+            return migrated
+        }
+        return prefs.getInt("dv_mode", DV_MODE_ALWAYS)
+    }
+    fun setDvMode(mode: Int) = prefs.edit { putInt("dv_mode", mode) }
 
     fun isFrameRateMatchingEnabled(): Boolean = prefs.getBoolean("frame_rate_matching", false)
     fun setFrameRateMatchingEnabled(enabled: Boolean) = prefs.edit { putBoolean("frame_rate_matching", enabled) }
@@ -204,11 +239,92 @@ class SettingsRepository private constructor(context: Context) {
     fun getPreferredSubLang(): String = prefs.getString("pref_sub_lang", TRACK_DEFAULT) ?: TRACK_DEFAULT
     fun setPreferredSubLang(lang: String) = prefs.edit { putString("pref_sub_lang", lang) }
 
+    fun getSubtitleAutoMode(): Int = prefs.getInt("subtitle_auto_mode", SUB_AUTO_DEFAULT)
+    fun setSubtitleAutoMode(mode: Int) = prefs.edit { putInt("subtitle_auto_mode", mode) }
+
     fun getLoudnessBoost(): Int = prefs.getInt("loudness_boost", 0)
     fun setLoudnessBoost(boost: Int) = prefs.edit { putInt("loudness_boost", boost) }
 
     fun getAppLanguage(): String = prefs.getString("app_language", LANG_SYSTEM_DEFAULT) ?: LANG_SYSTEM_DEFAULT
     fun setAppLanguage(langCode: String) = prefs.edit { putString("app_language", langCode) }
+
+    // Запоминание аудиодорожки (AUDIO_MEMORY_*): в плейлисте и (экспериментально) между разными видео
+    fun getAudioTrackMemoryMode(): Int = prefs.getInt("audio_track_memory", AUDIO_MEMORY_OFF)
+    fun setAudioTrackMemoryMode(mode: Int) = prefs.edit { putInt("audio_track_memory", mode) }
+
+    /**
+     * Наиболее используемые аудиодорожки в порядке приоритета:
+     * сначала упорядоченные пользователем, затем по числу выборов.
+     */
+    fun getAudioTrackStats(): List<AudioTrackStat> {
+        val json = prefs.getString("audio_track_stats", null) ?: return emptyList()
+        return try {
+            val array = JSONArray(json)
+            (0 until array.length()).map { i ->
+                val obj = array.getJSONObject(i)
+                AudioTrackStat(
+                    signature = obj.getString("signature"),
+                    label = obj.optString("label"),
+                    count = obj.optInt("count", 1),
+                    pinned = obj.optBoolean("pinned", false)
+                )
+            }
+        } catch (e: JSONException) {
+            emptyList()
+        }
+    }
+
+    private fun saveAudioTrackStats(stats: List<AudioTrackStat>) {
+        // Закрепленные - в заданном порядке, остальные - по числу выборов; лишние незакрепленные отбрасываем
+        val pinned = stats.filter { it.pinned }
+        val others = stats.filter { !it.pinned }.sortedByDescending { it.count }
+        val ordered = pinned + others.take((MAX_AUDIO_TRACK_STATS - pinned.size).coerceAtLeast(0))
+        val array = JSONArray()
+        ordered.forEach { stat ->
+            array.put(JSONObject().apply {
+                put("signature", stat.signature)
+                put("label", stat.label)
+                put("count", stat.count)
+                put("pinned", stat.pinned)
+            })
+        }
+        prefs.edit { putString("audio_track_stats", array.toString()) }
+    }
+
+    /** Учитывает выбор дорожки пользователем. */
+    fun recordAudioTrackChoice(signature: String, label: String) {
+        val stats = getAudioTrackStats().toMutableList()
+        val index = stats.indexOfFirst { it.signature == signature }
+        val updated = if (index != -1) {
+            stats.removeAt(index).let { it.copy(label = label, count = it.count + 1) }
+        } else {
+            AudioTrackStat(signature, label, 1)
+        }
+        // Незакрепленные сортируются по счетчику (стабильно): при равном счетчике выше последняя выбранная,
+        // иначе новая дорожка не попала бы в заполненный список
+        stats.add(if (updated.pinned) index else 0, updated)
+        saveAudioTrackStats(stats)
+    }
+
+    /**
+     * Перемещает дорожку в списке приоритетов. Дорожки до новой позиции включительно закрепляются,
+     * чтобы порядок, заданный пользователем, не менялся от счетчиков.
+     */
+    fun moveAudioTrackStat(from: Int, to: Int) {
+        val stats = getAudioTrackStats().toMutableList()
+        if (from !in stats.indices) return
+        val target = to.coerceIn(0, stats.lastIndex)
+        stats.add(target, stats.removeAt(from))
+        val pinUntil = maxOf(from, target)
+        saveAudioTrackStats(stats.mapIndexed { i, stat -> if (i <= pinUntil) stat.copy(pinned = true) else stat })
+    }
+
+    fun removeAudioTrackStat(index: Int) {
+        val stats = getAudioTrackStats().toMutableList()
+        if (index !in stats.indices) return
+        stats.removeAt(index)
+        saveAudioTrackStats(stats)
+    }
 
     fun getResumeMode(): Int = prefs.getInt("resume_mode", RESUME_ASK)
     fun setResumeMode(mode: Int) = prefs.edit { putInt("resume_mode", mode) }
@@ -230,6 +346,94 @@ class SettingsRepository private constructor(context: Context) {
     fun getOkButtonAction(): Int = prefs.getInt("ok_button_action", OK_ACTION_PAUSE_PANEL)
     fun setOkButtonAction(action: Int) = prefs.edit { putInt("ok_button_action", action) }
     // Горизонтальный свайп ( 0 = None, 1 = Seek, 2 = Playlist)
+    // Линзы анаглиф-очков переставлены (например, голубая слева): матрицы глаз меняются местами
+    fun isAnaglyphLensSwapped(): Boolean = prefs.getBoolean("anaglyph_lens_swap", false)
+    fun setAnaglyphLensSwapped(swapped: Boolean) = prefs.edit { putBoolean("anaglyph_lens_swap", swapped) }
+
+    // Калибровка анаглиф-очков из визарда (null - встроенная матрица Dubois)
+    fun getAnaglyphCalibration(group: GlassesGroup): AnaglyphCalibration? {
+        val key = "calib_${group.name.lowercase()}_"
+        if (!prefs.getBoolean("${key}set", false)) return null
+        val def = AnaglyphCalibration()
+        return AnaglyphCalibration(
+            leakA = prefs.getFloat("${key}leak_a", def.leakA),
+            leakB = prefs.getFloat("${key}leak_b", def.leakB)
+        )
+    }
+
+    fun setAnaglyphCalibration(group: GlassesGroup, calibration: AnaglyphCalibration) {
+        val key = "calib_${group.name.lowercase()}_"
+        prefs.edit {
+            putBoolean("${key}set", true)
+            putFloat("${key}leak_a", calibration.leakA)
+            putFloat("${key}leak_b", calibration.leakB)
+        }
+    }
+
+    /** Сброс калибровки анаглифа к значениям приложения: встроенные матрицы и обычный порядок линз. */
+    fun resetAnaglyphCalibration() {
+        prefs.edit {
+            GlassesGroup.entries.forEach { group ->
+                val key = "calib_${group.name.lowercase()}_"
+                listOf("set", "hue_a", "hue_b", "leak_a", "leak_b").forEach { remove(key + it) }
+            }
+            remove("anaglyph_lens_swap")
+            // Выбранный фильтр "Калибровка" заменяем встроенным фильтром группы
+            val types = StereoRenderer.AnaglyphType.entries
+            fun reset(key: String) {
+                val type = types.getOrNull(prefs.getInt(key, -1)) ?: return
+                if (AnaglyphLogic.isCalibratedType(type)) {
+                    putInt(key, AnaglyphLogic.defaultFilter(AnaglyphLogic.getGlassesGroup(type)).ordinal)
+                }
+            }
+            reset("def_anaglyph_type")
+            GlassesGroup.entries.forEach { reset("pref_filter_${it.name}") }
+        }
+        bumpCalibrationVersion()
+    }
+
+    /** Сброс калибровки VR к значениям приложения. */
+    fun resetVrCalibration() {
+        prefs.edit {
+            listOf("vr_k1", "vr_k2", "vr_scale", "global_screen_separation_pct").forEach { remove(it) }
+        }
+        bumpCalibrationVersion()
+    }
+
+    // Счетчик сохранений калибровки: плеер перечитывает параметры VR и анаглифа, если он изменился
+    fun getCalibrationVersion(): Int = prefs.getInt("calibration_version", 0)
+    fun bumpCalibrationVersion() = prefs.edit { putInt("calibration_version", getCalibrationVersion() + 1) }
+
+    // Стиль субтитров (без сохраненных значений - стандартный вид SubtitleView)
+    fun getSubtitleStyle(): SubtitleStyle {
+        val def = SubtitleStyle()
+        return SubtitleStyle(
+            font = prefs.getInt("sub_font", def.font),
+            sizePercent = prefs.getInt("sub_size", def.sizePercent),
+            textColor = prefs.getInt("sub_text_color", def.textColor),
+            backgroundColor = prefs.getInt("sub_bg_color", def.backgroundColor),
+            edgeType = prefs.getInt("sub_edge_type", def.edgeType),
+            edgeColor = prefs.getInt("sub_edge_color", def.edgeColor),
+            bottomPercent = prefs.getInt("sub_bottom", def.bottomPercent),
+            applyEmbedded = prefs.getBoolean("sub_embedded", def.applyEmbedded)
+        )
+    }
+
+    fun setSubtitleStyle(style: SubtitleStyle) = prefs.edit {
+        putInt("sub_font", style.font)
+        putInt("sub_size", style.sizePercent)
+        putInt("sub_text_color", style.textColor)
+        putInt("sub_bg_color", style.backgroundColor)
+        putInt("sub_edge_type", style.edgeType)
+        putInt("sub_edge_color", style.edgeColor)
+        putInt("sub_bottom", style.bottomPercent)
+        putBoolean("sub_embedded", style.applyEmbedded)
+    }
+
+    // Жесты громкости (справа) и яркости (слева) вертикальным свайпом
+    fun isVolumeBrightnessGesturesEnabled(): Boolean = prefs.getBoolean("gesture_volume_brightness", true)
+    fun setVolumeBrightnessGesturesEnabled(enabled: Boolean) = prefs.edit { putBoolean("gesture_volume_brightness", enabled) }
+
     fun getHorizontalSwipeAction(): Int = prefs.getInt("horizontal_swipe_action", 2)
     fun setHorizontalSwipeAction(action: Int) = prefs.edit { putInt("horizontal_swipe_action", action) }
 
@@ -250,7 +454,7 @@ class SettingsRepository private constructor(context: Context) {
 
     // Сигнатура настроек, требующих полного перезапуска плеера
     fun getHardSettingsSignature(): String {
-        val videoParams = "${getDecoderPriority()}_${isTunnelingEnabled()}_${isMapDvToHevcEnabled()}"
+        val videoParams = "${getDecoderPriority()}_${isTunnelingEnabled()}_${getDvMode()}"
         val audioDownmix = "${isStereoDownmixEnabled()}_${getMixPreset()}_${getMixFront()}_${getMixCenter()}_${getMixRear()}_${getMixMiddle()}_${getMixLfe()}"
         return "${videoParams}_${audioDownmix}_${getTargetBufferCorrectMB()}"
     }
@@ -275,6 +479,16 @@ class SettingsRepository private constructor(context: Context) {
             putLong("last_update_check", System.currentTimeMillis())
         }
     }
+
+    // Автоопределение стереопары для видео без сохраненных настроек (false - "Не обрабатывать")
+    fun isStereoAutoDetectEnabled(): Boolean = prefs.getBoolean("stereo_auto_detect", true)
+    fun setStereoAutoDetectEnabled(enabled: Boolean) = prefs.edit { putBoolean("stereo_auto_detect", enabled) }
+
+    // Вывод по умолчанию для нового стерео-видео (также обновляется при сохранении настроек видео в OSD)
+    fun getDefaultOutputMode(): StereoOutputMode =
+        StereoOutputMode.entries.getOrNull(prefs.getInt("def_output_mode", StereoOutputMode.ANAGLYPH.ordinal))
+            ?: StereoOutputMode.ANAGLYPH
+    fun setDefaultOutputMode(mode: StereoOutputMode) = prefs.edit { putInt("def_output_mode", mode.ordinal) }
 
     fun saveGlobalDefaults(
         outputMode: StereoOutputMode,

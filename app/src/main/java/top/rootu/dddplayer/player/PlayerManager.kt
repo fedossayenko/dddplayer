@@ -2,9 +2,12 @@ package top.rootu.dddplayer.player
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.hardware.display.DisplayManager
 import android.media.audiofx.LoudnessEnhancer
+import android.os.Build
 import android.os.Handler
 import android.util.Log
+import android.view.Display
 import android.view.accessibility.CaptioningManager
 import androidx.core.net.toUri
 import androidx.core.os.LocaleListCompat
@@ -224,7 +227,12 @@ class PlayerManager(
         }
 
         // === Кастомный MediaCodecSelector для Dolby Vision Fallback ===
-        val mediaCodecSelector = if (settingsRepo.isMapDvToHevcEnabled()) {
+        val mapDvToHevc = when (settingsRepo.getDvMode()) {
+            SettingsRepository.DV_MODE_ALWAYS -> true
+            SettingsRepository.DV_MODE_AUTO -> !isDolbyVisionSupported()
+            else -> false
+        }
+        val mediaCodecSelector = if (mapDvToHevc) {
             MediaCodecSelector { mimeType, requiresSecureDecoder, requiresTunnelingDecoder ->
                 var finalMimeType = mimeType
 
@@ -472,6 +480,30 @@ class PlayerManager(
         onPlayerCreated?.invoke(player)
     }
 
+    /**
+     * Dolby Vision можно выводить как есть: есть системный DV декодер и экран сообщает о поддержке DV.
+     * Иначе (режим "Авто") видео играет базовым слоем HEVC.
+     */
+    @Suppress("DEPRECATION")
+    private fun isDolbyVisionSupported(): Boolean {
+        val hasDecoder = try {
+            MediaCodecUtil.getDecoderInfos(MimeTypes.VIDEO_DOLBY_VISION, false, false).isNotEmpty()
+        } catch (e: MediaCodecUtil.DecoderQueryException) {
+            false
+        }
+        if (!hasDecoder || Build.VERSION.SDK_INT < Build.VERSION_CODES.N) return false
+
+        val display = (appContext.getSystemService(Context.DISPLAY_SERVICE) as? DisplayManager)
+            ?.getDisplay(Display.DEFAULT_DISPLAY) ?: return false
+        val hdrTypes = display.hdrCapabilities?.supportedHdrTypes?.toMutableSet() ?: mutableSetOf()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            hdrTypes.addAll(display.mode.supportedHdrTypes.toList())
+        }
+        val supported = Display.HdrCapabilities.HDR_TYPE_DOLBY_VISION in hdrTypes
+        Log.i("PlayerManager", "Dolby Vision: decoder=true, display=$supported")
+        return supported
+    }
+
     private fun buildMediaSources(exoItems: List<Media3MediaItem>): List<MediaSource> {
         // Передаем false вторым параметром. Это заставит плеер скачать первый .ts файл
         // и проанализировать его структуру, вместо того чтобы гадать по пустому m3u8.
@@ -663,6 +695,47 @@ class PlayerManager(
         return out.toByteArray()
     }
 
+    private fun buildExoItem(item: MediaItem): Media3MediaItem {
+        val subConfigs = item.subtitles.map { sub ->
+            Media3MediaItem.SubtitleConfiguration.Builder(sub.uri)
+                .setMimeType(sub.mimeType)
+                .setLanguage("ext")
+                .setLabel(sub.name ?: sub.filename)
+                .setSelectionFlags(C.SELECTION_FLAG_DEFAULT)
+                .build()
+        }
+
+        val metadata = MediaMetadata.Builder()
+            .setTitle(item.title)
+            .setArtworkUri(item.posterUri)
+            .build()
+
+        // Даем плееру больше времени на "переваривание" битых кадров,
+        // отодвигая точку воспроизведения дальше от края трансляции.
+        val liveConfig = Media3MediaItem.LiveConfiguration.Builder()
+            .setTargetOffsetMs(15000) // увеличили до 15 сек
+            .setMaxOffsetMs(30000)    // Максимальное отставание
+            .setMaxPlaybackSpeed(1.05f) // Разрешаем ускоряться до 1.05x чтобы догнать поток
+            .build()
+
+        return Media3MediaItem.Builder()
+            .setMediaId(item.uuid)
+            .setUri(item.uri)
+//            .setMimeType(mimeType)
+            .setMediaMetadata(metadata)
+            .setSubtitleConfigurations(subConfigs)
+            .setLiveConfiguration(liveConfig)
+            .build()
+    }
+
+    /**
+     * Перезагружает плейлист с измененными элементами (например, добавлены субтитры) с той же позиции.
+     */
+    fun reloadPlaylistItems(items: List<MediaItem>, index: Int, positionMs: Long) {
+        currentHeaders = items.map { it.headers }
+        reloadMediaItems(items.map { buildExoItem(it) }, index, positionMs)
+    }
+
     fun loadPlaylist(items: List<MediaItem>, startIndex: Int, startPosMs: Long = 0) {
         currentTrackInfo = emptyMap()
         resolvedMediaTypes.clear() // Очищаем кэш типов при новой загрузке
@@ -673,38 +746,7 @@ class PlayerManager(
         currentHeaders = items.map { it.headers }
         applyHeadersForIndex(safeStartIndex)
 
-        val exoItems = items.map { item ->
-            val subConfigs = item.subtitles.map { sub ->
-                Media3MediaItem.SubtitleConfiguration.Builder(sub.uri)
-                    .setMimeType(sub.mimeType)
-                    .setLanguage("ext")
-                    .setLabel(sub.name ?: sub.filename)
-                    .setSelectionFlags(C.SELECTION_FLAG_DEFAULT)
-                    .build()
-            }
-
-            val metadata = MediaMetadata.Builder()
-                .setTitle(item.title)
-                .setArtworkUri(item.posterUri)
-                .build()
-
-            // Даем плееру больше времени на "переваривание" битых кадров,
-            // отодвигая точку воспроизведения дальше от края трансляции.
-            val liveConfig = Media3MediaItem.LiveConfiguration.Builder()
-                .setTargetOffsetMs(15000) // увеличили до 15 сек
-                .setMaxOffsetMs(30000)    // Максимальное отставание
-                .setMaxPlaybackSpeed(1.05f) // Разрешаем ускоряться до 1.05x чтобы догнать поток
-                .build()
-
-            Media3MediaItem.Builder()
-                .setMediaId(item.uuid)
-                .setUri(item.uri)
-//                .setMimeType(mimeType)
-                .setMediaMetadata(metadata)
-                .setSubtitleConfigurations(subConfigs)
-                .setLiveConfiguration(liveConfig)
-                .build()
-        }
+        val exoItems = items.map { buildExoItem(it) }
 
         currentMediaItems = exoItems
         currentWindowIndex = safeStartIndex

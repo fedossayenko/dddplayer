@@ -1,13 +1,17 @@
 package top.rootu.dddplayer.ui
 
 import android.app.Dialog
+import android.content.Intent
 import android.os.Bundle
+import android.view.KeyEvent
 import android.view.View
+import android.view.ViewGroup
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageButton
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.ScrollView
@@ -15,24 +19,44 @@ import android.widget.SeekBar
 import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.addCallback
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.appcompat.widget.SwitchCompat
 import androidx.core.os.LocaleListCompat
-import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
+import androidx.core.view.children
+import androidx.core.view.isVisible
 import top.rootu.dddplayer.BuildConfig
 import top.rootu.dddplayer.R
 import top.rootu.dddplayer.data.SettingsRepository
 import top.rootu.dddplayer.logic.AudioMixerLogic
 import top.rootu.dddplayer.logic.UpdateInfo
-import top.rootu.dddplayer.ui.adapter.ChoiceAdapter
+import top.rootu.dddplayer.ui.calibration.CalibrationWizardActivity
 import top.rootu.dddplayer.utils.LocaleUtils
+import top.rootu.dddplayer.model.StereoOutputMode
 import top.rootu.dddplayer.viewmodel.GlobalSettingsViewModel
 import top.rootu.dddplayer.viewmodel.UpdateViewModel
 
 class GlobalSettingsActivity : AppCompatActivity() {
+
+    // Категория настроек: секция в разметке, название и иконка в списке слева
+    private data class SettingsCategory(val sectionId: Int, val titleRes: Int, val iconRes: Int)
+
+    private val categories = listOf(
+        SettingsCategory(R.id.section_playback, R.string.pref_general_header, R.drawable.ic_play_arrow),
+        SettingsCategory(R.id.section_screen, R.string.settings_cat_screen, R.drawable.ic_fullscreen),
+        SettingsCategory(R.id.section_video, R.string.settings_cat_video, R.drawable.ic_fit_screen),
+        SettingsCategory(R.id.section_audio, R.string.settings_cat_audio, R.drawable.ic_volume_up),
+        SettingsCategory(R.id.section_subtitles, R.string.settings_cat_subtitles, R.drawable.ic_subtitles),
+        SettingsCategory(R.id.section_control, R.string.settings_cat_control, R.drawable.ic_settings_remote),
+        SettingsCategory(R.id.section_3d, R.string.settings_cat_3d, R.drawable.ic_settings_3d),
+        SettingsCategory(R.id.section_app, R.string.pref_sec_app, R.drawable.ic_settings)
+    )
+    private val categoryViews = mutableListOf<View>()
+    private var selectedCategory = -1
+    // Последний пункт с фокусом в каждой категории: при возврате в категорию фокус встает на него
+    private val lastFocusedInCategory = mutableMapOf<Int, View>()
 
     private val updateViewModel: UpdateViewModel by viewModels()
     private val settingsViewModel: GlobalSettingsViewModel by viewModels()
@@ -41,6 +65,8 @@ class GlobalSettingsActivity : AppCompatActivity() {
 
     // UI Elements (lateinit, так как они инициализируются в bindViews)
     private lateinit var scrollView: ScrollView
+    private lateinit var contentContainer: LinearLayout
+    private lateinit var itemSubtitleStyle: LinearLayout
     private lateinit var btnClose: ImageButton
     private lateinit var itemExit: LinearLayout
     private lateinit var itemDecoder: LinearLayout
@@ -51,7 +77,7 @@ class GlobalSettingsActivity : AppCompatActivity() {
     private lateinit var itemTunneling: LinearLayout
     private lateinit var switchTunneling: SwitchCompat
     private lateinit var itemDv: LinearLayout
-    private lateinit var switchDv: SwitchCompat
+    private lateinit var textDvValue: TextView
     private lateinit var itemAfr: LinearLayout
     private lateinit var switchAfr: SwitchCompat
     private lateinit var textAfrDesc: TextView
@@ -76,6 +102,10 @@ class GlobalSettingsActivity : AppCompatActivity() {
     private lateinit var textAudioLangValue: TextView
     private lateinit var itemSubLang: LinearLayout
     private lateinit var textSubLangValue: TextView
+    private lateinit var itemSubtitleAuto: LinearLayout
+    private lateinit var textSubtitleAutoValue: TextView
+    private lateinit var itemDefault3dMode: LinearLayout
+    private lateinit var textDefault3dModeValue: TextView
     private lateinit var itemCalibrateVr: LinearLayout
     private lateinit var itemCalibrateAnaglyph: LinearLayout
     private lateinit var itemDownmix: LinearLayout
@@ -89,6 +119,8 @@ class GlobalSettingsActivity : AppCompatActivity() {
     private lateinit var textResumeActionValue: TextView
     private lateinit var itemExternalPosition: LinearLayout
     private lateinit var textExternalPositionValue: TextView
+    private lateinit var itemGestureVolume: LinearLayout
+    private lateinit var switchGestureVolume: SwitchCompat
     private lateinit var itemSwipeAction: LinearLayout
     private lateinit var textSwipeActionValue: TextView
     private lateinit var itemUpdate: LinearLayout
@@ -110,6 +142,10 @@ class GlobalSettingsActivity : AppCompatActivity() {
     private lateinit var textStartupPlaylistValue: TextView
     private lateinit var itemLiveMode: LinearLayout
     private lateinit var switchLiveMode: SwitchCompat
+    private lateinit var itemRememberAudio: LinearLayout
+    private lateinit var textRememberAudioValue: TextView
+    private lateinit var itemAudioPriority: LinearLayout
+    private lateinit var textAudioPriorityValue: TextView
     private lateinit var itemTrackChangeInfo: LinearLayout
     private lateinit var switchTrackChangeInfo: SwitchCompat
     private lateinit var itemBufferDisplay: LinearLayout
@@ -153,13 +189,137 @@ class GlobalSettingsActivity : AppCompatActivity() {
         setContentView(R.layout.activity_global_settings)
 
         bindViews()
+        setupCategories(savedInstanceState?.getInt(STATE_CATEGORY) ?: 0)
         setupListeners()
         observeViewModel()
-        handleInitialFocus(intent.getIntExtra("FOCUS_ITEM_ID", 0))
+        // После пересоздания (смена языка) пункт из интента повторно не открываем
+        handleInitialFocus(if (savedInstanceState == null) intent.getIntExtra("FOCUS_ITEM_ID", 0) else 0)
+
+        window.decorView.viewTreeObserver.addOnGlobalFocusChangeListener { _, newFocus ->
+            if (isInSettingsContent(newFocus)) lastFocusedInCategory[selectedCategory] = newFocus
+        }
+
+        // "Назад" из настроек категории возвращает к списку категорий, из списка - закрывает экран
+        onBackPressedDispatcher.addCallback(this) {
+            if (isInSettingsContent(currentFocus)) {
+                categoryViews[selectedCategory].requestFocus()
+            } else {
+                finish()
+            }
+        }
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putInt(STATE_CATEGORY, selectedCategory)
+    }
+
+    private fun setupCategories(initialCategory: Int) {
+        val container = findViewById<LinearLayout>(R.id.settings_categories)
+        categories.forEachIndexed { index, category ->
+            val view = layoutInflater.inflate(R.layout.item_settings_category, container, false)
+            view.findViewById<ImageView>(R.id.category_icon).setImageResource(category.iconRes)
+            view.findViewById<TextView>(R.id.category_title).setText(category.titleRes)
+            // Пульт: фокус на категории сразу показывает ее настройки
+            view.setOnFocusChangeListener { _, hasFocus -> if (hasFocus) selectCategory(index) }
+            view.setOnClickListener { selectCategory(index) }
+            // Вправо - к настройкам категории
+            view.setOnKeyListener { _, keyCode, event ->
+                keyCode == KeyEvent.KEYCODE_DPAD_RIGHT && event.action == KeyEvent.ACTION_DOWN && focusFirstSetting()
+            }
+            container.addView(view)
+            categoryViews.add(view)
+        }
+        selectCategory(initialCategory.coerceIn(categories.indices))
+    }
+
+    private fun selectCategory(index: Int) {
+        if (index == selectedCategory) return
+        selectedCategory = index
+        categories.forEachIndexed { i, category -> findViewById<View>(category.sectionId).isVisible = i == index }
+        categoryViews.forEachIndexed { i, view -> view.isSelected = i == index }
+        scrollView.scrollTo(0, 0)
+    }
+
+    /** Фокус на настройки выбранной категории: последний выбранный пункт или первый видимый. */
+    private fun focusFirstSetting(): Boolean {
+        lastFocusedInCategory[selectedCategory]?.takeIf { it.isShown && it.isFocusable }?.let {
+            return it.requestFocus()
+        }
+        val section = findViewById<ViewGroup>(categories[selectedCategory].sectionId)
+        val first = section.children.firstOrNull { it.isVisible && it.isFocusable } ?: return false
+        return first.requestFocus()
+    }
+
+    /** Переход к соседней категории (CH+/CH-, PgUp/PgDn), фокус остается в той же колонке. */
+    private fun switchCategory(direction: Int) {
+        val index = (selectedCategory + direction).coerceIn(categories.indices)
+        if (index == selectedCategory) return
+        val inContent = isInSettingsContent(currentFocus)
+        selectCategory(index)
+        if (!inContent || !focusFirstSetting()) categoryViews[index].requestFocus()
+    }
+
+    private fun isInSettingsContent(view: View?): Boolean {
+        var current: View? = view
+        while (current != null) {
+            if (current === contentContainer) return true
+            current = current.parent as? View
+        }
+        return false
+    }
+
+    // Пункт, с которого перешли на кнопку закрытия (туда возвращаемся Вниз/Влево)
+    private var focusBeforeClose: View? = null
+
+    /** Верхний пункт своей колонки: первая категория или первая видимая настройка категории. */
+    private fun isTopItem(view: View?): Boolean {
+        if (view == null) return false
+        if (view === categoryViews.firstOrNull()) return true
+        val section = findViewById<ViewGroup>(categories[selectedCategory].sectionId)
+        return view === section.children.firstOrNull { it.isVisible && it.isFocusable }
+    }
+
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (event.action == KeyEvent.ACTION_DOWN) {
+            val focused = currentFocus
+            when (event.keyCode) {
+                // Вверх с верхнего пункта - на кнопку закрытия
+                KeyEvent.KEYCODE_DPAD_UP -> if (isTopItem(focused)) {
+                    focusBeforeClose = focused
+                    btnClose.requestFocus()
+                    return true
+                }
+                // С кнопки закрытия - обратно к пункту, с которого пришли
+                KeyEvent.KEYCODE_DPAD_DOWN -> if (focused === btnClose) {
+                    (focusBeforeClose?.takeIf { it.isShown } ?: categoryViews[selectedCategory]).requestFocus()
+                    return true
+                }
+                // Влево из настроек - обратно к списку категорий
+                KeyEvent.KEYCODE_DPAD_LEFT -> if (focused === btnClose) {
+                    (focusBeforeClose?.takeIf { it.isShown } ?: categoryViews[selectedCategory]).requestFocus()
+                    return true
+                } else if (isInSettingsContent(focused)) {
+                    categoryViews[selectedCategory].requestFocus()
+                    return true
+                }
+                KeyEvent.KEYCODE_CHANNEL_UP, KeyEvent.KEYCODE_PAGE_UP -> {
+                    switchCategory(-1)
+                    return true
+                }
+                KeyEvent.KEYCODE_CHANNEL_DOWN, KeyEvent.KEYCODE_PAGE_DOWN -> {
+                    switchCategory(1)
+                    return true
+                }
+            }
+        }
+        return super.dispatchKeyEvent(event)
     }
 
     private fun bindViews() {
         scrollView = findViewById(R.id.settings_scrollview)
+        contentContainer = findViewById(R.id.settings_content)
+        itemSubtitleStyle = findViewById(R.id.item_subtitle_style)
         btnClose = findViewById(R.id.btn_close)
         itemExit = findViewById(R.id.item_exit)
         itemDecoder = findViewById(R.id.item_decoder)
@@ -170,7 +330,7 @@ class GlobalSettingsActivity : AppCompatActivity() {
         itemTunneling = findViewById(R.id.item_tunneling)
         switchTunneling = findViewById(R.id.switch_tunneling)
         itemDv = findViewById(R.id.item_dv)
-        switchDv = findViewById(R.id.switch_dv)
+        textDvValue = findViewById(R.id.text_dv_value)
         itemAfr = findViewById(R.id.item_afr)
         switchAfr = findViewById(R.id.switch_afr)
         textAfrDesc = findViewById(R.id.text_afr_desc)
@@ -195,6 +355,10 @@ class GlobalSettingsActivity : AppCompatActivity() {
         textAudioLangValue = findViewById(R.id.text_audio_lang_value)
         itemSubLang = findViewById(R.id.item_sub_lang)
         textSubLangValue = findViewById(R.id.text_sub_lang_value)
+        itemSubtitleAuto = findViewById(R.id.item_subtitle_auto)
+        textSubtitleAutoValue = findViewById(R.id.text_subtitle_auto_value)
+        itemDefault3dMode = findViewById(R.id.item_default_3d_mode)
+        textDefault3dModeValue = findViewById(R.id.text_default_3d_mode_value)
         itemCalibrateVr = findViewById(R.id.item_calibrate_vr)
         itemCalibrateAnaglyph = findViewById(R.id.item_calibrate_anaglyph)
         itemDownmix = findViewById(R.id.item_downmix)
@@ -208,6 +372,8 @@ class GlobalSettingsActivity : AppCompatActivity() {
         textResumeActionValue = findViewById(R.id.text_resume_mode_value)
         itemExternalPosition = findViewById(R.id.item_external_position)
         textExternalPositionValue = findViewById(R.id.text_external_position_value)
+        itemGestureVolume = findViewById(R.id.item_gesture_volume)
+        switchGestureVolume = findViewById(R.id.switch_gesture_volume)
         itemSwipeAction = findViewById(R.id.item_swipe_action)
         textSwipeActionValue = findViewById(R.id.text_swipe_action_value)
         itemUpdate = findViewById(R.id.item_update)
@@ -229,6 +395,10 @@ class GlobalSettingsActivity : AppCompatActivity() {
         textStartupPlaylistValue = findViewById(R.id.text_startup_playlist_value)
         itemLiveMode = findViewById(R.id.item_live_mode)
         switchLiveMode = findViewById(R.id.switch_live_mode)
+        itemRememberAudio = findViewById(R.id.item_remember_audio)
+        textRememberAudioValue = findViewById(R.id.text_remember_audio_value)
+        itemAudioPriority = findViewById(R.id.item_audio_priority)
+        textAudioPriorityValue = findViewById(R.id.text_audio_priority_value)
         itemTrackChangeInfo = findViewById(R.id.item_track_change_info)
         switchTrackChangeInfo = findViewById(R.id.switch_track_change_info)
         itemBufferDisplay = findViewById(R.id.item_buffer_display)
@@ -240,6 +410,10 @@ class GlobalSettingsActivity : AppCompatActivity() {
     private fun setupListeners() {
         btnClose.setOnClickListener { finish() }
         itemExit.setOnClickListener { finish() }
+
+        itemSubtitleStyle.setOnClickListener {
+            startActivity(Intent(this, SubtitleStyleActivity::class.java))
+        }
 
         // Decoder
         itemDecoder.setOnClickListener { settingsViewModel.toggleDecoderPriority() }
@@ -263,7 +437,11 @@ class GlobalSettingsActivity : AppCompatActivity() {
 
         // Dolby Vision
         itemDv.setOnClickListener {
-            settingsViewModel.toggleMapDvToHevc(!switchDv.isChecked)
+            // Порядок пунктов совпадает с SettingsRepository.DV_MODE_*
+            val options = listOf(getString(R.string.dv_mode_off), getString(R.string.dv_mode_auto), getString(R.string.dv_mode_always))
+            showSingleChoiceDialog(getString(R.string.pref_map_dv), options, settingsViewModel.dvMode.value ?: SettingsRepository.DV_MODE_ALWAYS) {
+                settingsViewModel.setDvMode(it)
+            }
         }
 
         // AFR
@@ -297,13 +475,16 @@ class GlobalSettingsActivity : AppCompatActivity() {
         // Boost
         itemBoost.setOnClickListener { settingsViewModel.cycleLoudnessBoost() }
 
-        // Calibration (Placeholder)
-        itemCalibrateVr.setOnClickListener {
-            Toast.makeText(applicationContext, getString(R.string.develop_tost), Toast.LENGTH_SHORT).show()
+        // Визарды калибровки
+        itemDefault3dMode.setOnClickListener {
+            val current = default3dModes.indexOf(settingsViewModel.default3dMode.value).coerceAtLeast(0)
+            showSingleChoiceDialog(getString(R.string.pref_default_3d_mode), default3dModes.map { default3dModeLabel(it) }, current) {
+                settingsViewModel.setDefault3dMode(default3dModes[it])
+            }
         }
-        itemCalibrateAnaglyph.setOnClickListener {
-            Toast.makeText(applicationContext, getString(R.string.develop_tost), Toast.LENGTH_SHORT).show()
-        }
+        itemCalibrateVr.setOnClickListener { startCalibration(CalibrationWizardActivity.MODE_VR) }
+        itemCalibrateAnaglyph.setOnClickListener { startCalibration(CalibrationWizardActivity.MODE_ANAGLYPH) }
+        findViewById<View>(R.id.item_reset_calibration).setOnClickListener { showResetCalibrationDialog() }
 
         // Crash Test
         var crashCounter = 0
@@ -351,6 +532,10 @@ class GlobalSettingsActivity : AppCompatActivity() {
                 settingsViewModel.setOkButtonAction(it)
             }
         }
+        itemGestureVolume.setOnClickListener {
+            settingsViewModel.toggleVolumeBrightnessGestures(!switchGestureVolume.isChecked)
+        }
+
         itemSwipeAction.setOnClickListener {
             val options = listOf(getString(R.string.swipe_action_none), getString(R.string.swipe_action_seek), getString(R.string.swipe_action_playlist))
             showSingleChoiceDialog(getString(R.string.pref_swipe_horizontal), options, settingsViewModel.horizontalSwipeAction.value ?: 2) {
@@ -370,6 +555,24 @@ class GlobalSettingsActivity : AppCompatActivity() {
 
         itemStartupPlaylist.setOnClickListener { showUrlInputDialog() }
         itemLiveMode.setOnClickListener { settingsViewModel.toggleLiveMode(!switchLiveMode.isChecked) }
+        itemSubtitleAuto.setOnClickListener {
+            // Порядок пунктов совпадает с SettingsRepository.SUB_AUTO_*
+            val options = listOf(
+                getString(R.string.sub_auto_default), getString(R.string.sub_auto_off),
+                getString(R.string.sub_auto_forced), getString(R.string.sub_auto_full)
+            )
+            showSingleChoiceDialog(getString(R.string.pref_subtitle_auto), options, settingsViewModel.subtitleAutoMode.value ?: SettingsRepository.SUB_AUTO_DEFAULT) {
+                settingsViewModel.setSubtitleAutoMode(it)
+            }
+        }
+        itemRememberAudio.setOnClickListener {
+            // Порядок пунктов совпадает с SettingsRepository.AUDIO_MEMORY_*
+            val options = listOf(getString(R.string.audio_memory_off), getString(R.string.audio_memory_playlist), getString(R.string.audio_memory_all))
+            showSingleChoiceDialog(getString(R.string.pref_remember_audio), options, settingsViewModel.audioTrackMemoryMode.value ?: SettingsRepository.AUDIO_MEMORY_OFF) {
+                settingsViewModel.setAudioTrackMemoryMode(it)
+            }
+        }
+        itemAudioPriority.setOnClickListener { showAudioPriorityDialog() }
         itemTrackChangeInfo.setOnClickListener { settingsViewModel.toggleShowInfoOnTrackChange(!switchTrackChangeInfo.isChecked) }
 
         itemBufferDisplay.setOnClickListener {
@@ -422,7 +625,13 @@ class GlobalSettingsActivity : AppCompatActivity() {
             textDecoderDesc.setText(settingsViewModel.getDecoderDescResId(mode))
         }
         settingsViewModel.isTunnelingEnabled.observe(this) { switchTunneling.isChecked = it }
-        settingsViewModel.isMapDvToHevcEnabled.observe(this) { switchDv.isChecked = it }
+        settingsViewModel.dvMode.observe(this) { mode ->
+            textDvValue.text = when (mode) {
+                SettingsRepository.DV_MODE_OFF -> getString(R.string.dv_mode_off)
+                SettingsRepository.DV_MODE_AUTO -> getString(R.string.dv_mode_auto)
+                else -> getString(R.string.dv_mode_always)
+            }
+        }
         // AFR
         settingsViewModel.isFrameRateMatchingEnabled.observe(this) { enabled ->
             switchAfr.isChecked = enabled
@@ -508,6 +717,7 @@ class GlobalSettingsActivity : AppCompatActivity() {
             }
         }
 
+        settingsViewModel.isVolumeBrightnessGestures.observe(this) { switchGestureVolume.isChecked = it }
         settingsViewModel.horizontalSwipeAction.observe(this) { action ->
             textSwipeActionValue.text = when (action) {
                 1 -> getString(R.string.swipe_action_seek)
@@ -531,6 +741,27 @@ class GlobalSettingsActivity : AppCompatActivity() {
             textStartupPlaylistValue.text = if (uri.isNullOrEmpty()) getString(R.string.pref_startup_playlist_not_set) else uri
         }
         settingsViewModel.isLiveModeEnabled.observe(this) { switchLiveMode.isChecked = it }
+        settingsViewModel.default3dMode.observe(this) { textDefault3dModeValue.text = default3dModeLabel(it) }
+        settingsViewModel.subtitleAutoMode.observe(this) { mode ->
+            textSubtitleAutoValue.text = when (mode) {
+                SettingsRepository.SUB_AUTO_OFF -> getString(R.string.sub_auto_off)
+                SettingsRepository.SUB_AUTO_FORCED -> getString(R.string.sub_auto_forced)
+                SettingsRepository.SUB_AUTO_FULL -> getString(R.string.sub_auto_full)
+                else -> getString(R.string.sub_auto_default)
+            }
+        }
+        settingsViewModel.audioTrackMemoryMode.observe(this) { mode ->
+            textRememberAudioValue.text = when (mode) {
+                SettingsRepository.AUDIO_MEMORY_PLAYLIST -> getString(R.string.audio_memory_playlist)
+                SettingsRepository.AUDIO_MEMORY_ALL -> getString(R.string.audio_memory_all)
+                else -> getString(R.string.audio_memory_off)
+            }
+            // Список приоритетов нужен только для запоминания между разными видео
+            itemAudioPriority.isVisible = mode == SettingsRepository.AUDIO_MEMORY_ALL
+        }
+        settingsViewModel.audioTrackStats.observe(this) { stats ->
+            textAudioPriorityValue.text = stats.size.toString()
+        }
         settingsViewModel.isShowInfoOnTrackChange.observe(this) { switchTrackChangeInfo.isChecked = it }
         settingsViewModel.bufferDisplayMode.observe(this) { mode ->
             textBufferDisplayValue.text = when (mode) {
@@ -572,31 +803,83 @@ class GlobalSettingsActivity : AppCompatActivity() {
         editUrl.requestFocus()
     }
 
-    private fun showSingleChoiceDialog(title: String, items: List<String>, currentIndex: Int, onSelected: (Int) -> Unit) {
-        val dialog = Dialog(this, R.style.Theme_App_Dialog)
-        dialog.setContentView(R.layout.dialog_list_choice)
-        dialog.findViewById<TextView>(R.id.dialog_title).text = title
-
-        val recycler = dialog.findViewById<RecyclerView>(R.id.dialog_recycler_view)
-        recycler.layoutManager = LinearLayoutManager(this)
-        recycler.adapter = ChoiceAdapter(items, currentIndex) { idx ->
-            onSelected(idx)
-            dialog.dismiss()
+    /**
+     * Список приоритетов аудиодорожек: выбор дорожки открывает действия (выше, ниже, в начало, удалить).
+     */
+    private fun showAudioPriorityDialog() {
+        val stats = settingsViewModel.audioTrackStats.value.orEmpty()
+        if (stats.isEmpty()) {
+            Toast.makeText(this, R.string.audio_priority_empty, Toast.LENGTH_LONG).show()
+            return
         }
-
-        dialog.show()
-        recycler.post {
-            (recycler.layoutManager as? LinearLayoutManager)?.scrollToPositionWithOffset(currentIndex, 0)
-            recycler.postDelayed({ recycler.findViewHolderForAdapterPosition(currentIndex)?.itemView?.requestFocus() }, 50)
+        val items = stats.mapIndexed { i, stat -> getString(R.string.audio_priority_item, i + 1, stat.label, stat.count) }
+        showSingleChoiceDialog(getString(R.string.pref_audio_priority), items, -1) { index ->
+            val actions = listOf(
+                getString(R.string.audio_priority_top),
+                getString(R.string.audio_priority_up),
+                getString(R.string.audio_priority_down),
+                getString(R.string.audio_priority_remove)
+            )
+            showSingleChoiceDialog(stats[index].label, actions, -1) { action ->
+                when (action) {
+                    0 -> settingsViewModel.moveAudioTrackStat(index, 0)
+                    1 -> settingsViewModel.moveAudioTrackStat(index, index - 1)
+                    2 -> settingsViewModel.moveAudioTrackStat(index, index + 1)
+                    3 -> settingsViewModel.removeAudioTrackStat(index)
+                }
+                // Возвращаемся к обновленному списку
+                showAudioPriorityDialog()
+            }
         }
     }
 
+    private fun startCalibration(mode: String) {
+        startActivity(Intent(this, CalibrationWizardActivity::class.java).putExtra(CalibrationWizardActivity.EXTRA_MODE, mode))
+    }
+
+    // Сброс калибровки к значениям приложения: VR, анаглиф или все
+    private fun showResetCalibrationDialog() {
+        val options = listOf(
+            getString(R.string.reset_calibration_vr),
+            getString(R.string.reset_calibration_anaglyph),
+            getString(R.string.reset_calibration_all)
+        )
+        showSingleChoiceDialog(getString(R.string.pref_reset_calibration), options, -1) { index ->
+            val repository = SettingsRepository.getInstance(this)
+            if (index == 0 || index == 2) repository.resetVrCalibration()
+            if (index == 1 || index == 2) repository.resetAnaglyphCalibration()
+            Toast.makeText(this, R.string.reset_calibration_done, Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    // Варианты 3D режима по умолчанию: null - "Не обрабатывать"
+    private val default3dModes = listOf(
+        null, StereoOutputMode.ANAGLYPH, StereoOutputMode.CARDBOARD_VR,
+        StereoOutputMode.LEFT_ONLY, StereoOutputMode.RIGHT_ONLY
+    )
+
+    private fun default3dModeLabel(mode: StereoOutputMode?): String = getString(
+        when (mode) {
+            null -> R.string.default_3d_none
+            StereoOutputMode.ANAGLYPH -> R.string.output_mode_anaglyph
+            StereoOutputMode.CARDBOARD_VR -> R.string.output_mode_vr
+            StereoOutputMode.LEFT_ONLY -> R.string.default_3d_left
+            StereoOutputMode.RIGHT_ONLY -> R.string.default_3d_right
+        }
+    )
+
+    private fun showSingleChoiceDialog(title: String, items: List<String>, currentIndex: Int, onSelected: (Int) -> Unit) {
+        ChoiceDialog.show(this, title, items, currentIndex, onSelected)
+    }
+
     private fun handleInitialFocus(focusItemId: Int) {
-        if (focusItemId != 0) {
-            val viewToFocus = findViewById<View>(focusItemId)
-            viewToFocus?.post {
-                scrollView.smoothScrollTo(0, viewToFocus.top)
-                scrollView.requestChildFocus(viewToFocus.parent as View, viewToFocus)
+        val viewToFocus = if (focusItemId != 0) findViewById<View>(focusItemId) else null
+        if (viewToFocus != null) {
+            // Открываем категорию, в которой находится пункт
+            val categoryIndex = categories.indexOfFirst { isDescendant(viewToFocus, findViewById(it.sectionId)) }
+            if (categoryIndex != -1) selectCategory(categoryIndex)
+            viewToFocus.post {
+                // requestFocus сам прокручивает список к пункту
                 viewToFocus.requestFocus()
 
                 if (focusItemId == R.id.item_update) {
@@ -609,10 +892,17 @@ class GlobalSettingsActivity : AppCompatActivity() {
                 }
             }
         } else {
-            itemDecoder.post{
-                itemDecoder.requestFocus()
-            }
+            categoryViews[selectedCategory].post { categoryViews[selectedCategory].requestFocus() }
         }
+    }
+
+    private fun isDescendant(view: View, ancestor: View): Boolean {
+        var current: View? = view
+        while (current != null) {
+            if (current === ancestor) return true
+            current = current.parent as? View
+        }
+        return false
     }
 
     private fun applyAppLocale(selectedCode: String) {
@@ -830,6 +1120,10 @@ class GlobalSettingsActivity : AppCompatActivity() {
 
     private fun updateLangUI(textView: TextView, langCode: String) {
         textView.text = LocaleUtils.getFormattedLanguageName(langCode, this)
+    }
+
+    private companion object {
+        const val STATE_CATEGORY = "settings_category"
     }
 
     override fun onDestroy() {

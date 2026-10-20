@@ -13,11 +13,25 @@ class PlayerTouchHandler(
     private val onVolumeChange: (deltaPercent: Float) -> Unit,
     private val onBrightnessChange: (deltaPercent: Float) -> Unit,
     private val onHorizontalScroll: (deltaX: Float) -> Unit,
-    private val onGestureEnd: () -> Unit
+    private val onGestureEnd: () -> Unit,
+    // Жесты громкости и яркости (вертикальные свайпы) включены в настройках
+    private val isVerticalGesturesEnabled: () -> Boolean = { true }
 ) : GestureDetector.SimpleOnGestureListener() {
 
-    private enum class ScrollMode { NONE, VOLUME, BRIGHTNESS, HORIZONTAL }
+    // IGNORED - жест распознан, но ничего не делает (выключенные жесты громкости/яркости)
+    private enum class ScrollMode { NONE, VOLUME, BRIGHTNESS, HORIZONTAL, IGNORED }
     private var scrollMode = ScrollMode.NONE
+
+    // В текущем касании был второй палец (масштабирование): тапы и свайпы одним пальцем не обрабатываем
+    private var multiTouch = false
+
+    /** Идет свайп одним пальцем (громкость, яркость или горизонтальный). */
+    val isScrolling: Boolean
+        get() = scrollMode != ScrollMode.NONE && scrollMode != ScrollMode.IGNORED
+
+    fun onMultiTouch() {
+        multiTouch = true
+    }
 
     // Порог срабатывания (в пикселях).
     // Должен быть достаточно большим, чтобы отличить скролл от тапа,
@@ -26,15 +40,18 @@ class PlayerTouchHandler(
 
     override fun onDown(e: MotionEvent): Boolean {
         scrollMode = ScrollMode.NONE
+        multiTouch = false
         return true
     }
 
     override fun onSingleTapConfirmed(e: MotionEvent): Boolean {
+        if (multiTouch) return true
         onSingleTap()
         return true
     }
 
     override fun onDoubleTap(e: MotionEvent): Boolean {
+        if (multiTouch) return true
         val isForward = e.x > screenWidth / 2
         onDoubleTapSeek(isForward)
         return true
@@ -47,6 +64,7 @@ class PlayerTouchHandler(
         distanceY: Float
     ): Boolean {
         if (e1 == null) return false
+        if (multiTouch && scrollMode == ScrollMode.NONE) return true
 
         // 1. Определяем режим, если он еще не выбран
         if (scrollMode == ScrollMode.NONE) {
@@ -64,7 +82,9 @@ class PlayerTouchHandler(
                 } else {
                     // Вертикальный свайп
                     // Определяем сторону экрана (Лево/Право) по точке НАЧАЛА жеста (e1)
-                    if (e1.x > screenWidth / 2) {
+                    if (!isVerticalGesturesEnabled()) {
+                        ScrollMode.IGNORED
+                    } else if (e1.x > screenWidth / 2) {
                         ScrollMode.VOLUME
                     } else {
                         ScrollMode.BRIGHTNESS
@@ -98,9 +118,7 @@ class PlayerTouchHandler(
     }
 
     fun onActionUp() {
-        if (scrollMode != ScrollMode.NONE) {
-            onGestureEnd()
-            scrollMode = ScrollMode.NONE
-        }
+        if (isScrolling) onGestureEnd()
+        scrollMode = ScrollMode.NONE
     }
 }

@@ -9,6 +9,8 @@ import androidx.media3.exoplayer.DefaultRenderersFactory
 import top.rootu.dddplayer.R
 import top.rootu.dddplayer.data.SettingsRepository
 import top.rootu.dddplayer.logic.AudioMixerLogic
+import top.rootu.dddplayer.model.AudioTrackStat
+import top.rootu.dddplayer.model.StereoOutputMode
 
 /**
  * ViewModel для управления всеми глобальными настройками приложения.
@@ -27,8 +29,8 @@ class GlobalSettingsViewModel(application: Application) : AndroidViewModel(appli
     private val _isTunnelingEnabled = MutableLiveData(repository.isTunnelingEnabled())
     val isTunnelingEnabled: LiveData<Boolean> = _isTunnelingEnabled
 
-    private val _isMapDvToHevcEnabled = MutableLiveData(repository.isMapDvToHevcEnabled())
-    val isMapDvToHevcEnabled: LiveData<Boolean> = _isMapDvToHevcEnabled
+    private val _dvMode = MutableLiveData(repository.getDvMode())
+    val dvMode: LiveData<Int> = _dvMode
 
     private val _isFrameRateMatchingEnabled = MutableLiveData(repository.isFrameRateMatchingEnabled())
     val isFrameRateMatchingEnabled: LiveData<Boolean> = _isFrameRateMatchingEnabled
@@ -130,6 +132,48 @@ class GlobalSettingsViewModel(application: Application) : AndroidViewModel(appli
         _isLiveModeEnabled.value = enabled
     }
 
+    // 3D режим по умолчанию: null - "Не обрабатывать" (без автоопределения стереопары), иначе вывод
+    private val _default3dMode = MutableLiveData(
+        if (repository.isStereoAutoDetectEnabled()) repository.getDefaultOutputMode() else null
+    )
+    val default3dMode: LiveData<StereoOutputMode?> = _default3dMode
+
+    fun setDefault3dMode(mode: StereoOutputMode?) {
+        repository.setStereoAutoDetectEnabled(mode != null)
+        if (mode != null) repository.setDefaultOutputMode(mode)
+        _default3dMode.value = mode
+    }
+
+    private val _subtitleAutoMode = MutableLiveData(repository.getSubtitleAutoMode())
+    val subtitleAutoMode: LiveData<Int> = _subtitleAutoMode
+
+    fun setSubtitleAutoMode(mode: Int) {
+        repository.setSubtitleAutoMode(mode)
+        _subtitleAutoMode.value = mode
+    }
+
+    private val _audioTrackMemoryMode = MutableLiveData(repository.getAudioTrackMemoryMode())
+    val audioTrackMemoryMode: LiveData<Int> = _audioTrackMemoryMode
+
+    fun setAudioTrackMemoryMode(mode: Int) {
+        repository.setAudioTrackMemoryMode(mode)
+        _audioTrackMemoryMode.value = mode
+    }
+
+    // Список приоритетов аудиодорожек (наиболее используемые)
+    private val _audioTrackStats = MutableLiveData(repository.getAudioTrackStats())
+    val audioTrackStats: LiveData<List<AudioTrackStat>> = _audioTrackStats
+
+    fun moveAudioTrackStat(from: Int, to: Int) {
+        repository.moveAudioTrackStat(from, to)
+        _audioTrackStats.value = repository.getAudioTrackStats()
+    }
+
+    fun removeAudioTrackStat(index: Int) {
+        repository.removeAudioTrackStat(index)
+        _audioTrackStats.value = repository.getAudioTrackStats()
+    }
+
     fun toggleShowInfoOnTrackChange(enabled: Boolean) {
         repository.setShowInfoOnTrackChange(enabled)
         _isShowInfoOnTrackChange.value = enabled
@@ -203,9 +247,9 @@ class GlobalSettingsViewModel(application: Application) : AndroidViewModel(appli
         _isTunnelingEnabled.value = enabled
     }
 
-    fun toggleMapDvToHevc(enabled: Boolean) {
-        repository.setMapDvToHevcEnabled(enabled)
-        _isMapDvToHevcEnabled.value = enabled
+    fun setDvMode(mode: Int) {
+        repository.setDvMode(mode)
+        _dvMode.value = mode
     }
 
     fun toggleFrameRateMatching(enabled: Boolean) {
@@ -299,6 +343,14 @@ class GlobalSettingsViewModel(application: Application) : AndroidViewModel(appli
     fun setOkButtonAction(action: Int) {
         repository.setOkButtonAction(action)
         _okButtonAction.value = action
+    }
+
+    private val _isVolumeBrightnessGestures = MutableLiveData(repository.isVolumeBrightnessGesturesEnabled())
+    val isVolumeBrightnessGestures: LiveData<Boolean> = _isVolumeBrightnessGestures
+
+    fun toggleVolumeBrightnessGestures(enabled: Boolean) {
+        repository.setVolumeBrightnessGesturesEnabled(enabled)
+        _isVolumeBrightnessGestures.value = enabled
     }
 
     fun setHorizontalSwipeAction(action: Int) {

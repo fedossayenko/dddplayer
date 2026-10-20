@@ -382,6 +382,14 @@ class StereoRenderer(
         return shader
     }
 
+    /**
+     * Размер буфера входной поверхности, когда кадры рисуются на ней через Canvas
+     * (тестовые картинки калибровки). Видео плеер задает размер сам.
+     */
+    fun setInputBufferSize(width: Int, height: Int) {
+        surfaceTexture?.setDefaultBufferSize(width, height)
+    }
+
     fun setInputType(type: StereoInputType) {
         currentInputType = type
         glSurfaceView.requestRender()
@@ -480,7 +488,7 @@ class StereoRenderer(
     // а Color лишь копирует каналы - для них смешивание остается в гамме.
     private fun usesLinearMatrix(type: AnaglyphType): Boolean =
         type.name.endsWith("_DUBOIS") || type.name.endsWith("_CUSTOM") ||
-                type == AnaglyphType.RC_OPTIMIZED
+                type.name.endsWith("_CALIBRATED") || type == AnaglyphType.RC_OPTIMIZED
 
     fun release() {
         // Освобождаем Java-объекты Surface, чтобы ExoPlayer перестал в них писать
@@ -508,6 +516,9 @@ class StereoRenderer(
 
         // Green-Magenta
         GM_DUBOIS, GM_HALF_COLOR, GM_COLOR, GM_MONO, GM_CUSTOM,
-        RB_MONO
+        RB_MONO,
+
+        // Откалиброванные в визарде (добавлены в конец: порядковые номера сохранены в настройках)
+        RC_CALIBRATED, YB_CALIBRATED, GM_CALIBRATED
     }
 }

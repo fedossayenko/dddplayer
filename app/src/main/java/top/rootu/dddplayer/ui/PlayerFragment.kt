@@ -3,6 +3,7 @@ package top.rootu.dddplayer.ui
 import android.annotation.SuppressLint
 import android.app.Dialog
 import android.content.Context
+import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.media.AudioManager
 import android.opengl.GLSurfaceView
@@ -16,6 +17,7 @@ import android.view.Gravity
 import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.MotionEvent
+import android.view.ScaleGestureDetector
 import android.view.Surface
 import android.view.View
 import android.view.ViewGroup
@@ -24,6 +26,7 @@ import android.widget.PopupMenu
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
@@ -55,17 +58,20 @@ import top.rootu.dddplayer.ui.controller.PlayerInputHandler
 import top.rootu.dddplayer.ui.controller.PlayerTimerController
 import top.rootu.dddplayer.ui.controller.PlayerTouchHandler
 import top.rootu.dddplayer.ui.controller.PlayerUiController
+import top.rootu.dddplayer.utils.IntentUtils
 import top.rootu.dddplayer.utils.afr.AfrFormatItem
 import top.rootu.dddplayer.utils.afr.AutoFrameRateHelper
 import top.rootu.dddplayer.utils.afr.DisplayHolder
 import top.rootu.dddplayer.utils.afr.DisplaySyncHelper
 import top.rootu.dddplayer.utils.afr.TvQuickActions
 import top.rootu.dddplayer.viewmodel.PlayerViewModel
+import top.rootu.dddplayer.viewmodel.SUBTITLE_MENU_LOAD_FILE
 import top.rootu.dddplayer.viewmodel.PlaylistUiState
 import top.rootu.dddplayer.viewmodel.SettingType
 import top.rootu.dddplayer.viewmodel.SettingsViewModel
 import top.rootu.dddplayer.viewmodel.UpdateViewModel
 import kotlin.math.abs
+import kotlin.math.roundToInt
 
 class PlayerFragment : Fragment(), OnSurfaceReadyListener {
 
@@ -82,6 +88,8 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
     private var stereoRenderer: StereoRenderer? = null
     private var sideMenuDialog: Dialog? = null
     private var sideMenuAdapter: SideMenuAdapter? = null
+    // Пункты, показанные в боковом меню сейчас (клики по пунктам другого меню игнорируются)
+    private var sideMenuItems: List<MenuItem> = emptyList()
 
     // Контроллеры
     private var _ui: PlayerUiController? = null
@@ -110,6 +118,11 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
 
     // Переменные для горизонтального свайпа
     private var swipeAction = 0 // 0=None, 1=Seek, 2=Playlist
+    private var verticalGesturesEnabled = true // Жесты громкости и яркости
+
+    // Масштабирование двумя пальцами (только 2D)
+    private lateinit var scaleDetector: ScaleGestureDetector
+    private var pinchZoom = 100f
     private var bufferDisplayMode = SettingsRepository.BUFFER_DISPLAY_OFF
     private var isSwipeSeeking = false
     private var swipeSeekStartPosition = 0L
@@ -164,6 +177,7 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
         )
 
         swipeAction = settingsRepo.getHorizontalSwipeAction()
+        verticalGesturesEnabled = settingsRepo.isVolumeBrightnessGesturesEnabled()
 
         // === ИНИЦИАЛИЗАЦИЯ ЖЕСТОВ ===
         val displayMetrics = resources.displayMetrics
@@ -201,10 +215,45 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
 
                 // Завершение горизонтального свайпа
                 finishHorizontalSwipe()
-            }
+            },
+            isVerticalGesturesEnabled = { verticalGesturesEnabled }
         )
 
         gestureDetector = GestureDetector(requireContext(), touchHandler)
+
+        // Двумя пальцами: развести/свести - масштаб (режим "Масштаб" 100-200%), двигать - сдвиг картинки
+        scaleDetector = ScaleGestureDetector(requireContext(), object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
+            private var lastFocusX = 0f
+            private var lastFocusY = 0f
+
+            override fun onScaleBegin(detector: ScaleGestureDetector): Boolean {
+                // Только 2D видео и если не начат свайп одним пальцем
+                if (viewModel.inputType.value != StereoInputType.NONE || touchHandler.isScrolling) return false
+                pinchZoom = if (viewModel.resizeMode.value == ResizeMode.SCALE) {
+                    (viewModel.zoomScale.value ?: 100).toFloat()
+                } else {
+                    100f
+                }
+                lastFocusX = detector.focusX
+                lastFocusY = detector.focusY
+                return true
+            }
+
+            override fun onScale(detector: ScaleGestureDetector): Boolean {
+                pinchZoom = (pinchZoom * detector.scaleFactor).coerceIn(100f, 200f)
+                val percent = pinchZoom.roundToInt()
+                if (percent != viewModel.zoomScale.value || viewModel.resizeMode.value != ResizeMode.SCALE) {
+                    viewModel.setZoomScale(percent)
+                }
+                ui.panVideo(detector.focusX - lastFocusX, detector.focusY - lastFocusY)
+                lastFocusX = detector.focusX
+                lastFocusY = detector.focusY
+                return true
+            }
+        }).apply {
+            // Двойной тап с протяжкой не масштабирует: двойной тап - перемотка
+            isQuickScaleEnabled = false
+        }
 
         // Вешаем слушатель на корневой контейнер
         view.findViewById<View>(R.id.root_container).setOnTouchListener { _, event ->
@@ -214,6 +263,10 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
             if (event.action == MotionEvent.ACTION_UP) {
                 touchHandler.onActionUp()
             }
+            if (event.actionMasked == MotionEvent.ACTION_POINTER_DOWN && !touchHandler.isScrolling) {
+                touchHandler.onMultiTouch()
+            }
+            scaleDetector.onTouchEvent(event)
             gestureDetector.onTouchEvent(event)
             true // Поглощаем событие
         }
@@ -649,7 +702,7 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
             if (selected == null) {
                 showMainMenu("audio")
             } else {
-                selected.id.toIntOrNull()?.let { viewModel.selectTrackByIndex(C.TRACK_TYPE_AUDIO, it) }
+                selected.id.toIntOrNull()?.let { viewModel.selectTrackByIndex(C.TRACK_TYPE_AUDIO, it, fromUser = true) }
                 sideMenuDialog?.dismiss()
             }
         }
@@ -659,7 +712,8 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
         val menuItems = viewModel.getSubtitleMenuItems(requireContext())
         if (menuItems.isEmpty()) return
         // -1, потому что первый элемент - "Off"
-        val trackCount = (menuItems.size - 1).coerceAtLeast(0)
+        // -2: пункты "Выкл" и "Загрузить из файла"
+        val trackCount = (menuItems.size - 2).coerceAtLeast(0)
 
         showSideMenu(
             getString(R.string.menu_subtitle_title, trackCount),
@@ -667,10 +721,29 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
         ) { selected ->
             if (selected == null) {
                 showMainMenu("subtitles")
+            } else if (selected.id == SUBTITLE_MENU_LOAD_FILE) {
+                sideMenuDialog?.dismiss()
+                openSubtitleFile()
             } else {
-                selected.id.toIntOrNull()?.let { viewModel.selectTrackByIndex(C.TRACK_TYPE_TEXT, it) }
+                selected.id.toIntOrNull()?.let { viewModel.selectTrackByIndex(C.TRACK_TYPE_TEXT, it, fromUser = true) }
                 sideMenuDialog?.dismiss()
             }
+        }
+    }
+
+    // Выбор файла субтитров через системный диалог (на части ТВ его нет)
+    private val pickSubtitleLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) {
+            val name = IntentUtils.resolveFileName(requireContext(), uri)
+            viewModel.addExternalSubtitle(uri, name)
+        }
+    }
+
+    private fun openSubtitleFile() {
+        try {
+            pickSubtitleLauncher.launch(arrayOf("*/*"))
+        } catch (e: ActivityNotFoundException) {
+            Toast.makeText(requireContext(), R.string.subtitle_no_file_picker, Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -726,7 +799,7 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
                     }
                 }
                 // Принудительно обновляем список в адаптере, чтобы выделить новый пункт.
-                sideMenuAdapter?.submitList(viewModel.getResizeModeMenuItems(requireContext()))
+                updateSideMenuItems(viewModel.getResizeModeMenuItems(requireContext()))
             }
         }
     }
@@ -799,6 +872,12 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
         seekBar?.requestFocus()
     }
 
+    /** Обновляет пункты открытого бокового меню (например, отметку выбранного), не теряя обработку кликов. */
+    private fun updateSideMenuItems(items: List<MenuItem>) {
+        sideMenuItems = items
+        sideMenuAdapter?.submitList(items)
+    }
+
     /**
      * @param initialFocusId ID элемента для начального фокуса.
      * Если null, фокус ставится на элемент с isSelected=true, либо на первый.
@@ -847,7 +926,7 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
             // DiffUtil применяет новый список асинхронно, а обработчик меняется сразу.
             // Клик, пришедший в этот промежуток, относится к элементу предыдущего меню
             // (например, "audio" из главного меню) - игнорируем его.
-            if (items.any { it === item }) {
+            if (sideMenuItems.any { it === item }) {
                 isSelectionMade = true
                 onItemSelected(item)
             }
@@ -859,6 +938,7 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
             sideMenuAdapter?.onItemClick = onItemClick
         }
 
+        sideMenuItems = items
         sideMenuAdapter?.submitList(items) {
             recycler?.post {
                 var targetIndex = -1
@@ -1130,7 +1210,7 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
         viewModel.anaglyphDelegate.vrK2.observe(viewLifecycleOwner) { updateVrParams() }
         viewModel.anaglyphDelegate.vrScale.observe(viewLifecycleOwner) { updateVrParams() }
 
-        viewModel.anaglyphDelegate.currentMatrices.observe(viewLifecycleOwner) { (l, r) -> stereoRenderer?.setAnaglyphMatrices(l, r) }
+        viewModel.anaglyphDelegate.currentMatrices.observe(viewLifecycleOwner) { (l, r) -> applyAnaglyphMatrices(l, r) }
 
         // Панель настроек (SettingsViewModel)
         settingsViewModel.isSettingsPanelVisible.observe(viewLifecycleOwner) { isVisible ->
@@ -1311,6 +1391,12 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
         btnResume.requestFocus()
     }
 
+    // Переставленные линзы очков (например, голубая слева): изображение левого глаза - в цвет линзы B
+    private fun applyAnaglyphMatrices(left: FloatArray, right: FloatArray) {
+        val swapped = SettingsRepository.getInstance(requireContext().applicationContext).isAnaglyphLensSwapped()
+        if (swapped) stereoRenderer?.setAnaglyphMatrices(right, left) else stereoRenderer?.setAnaglyphMatrices(left, right)
+    }
+
     private fun updateVrParams() {
         stereoRenderer?.setDistortion(
             viewModel.anaglyphDelegate.vrK1.value ?: 0.34f,
@@ -1344,8 +1430,7 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
                 else getString(R.string.api_gles3)
             }
             SettingType.FILTER_MODE -> {
-                val name = viewModel.anaglyphType.value?.name ?: ""
-                if (name.endsWith("_CUSTOM")) getString(R.string.val_custom) else name
+                viewModel.anaglyphType.value?.let { AnaglyphLogic.filterLabel(requireContext(), it) } ?: ""
             }
             SettingType.CUSTOM_HUE_L -> {
                 val offset = viewModel.anaglyphDelegate.customHueOffsetL.value ?: 0
@@ -1539,9 +1624,13 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
         // Обновляем настройку свайпа при возврате на экран
         val settingsRepo = SettingsRepository.getInstance(requireContext().applicationContext)
         swipeAction = settingsRepo.getHorizontalSwipeAction()
+        verticalGesturesEnabled = settingsRepo.isVolumeBrightnessGesturesEnabled()
 
-        // Обновляем видимость часов (на случай, если изменили в настройках)
+        // Обновляем видимость часов и стиль субтитров (на случай, если изменили в настройках)
         ui.updateClockTransparency(settingsRepo.getClockTransparency())
+        ui.applySubtitleStyle(settingsRepo.getSubtitleStyle())
+        // Калибровка VR и анаглифа могла измениться в визарде
+        viewModel.reloadCalibrationIfChanged()
         applyBufferDisplayMode(settingsRepo.getBufferDisplayMode())
 
         // Проверяем, нужно ли перезапустить плеер из-за смены настроек

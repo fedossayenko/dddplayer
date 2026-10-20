@@ -5,7 +5,8 @@
 `PlayerManager` владеет экземпляром ExoPlayer. Обращается к нему только `PlayerViewModel`.
 
 - `initializePlayer()` собирает плеер из текущих настроек:
-  - `MediaCodecSelector`: при `map_dv_to_hevc` запрос декодера Dolby Vision подменяется на HEVC;
+  - `MediaCodecSelector`: запрос декодера Dolby Vision подменяется на HEVC по `dv_mode` — всегда, никогда или
+    «авто» (если нет DV декодера или экран не сообщает о поддержке DV, `isDolbyVisionSupported`);
   - `DefaultTrackSelector`: туннелирование, предпочтительные языки аудио и субтитров (`""` — по умолчанию,
     `device` — языки системы), `exceedRendererCapabilitiesIfNecessary`;
   - `DefaultRenderersFactory`: приоритет декодеров-расширений (`decoder_priority`, ffmpeg и AV1 из AAR),

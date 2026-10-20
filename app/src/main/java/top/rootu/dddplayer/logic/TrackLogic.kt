@@ -6,7 +6,9 @@ import androidx.media3.common.C
 import androidx.media3.common.Format
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.Tracks
+import androidx.media3.common.util.Util
 import top.rootu.dddplayer.R
+import top.rootu.dddplayer.data.SettingsRepository
 import top.rootu.dddplayer.utils.LocaleUtils
 import top.rootu.dddplayer.viewmodel.TrackOption
 import top.rootu.dddplayer.viewmodel.VideoQualityOption
@@ -129,6 +131,77 @@ object TrackLogic {
             }
         }
         return Pair(subList, selectedSubIdx)
+    }
+
+    /**
+     * Подпись аудиодорожки для выбора такой же дорожки в других видео:
+     * название, язык, кодек и число каналов. null для пункта "Выкл".
+     */
+    fun audioTrackSignature(option: TrackOption): String? {
+        if (option.isOff) return null
+        val format = option.format ?: return null
+        val name = option.nameFromMeta?.trim()?.ifEmpty { null } ?: format.label?.trim().orEmpty()
+        return listOf(name, format.language ?: "und", format.sampleMimeType.orEmpty(), format.channelCount.toString())
+            .joinToString("|")
+            .replace('\n', ' ')
+    }
+
+    /**
+     * Индекс субтитров для автовключения при загрузке видео (настройка subtitle_auto_mode).
+     * null - ничего не менять (режим "По умолчанию" или подходящей дорожки нет).
+     * @param preferredLangs предпочитаемые языки субтитров по порядку
+     * @param audioLang язык текущей аудиодорожки (для форсированных субтитров)
+     */
+    fun autoSubtitleIndex(
+        options: List<TrackOption>,
+        mode: Int,
+        preferredLangs: List<String>,
+        audioLang: String?
+    ): Int? {
+        val offIdx = options.indexOfFirst { it.isOff }.takeIf { it != -1 }
+        if (mode == SettingsRepository.SUB_AUTO_OFF) return offIdx
+
+        val tracks = options.withIndex().filter { !it.value.isOff && it.value.format != null }
+        val (forced, full) = tracks.partition { it.value.format!!.selectionFlags and C.SELECTION_FLAG_FORCED != 0 }
+
+        fun byLanguage(list: List<IndexedValue<TrackOption>>, langs: List<String>): Int? {
+            for (lang in langs) {
+                list.firstOrNull { sameLanguage(it.value.format?.language, lang) }?.let { return it.index }
+            }
+            return null
+        }
+
+        fun byDefaultFlag(list: List<IndexedValue<TrackOption>>): Int? =
+            list.firstOrNull { it.value.format!!.selectionFlags and C.SELECTION_FLAG_DEFAULT != 0 }?.index
+
+        return when (mode) {
+            SettingsRepository.SUB_AUTO_FORCED ->
+                // Форсированные субтитры переводят надписи, ищем их сначала на языке звука; нет форсированных - выключаем
+                byLanguage(forced, listOfNotNull(audioLang) + preferredLangs)
+                    ?: byDefaultFlag(forced)
+                    ?: forced.firstOrNull()?.index
+                    ?: offIdx
+            SettingsRepository.SUB_AUTO_FULL ->
+                byLanguage(full, preferredLangs)
+                    ?: byDefaultFlag(full)
+                    ?: full.firstOrNull()?.index
+                    ?: byLanguage(forced, preferredLangs)
+                    ?: forced.firstOrNull()?.index
+            else -> null
+        }
+    }
+
+    /** Сравнение кодов языков без учета региона и формата (ru, rus, ru-RU) */
+    fun sameLanguage(a: String?, b: String?): Boolean {
+        val x = primaryLanguage(a) ?: return false
+        val y = primaryLanguage(b) ?: return false
+        return x == y
+    }
+
+    private fun primaryLanguage(code: String?): String? {
+        if (code.isNullOrBlank()) return null
+        val normalized = Util.normalizeLanguageCode(code.trim())?.substringBefore('-')?.lowercase()
+        return normalized?.takeIf { it.isNotEmpty() && it != "und" && it != "ext" }
     }
 
     fun buildTrackLabel(option: TrackOption, context: Context): String {

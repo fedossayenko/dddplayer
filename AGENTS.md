@@ -18,22 +18,27 @@ compileSdk 36). Умеет обычное 2D/HDR видео и стереопа�
 ## Сборка и проверка
 
 ```bash
-./gradlew assembleDebug          # то же, что делает CI
+./gradlew testDebugUnitTest      # юнит-тесты (JUnit + Robolectric)
+./gradlew assembleDebug          # сборка APK
 ./gradlew assembleRelease        # релиз (minify выключен)
 ```
 
 - Нужен JDK 17 и Android SDK (compileSdk 36). Версия приложения берется из git:
   `versionCode = git rev-list --count HEAD`, `versionName = git describe --tags --dirty`.
   Поэтому нужна полная история (`fetch-depth: 0`), а в shallow-клоне версия будет неправильной.
-- CI: `.github/workflows/android-build.yml` собирает `assembleDebug` на push/PR в `main`
-  и выкладывает APK как артефакт `dddplayer-debug-apk`.
+- CI: `.github/workflows/android-build.yml` на push/PR в `main` запускает юнит-тесты и собирает `assembleDebug`,
+  APK выкладывается как артефакт `dddplayer-debug-apk` (при падении тестов - отчеты `unit-test-reports`).
 - Релиз: `.github/workflows/release.yml` запускается на тег `vX.Y.Z` (`git tag v1.2.5 && git push origin v1.2.5`).
   Он собирает `assembleRelease`, подписывает APK ключом из приватного репозитория (секреты `KEYSTORE_*`,
   `RELEASE_SIGN_*`) и публикует GitHub Release с `app-release.apk`. Встроенное обновление
   (`UpdateManager`) берет последний не-draft и не-prerelease релиз и первый `.apk` в нем.
   Подпись настраивается в `app/build.gradle.kts` из переменных окружения, без них релиз собирается неподписанным.
-- **Unit/UI тестов в проекте нет.** Если Android SDK недоступен (облачная песочница),
-  единственная проверка компиляции — CI. Поэтому:
+- **Тесты:** `app/src/test` — JVM юнит-тесты. Чистая логика тестируется на JUnit, код с Android API
+  (`Uri`, `SharedPreferences`, `org.json`, `SystemClock`) — под `RobolectricTestRunner`
+  (`src/test/resources/robolectric.properties`: SDK 34 и простой `Application` вместо `App`).
+  Синглтоны `SettingsRepository`/`AppDatabase` в тестах сбрасываются через reflection (см. `SettingsRepositoryTest`).
+  Новую логику (парсеры, расчеты, настройки и их миграции) покрывайте тестами. UI-тестов нет.
+- Если Android SDK недоступен (облачная песочница), тесты и компиляцию проверяет только CI. Поэтому:
   - перечитывайте свой diff и проверяйте импорты, порядок инициализации свойств и ссылки на ресурсы;
   - проверяйте, что каждый `R.string.*`, `R.id.*`, `R.layout.*` и `R.drawable.*` существует;
   - не пушьте наугад: одна выверенная правка лучше трех.

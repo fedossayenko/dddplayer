@@ -2,15 +2,18 @@ package top.rootu.dddplayer.viewmodel
 
 import android.app.Application
 import android.content.Context
+import android.net.Uri
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import androidx.core.os.LocaleListCompat
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import androidx.media3.common.C
 import androidx.media3.common.Format
+import androidx.media3.common.MimeTypes
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.TrackSelectionOverride
@@ -38,6 +41,7 @@ import top.rootu.dddplayer.model.PlaybackSpeed
 import top.rootu.dddplayer.model.ResizeMode
 import top.rootu.dddplayer.model.StereoInputType
 import top.rootu.dddplayer.model.StereoOutputMode
+import top.rootu.dddplayer.model.SubtitleItem
 import top.rootu.dddplayer.player.PlayerManager
 import top.rootu.dddplayer.renderer.StereoRenderer
 import top.rootu.dddplayer.utils.MediaFormatHelper
@@ -97,6 +101,9 @@ data class PlaylistUiState(
 )
 
 @UnstableApi
+// Пункт "Загрузить из файла" в меню субтитров
+const val SUBTITLE_MENU_LOAD_FILE = "load_file"
+
 class PlayerViewModel(application: Application) : AndroidViewModel(application) {
 
     private var ioRetryCount = 0
@@ -241,6 +248,22 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     // Храним ID, которые нужно применить, когда треки загрузятся (восстановление треков)
     private var pendingAudioId: String? = null
     private var pendingSubtitleId: String? = null
+
+    // Название внешних субтитров, которые нужно включить после их добавления
+    private var pendingSubtitleLabel: String? = null
+
+    // Аудиодорожку выбрал пользователь (запоминаем ее для других видео)
+    private var audioChosenByUser = false
+    // Выбор пользователя еще не учтен в статистике дорожек (учитываем один раз на видео)
+    private var audioChoicePendingStat = false
+    // Дорожка, выбранная пользователем в текущем плейлисте (для следующих элементов)
+    private var sessionAudioSignature: String? = null
+    // Дорожка для текущего видео уже определена (сохраненная, выбранная или найденная среди последних)
+    private var audioTrackResolved = false
+    // Субтитры для текущего видео уже выбраны (сохраненные, пользователем или автовключением)
+    private var subtitleResolved = false
+    // Настройки видео из базы прочитаны (автовключение ждет их, чтобы не перебить сохраненные субтитры)
+    private var videoSettingsChecked = false
 
     // Internal
     private var audioOptions = listOf<TrackOption>()
@@ -583,6 +606,11 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         // Сбрасываем отложенные ID дорожек при переходе на новое видео
         pendingAudioId = null
         pendingSubtitleId = null
+        audioChosenByUser = false
+        audioChoicePendingStat = false
+        audioTrackResolved = false
+        subtitleResolved = false
+        videoSettingsChecked = false
 
         player?.let { p ->
             val title = mediaItem?.mediaMetadata?.title?.toString()
@@ -630,12 +658,19 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                     } else {
                         loadGlobalDefaults()
                     }
+                    videoSettingsChecked = true
+                    // Дорожки могли прийти раньше настроек: применяем автовключение субтитров сейчас
+                    if (!subtitleResolved && repository.getSubtitleAutoMode() != SettingsRepository.SUB_AUTO_DEFAULT) {
+                        player?.let { updateTracksInfo(it.currentTracks) }
+                    }
                     if (!isFirstItemLoaded) {
                         handleResumeLogic(saved)
                     }
                     // Помечаем, что первое видео обработавано.
                     isFirstItemLoaded = true
                 }
+            } else {
+                videoSettingsChecked = true
             }
         }
     }
@@ -827,8 +862,8 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             return
         }
 
-        // Логика автоопределения
-        if (_inputType.value == StereoInputType.NONE) {
+        // Логика автоопределения (выключена в режиме "Не обрабатывать")
+        if (_inputType.value == StereoInputType.NONE && repository.isStereoAutoDetectEnabled()) {
             val detectedType = StereoTypeDetector.detect(
                 player?.videoFormat,
                 player?.currentMediaItem?.localConfiguration?.uri
@@ -869,6 +904,18 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             if (foundIdx != -1) {
                 finalAudioIdx = foundIdx
                 selectTrackByIndex(C.TRACK_TYPE_AUDIO, foundIdx)
+                audioTrackResolved = true
+            }
+        }
+        // Иначе ищем дорожку, выбранную в этом плейлисте, а затем (экспериментально) среди наиболее используемых.
+        // Пока не нашли, пробуем при каждом обновлении: названия из метаданных файла приходят позже
+        if (!audioTrackResolved && !audioChosenByUser) {
+            findRememberedAudioTrackIndex()?.let { idx ->
+                audioTrackResolved = true
+                if (idx != finalAudioIdx) {
+                    finalAudioIdx = idx
+                    selectTrackByIndex(C.TRACK_TYPE_AUDIO, idx)
+                }
             }
         }
         currentAudioIndex = finalAudioIdx
@@ -879,25 +926,59 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         subtitleOptions = subs
         // Пытаемся применить отложенные субтитры
         var finalSubIdx = subIdx
+        pendingSubtitleLabel?.let { label ->
+            // Только что добавленные субтитры: последняя внешняя дорожка с этим названием
+            val foundIdx = subtitleOptions.indexOfLast { it.format?.language == "ext" && it.format?.label == label }
+            if (foundIdx != -1) {
+                pendingSubtitleLabel = null
+                pendingSubtitleId = null
+                subtitleResolved = true
+                finalSubIdx = foundIdx
+                selectTrackByIndex(C.TRACK_TYPE_TEXT, foundIdx)
+            }
+        }
         pendingSubtitleId?.let { id ->
             // Специальная обработка для "Выкл"
             if (id == "disabled") {
                 finalSubIdx = 0
+                subtitleResolved = true
                 selectTrackByIndex(C.TRACK_TYPE_TEXT, 0)
             } else {
                 val foundIdx = subtitleOptions.indexOfFirst { it.format?.id == id }
                 if (foundIdx != -1) {
                     finalSubIdx = foundIdx
+                    subtitleResolved = true
                     selectTrackByIndex(C.TRACK_TYPE_TEXT, foundIdx)
                 }
+            }
+        }
+        // Автовключение субтитров по настройке: один раз на видео, если субтитры не сохранены для него.
+        // Ждем появления дорожек субтитров: в HLS они могут прийти позже видео и звука
+        if (!subtitleResolved && videoSettingsChecked && pendingSubtitleId == null && pendingSubtitleLabel == null &&
+            subtitleOptions.any { !it.isOff }
+        ) {
+            subtitleResolved = true
+            val mode = repository.getSubtitleAutoMode()
+            if (mode != SettingsRepository.SUB_AUTO_DEFAULT) {
+                val audioLang = audioOptions.getOrNull(finalAudioIdx)?.format?.language
+                TrackLogic.autoSubtitleIndex(subtitleOptions, mode, preferredSubtitleLanguages(), audioLang)
+                    ?.let { idx ->
+                        if (idx != finalSubIdx) {
+                            finalSubIdx = idx
+                            selectTrackByIndex(C.TRACK_TYPE_TEXT, idx)
+                        }
+                    }
             }
         }
         currentSubtitleIndex = finalSubIdx
         _currentSubtitleTrack.postValue(subtitleOptions.getOrNull(currentSubtitleIndex))
 
-        // Очищаем отложенные ID, так как мы их уже применили (или не нашли)
-        pendingAudioId = null
-        pendingSubtitleId = null
+        // Очищаем отложенные ID, так как мы их уже применили (или не нашли).
+        // Пустой список дорожек приходит при перезагрузке источника - ждем настоящий
+        if (!tracks.isEmpty) {
+            pendingAudioId = null
+            pendingSubtitleId = null
+        }
 
         // 3. Видео (Quality)
         _videoQualityOptions.postValue(TrackLogic.extractVideoTracks(tracks))
@@ -982,6 +1063,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         val startItem = indexedItems.getOrNull(startIndex)
         var startPos = startItem?.startPositionMs ?: 0L
         pendingExternalPosition = null
+        sessionAudioSignature = null // Новый плейлист - выбор дорожки начинается заново
         isFirstItemLoaded = false // Продолжение просмотра - для первого элемента нового плейлиста
         if (startItem != null && startPos > 0 &&
             repository.getExternalPositionMode() == SettingsRepository.EXTERNAL_POSITION_ASK
@@ -1086,9 +1168,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     // --- Settings Logic ---
 
     private fun loadGlobalDefaults() {
-        val outModeOrd = repository.getGlobalInt("def_output_mode", StereoOutputMode.ANAGLYPH.ordinal)
-        val outputMode = StereoOutputMode.entries.getOrNull(outModeOrd) ?: StereoOutputMode.ANAGLYPH
-        _outputMode.value = outputMode
+        _outputMode.value = repository.getDefaultOutputMode()
 
         val anaTypeOrd = repository.getGlobalInt("def_anaglyph_type", StereoRenderer.AnaglyphType.RC_DUBOIS.ordinal)
         val anaglyphType = StereoRenderer.AnaglyphType.entries.getOrNull(anaTypeOrd) ?: StereoRenderer.AnaglyphType.RC_DUBOIS
@@ -1122,6 +1202,17 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             subtitleTrackId = subId
         )
         viewModelScope.launch { repository.saveVideoSettings(settings) }
+
+        // Выбранную вручную дорожку учитываем в статистике для других видео: один раз на видео
+        // и итоговый выбор, а не каждую дорожку при переборе в OSD
+        if (audioChoicePendingStat && repository.getAudioTrackMemoryMode() == SettingsRepository.AUDIO_MEMORY_ALL) {
+            _currentAudioTrack.value?.let { option ->
+                TrackLogic.audioTrackSignature(option)?.let { signature ->
+                    repository.recordAudioTrackChoice(signature, TrackLogic.buildTrackLabel(option, getApplication<Application>()))
+                }
+            }
+            audioChoicePendingStat = false
+        }
 
         repository.saveGlobalDefaults(settings.outputMode, settings.anaglyphType)
         repository.putGlobalFloat("global_screen_separation_pct", _screenSeparation.value!!)
@@ -1340,10 +1431,46 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun getSubtitleMenuItems(context: Context): List<MenuItem> {
-        return subtitleOptions.mapIndexed { index, option ->
+        val tracks = subtitleOptions.mapIndexed { index, option ->
             val name = TrackLogic.buildTrackLabel(option, context)
             MenuItem(index.toString(), name, isSelected = index == currentSubtitleIndex)
         }
+        // Пункт загрузки субтитров из файла - в конце списка
+        return tracks + MenuItem(SUBTITLE_MENU_LOAD_FILE, context.getString(R.string.subtitle_load_file))
+    }
+
+    /**
+     * Добавляет внешние субтитры к текущему видео и включает их.
+     * Плейлист перезагружается с той же позиции (дорожки субтитров задаются при подготовке источника).
+     */
+    fun addExternalSubtitle(uri: Uri, fileName: String?) {
+        val p = player ?: return
+        val playlist = _currentPlaylist.value ?: return
+        val playingId = p.currentMediaItem?.mediaId ?: return
+        val index = playlist.indexOfFirst { it.uuid == playingId }
+        if (index == -1) return
+
+        val name = fileName ?: uri.lastPathSegment ?: "Subtitles"
+        val mimeType = MediaFormatHelper.getSubtitleMimeTypeByName(name)
+        if (mimeType == null || mimeType == MimeTypes.TEXT_UNKNOWN) {
+            _toastMessage.value = getString(R.string.subtitle_unsupported)
+            return
+        }
+
+        val item = playlist[index]
+        val updated = item.copy(subtitles = item.subtitles + SubtitleItem(uri, name, name, mimeType))
+        val newPlaylist = playlist.toMutableList().apply { set(index, updated) }
+        _currentPlaylist.value = newPlaylist
+        _playlistUiState.value?.let { state ->
+            _playlistUiState.value = state.copy(items = state.items.map { if (it.uuid == updated.uuid) updated else it })
+        }
+
+        // После перезагрузки оставляем текущую аудиодорожку и включаем новые субтитры
+        pendingAudioId = _currentAudioTrack.value?.format?.id
+        pendingSubtitleLabel = name
+        // То же видео перезагружается: настройки и счетчики не сбрасываем
+        isRecoveringFromError = true
+        playerManager.reloadPlaylistItems(newPlaylist, p.currentMediaItemIndex, p.currentPosition)
     }
 
     private fun getResizeModeLabel(context: Context): String {
@@ -1356,16 +1483,50 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
-    fun selectTrackByIndex(trackType: Int, index: Int) {
+    private fun findRememberedAudioTrackIndex(): Int? {
+        val mode = repository.getAudioTrackMemoryMode()
+        if (mode == SettingsRepository.AUDIO_MEMORY_OFF) return null
+        val candidates = buildList {
+            sessionAudioSignature?.let { add(it) }
+            if (mode == SettingsRepository.AUDIO_MEMORY_ALL) {
+                addAll(repository.getAudioTrackStats().map { it.signature })
+            }
+        }
+        for (signature in candidates) {
+            val idx = audioOptions.indexOfFirst { TrackLogic.audioTrackSignature(it) == signature }
+            if (idx != -1) return idx
+        }
+        return null
+    }
+
+    private fun preferredSubtitleLanguages(): List<String> =
+        when (val pref = repository.getPreferredSubLang()) {
+            SettingsRepository.TRACK_DEFAULT -> emptyList()
+            SettingsRepository.TRACK_DEVICE -> {
+                val locales = LocaleListCompat.getAdjustedDefault()
+                (0 until locales.size()).mapNotNull { locales.get(it)?.language }
+            }
+            else -> listOf(pref)
+        }
+
+    /** @param fromUser выбор из меню/OSD (запоминается для других видео) */
+    fun selectTrackByIndex(trackType: Int, index: Int, fromUser: Boolean = false) {
         val options = if (trackType == C.TRACK_TYPE_AUDIO) audioOptions else subtitleOptions
 
         if (index in options.indices) {
             val option = options[index]
 
             if (trackType == C.TRACK_TYPE_AUDIO) {
+                if (fromUser) {
+                    audioChosenByUser = true
+                    audioChoicePendingStat = true
+                    audioTrackResolved = true
+                    sessionAudioSignature = TrackLogic.audioTrackSignature(option)
+                }
                 currentAudioIndex = index
                 _currentAudioTrack.value = option
             } else {
+                if (fromUser) subtitleResolved = true
                 currentSubtitleIndex = index
                 _currentSubtitleTrack.value = option
             }
@@ -1410,7 +1571,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             }
             SettingType.FILTER_MODE -> {
                 val currentGroup = AnaglyphLogic.getGlassesGroup(_anaglyphType.value!!)
-                val filters = AnaglyphLogic.getFiltersForGroup(currentGroup)
+                val filters = filtersForGroup(currentGroup)
                 val nextFilter = SettingsMutator.cycleList(_anaglyphType.value!!, filters, direction)
                 _anaglyphType.value = nextFilter
                 savePreferredFilter(nextFilter)
@@ -1454,14 +1615,14 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                 val options = audioOptions
                 if (options.isNotEmpty()) {
                     val nextIndex = (currentAudioIndex + direction + options.size) % options.size
-                    selectTrackByIndex(C.TRACK_TYPE_AUDIO, nextIndex)
+                    selectTrackByIndex(C.TRACK_TYPE_AUDIO, nextIndex, fromUser = true)
                 }
             }
             SettingType.SUBTITLES -> {
                 val options = subtitleOptions
                 if (options.isNotEmpty()) {
                     val nextIndex = (currentSubtitleIndex + direction + options.size) % options.size
-                    selectTrackByIndex(C.TRACK_TYPE_TEXT, nextIndex)
+                    selectTrackByIndex(C.TRACK_TYPE_TEXT, nextIndex, fromUser = true)
                 }
             }
         }
@@ -1516,12 +1677,8 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             }
             SettingType.FILTER_MODE -> {
                 val currentGroup = AnaglyphLogic.getGlassesGroup(_anaglyphType.value!!)
-                val filters = AnaglyphLogic.getFiltersForGroup(currentGroup)
-                val list = filters.map {
-                    if (it.name.endsWith("_CUSTOM"))
-                        context.getString(R.string.val_custom) // Используем контекст, переданный из Fragment
-                    else it.name
-                }
+                val filters = filtersForGroup(currentGroup)
+                val list = filters.map { AnaglyphLogic.filterLabel(context, it) }
                 val index = filters.indexOf(_anaglyphType.value!!)
                 Pair(list, index)
             }
@@ -1666,7 +1823,24 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                 if (AnaglyphLogic.getGlassesGroup(savedType) == group) return savedType
             }
         }
-        return AnaglyphLogic.getFiltersForGroup(group).first()
+        return filtersForGroup(group).first()
+    }
+
+    // Фильтры группы очков; "Калибровка" - только если очки откалиброваны в визарде
+    private fun filtersForGroup(group: GlassesGroup) =
+        AnaglyphLogic.getFiltersForGroup(group, includeCalibrated = repository.getAnaglyphCalibration(group) != null)
+
+    // Версия калибровки (визарды VR и анаглифа), с которой загружены параметры
+    private var calibrationVersion = repository.getCalibrationVersion()
+
+    /** Перечитывает параметры VR и матрицы анаглифа, если калибровку сохранили или сбросили. */
+    fun reloadCalibrationIfChanged() {
+        val version = repository.getCalibrationVersion()
+        if (version == calibrationVersion) return
+        calibrationVersion = version
+        _screenSeparation.value = repository.getGlobalFloat("global_screen_separation_pct", 0f)
+        anaglyphDelegate.loadGlobalVrParams()
+        _anaglyphType.value?.let { anaglyphDelegate.updateAnaglyphMatrix(it) }
     }
 
     fun setDeviceSupportsEs3(supported: Boolean) {

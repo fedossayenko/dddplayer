@@ -51,19 +51,33 @@
         android:visibility="gone"
         android:baselineAligned="false">
 
-        <androidx.media3.ui.SubtitleView
-            android:id="@+id/subtitle_view_left"
+        <!-- Каждый глаз в своей половине: сдвинутые на разнос экранов субтитры
+             обрезаются по границе половины и не наслаиваются на соседний глаз -->
+        <FrameLayout
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:background="@color/transparent" />
+            android:clipChildren="true">
 
-        <androidx.media3.ui.SubtitleView
-            android:id="@+id/subtitle_view_right"
+            <androidx.media3.ui.SubtitleView
+                android:id="@+id/subtitle_view_left"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@color/transparent" />
+        </FrameLayout>
+
+        <FrameLayout
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:background="@color/transparent" />
+            android:clipChildren="true">
+
+            <androidx.media3.ui.SubtitleView
+                android:id="@+id/subtitle_view_right"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@color/transparent" />
+        </FrameLayout>
     </LinearLayout>
 
     <!-- Одиночные часы в правом верхнем углу (с черным контуром) -->

@@ -67,28 +67,86 @@ object DuboisMath {
         // Составляем матрицу Q (6x3)
         // Q = [ Basis * effL ]
         //     [ Basis * effR ]
-        val q = Array(6) { FloatArray(3) }
-        for (row in 0 until 3) {
-            q[row][0] = mBasis[row][0] * effL[0]
-            q[row][1] = mBasis[row][1] * effL[1]
-            q[row][2] = mBasis[row][2] * effL[2]
-        }
-        for (row in 0 until 3) {
-            q[row + 3][0] = mBasis[row][0] * effR[0]
-            q[row + 3][1] = mBasis[row][1] * effR[1]
-            q[row + 3][2] = mBasis[row][2] * effR[2]
-        }
+        val qL = Array(3) { row -> FloatArray(3) { c -> mBasis[row][c] * effL[c] } }
+        val qR = Array(3) { row -> FloatArray(3) { c -> mBasis[row][c] * effR[c] } }
 
-        // Least Squares: (Q^T * Q)^-1 * Q^T
-        val qt = transpose(q) // 3x6
-        val qtq = multiply(qt, q) // 3x3
-
-        // Если инверсия не удалась, возвращаем цвета и помечаем как Invalid
-        val qtqInv = invert3x3(qtq) ?: return ResultMatrices(
+        return solve(qL, qR, mBasis) ?: ResultMatrices(
+            // Если инверсия не удалась, возвращаем цвета и помечаем как Invalid
             floatArrayOf(cL[0], 0f, 0f, 0f, cL[1], 0f, 0f, 0f, cL[2]),
             floatArrayOf(cR[0], 0f, 0f, 0f, cR[1], 0f, 0f, 0f, cR[2]),
             isValid = false
         )
+    }
+
+    /**
+     * Матрицы фильтра "Калибровка": классический Dubois для идеальных фильтров плюс подавление двоения.
+     *
+     * Свои цвета фильтров - основные цвета экрана (ownA/ownB: индексы 0=R, 1=G, 2=B).
+     * Утечка leakA - доля чужого света, прошедшего через фильтр A: полный дополнительный цвет через фильтр
+     * выглядит как свой цвет фильтра с линейной яркостью leakA. Изображение второго глаза, просочившееся
+     * через фильтр, вычитается из каналов своего цвета ("антитень"). Подавление работает, пока каналы
+     * не уходят в 0: на средних и светлых тонах тень исчезает, в темных остается.
+     * Без утечек получается классический Dubois.
+     */
+    fun calculateWithCrosstalk(ownA: Set<Int>, ownB: Set<Int>, leakA: Float, leakB: Float): ResultMatrices {
+        val ideal = solveMatrices(filterResponse(ownA), filterResponse(ownB), mXYZ)
+            ?: return ResultMatrices(
+                FloatArray(9) { if (it % 4 == 0 && it / 4 in ownA) 1f else 0f },
+                FloatArray(9) { if (it % 4 == 0 && it / 4 in ownB) 1f else 0f },
+                isValid = false
+            )
+        val (mA, mB) = ideal
+        // Остаток самого Dubois (без утечек) сохраняем, убираем только то, что добавляет утечка
+        val targetA = FloatArray(3) { c -> weighted(mB, ownA, c) }
+        val targetB = FloatArray(3) { c -> weighted(mA, ownB, c) }
+        // Вычитание сдвигает баланс белого, а нормализация - вычитание: несколько итераций сходятся
+        repeat(CROSSTALK_ITERATIONS) {
+            val errorA = FloatArray(3) { c -> ghostThroughFilter(mB, ownA, leakA, c) - targetA[c] }
+            val errorB = FloatArray(3) { c -> ghostThroughFilter(mA, ownB, leakB, c) - targetB[c] }
+            for (row in ownA) for (c in 0..2) mB[row][c] -= errorA[c]
+            for (row in ownB) for (c in 0..2) mA[row][c] -= errorB[c]
+            normalize(mA, mB)
+        }
+        return ResultMatrices(flatten(mA), flatten(mB), true)
+    }
+
+    private const val CROSSTALK_ITERATIONS = 20
+
+    /**
+     * Яркость, которую входной канал c изображения (матрица m) дает глазу за фильтром own:
+     * свои основные цвета целиком плюс остальные с долей leak (своя яркость фильтра = 1).
+     */
+    private fun ghostThroughFilter(m: Array<FloatArray>, own: Set<Int>, leak: Float, c: Int): Float =
+        weighted(m, own, c) + leak * weighted(m, (0..2).filter { it !in own }.toSet(), c)
+
+    // Вклад входного канала c в яркость основных цветов primaries (веса по яркости, сумма весов = 1)
+    private fun weighted(m: Array<FloatArray>, primaries: Set<Int>, c: Int): Float {
+        val total = primaries.sumOf { mXYZ[1][it].toDouble() }.toFloat()
+        if (total <= 0f) return 0f
+        return primaries.sumOf { (mXYZ[1][it] / total * m[it][c]).toDouble() }.toFloat()
+    }
+
+    // XYZ, видимый через идеальный фильтр, для каждого основного цвета экрана (столбцы)
+    private fun filterResponse(own: Set<Int>): Array<FloatArray> =
+        Array(3) { row -> FloatArray(3) { c -> if (c in own) mXYZ[row][c] else 0f } }
+
+    /**
+     * Метод наименьших квадратов Dubois: Q = [qL; qR] (6x3), P = (Q^T Q)^-1 Q^T, итог = P * Basis.
+     * @return null, если матрица вырождена
+     */
+    private fun solve(qL: Array<FloatArray>, qR: Array<FloatArray>, mBasis: Array<FloatArray>): ResultMatrices? =
+        solveMatrices(qL, qR, mBasis)?.let { (l, r) -> ResultMatrices(flatten(l), flatten(r), true) }
+
+    private fun solveMatrices(
+        qL: Array<FloatArray>,
+        qR: Array<FloatArray>,
+        mBasis: Array<FloatArray>
+    ): Pair<Array<FloatArray>, Array<FloatArray>>? {
+        val q = Array(6) { row -> if (row < 3) qL[row] else qR[row - 3] }
+
+        val qt = transpose(q) // 3x6
+        val qtq = multiply(qt, q) // 3x3
+        val qtqInv = invert3x3(qtq) ?: return null
 
         val mPInv = multiply(qtqInv, qt) // 3x6
 
@@ -100,12 +158,18 @@ object DuboisMath {
         val finalL = multiply3x3(pLeft, mBasis)
         val finalR = multiply3x3(pRight, mBasis)
 
-
         // Normalize (White balance fix)
         normalize(finalL, finalR)
 
-        return ResultMatrices(flatten(finalL), flatten(finalR), true)
+        return finalL to finalR
     }
+
+    /** Значение sRGB (0..1) -> линейная яркость (0..1). */
+    fun srgbToLinear(x: Float): Float = sRGBtoLinear(x)
+
+    /** Линейная яркость (0..1) -> значение sRGB (0..1). */
+    fun linearToSrgb(x: Float): Float =
+        if (x <= 0.0031308f) x * 12.92f else 1.055f * x.pow(1f / 2.4f) - 0.055f
 
     private fun sRGBtoLinear(x: Float): Float {
         return if (x <= 0.04045f) x / 12.92f else ((x + 0.055f) / 1.055f).pow(2.4f)

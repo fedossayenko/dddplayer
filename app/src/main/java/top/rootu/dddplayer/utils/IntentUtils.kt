@@ -65,7 +65,8 @@ object IntentUtils {
             filename = filename,
             posterUri = singlePoster?.toUri(),
             headers = parseHeaders(extras),
-            subtitles = singleSubs,
+            // Если субтитры не переданы, ищем рядом с файлом (movie.mkv -> movie.srt)
+            subtitles = singleSubs.ifEmpty { SubtitleFinder.findSidecarSubtitles(uri) },
             startPositionMs = startPosition
         )
 
@@ -112,7 +113,7 @@ object IntentUtils {
                     filename = filenames?.getOrNull(i),
                     posterUri = posters?.getOrNull(i)?.takeIf { it.isNotEmpty() }?.toUri(),
                     headers = headersMap,
-                    subtitles = itemSubs,
+                    subtitles = itemSubs.ifEmpty { SubtitleFinder.findSidecarSubtitles(uri) },
                     startPositionMs = pos
                 )
             )
@@ -146,7 +147,7 @@ object IntentUtils {
     /**
      * Извлекает реальное имя файла из content:// URI.
      */
-    private fun resolveFileName(context: Context, uri: Uri): String? {
+    fun resolveFileName(context: Context, uri: Uri): String? {
         if (uri.scheme == ContentResolver.SCHEME_CONTENT) {
             try {
                 context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
