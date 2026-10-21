@@ -10,6 +10,7 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Environment
 import android.provider.Settings
+import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -88,6 +89,8 @@ class FileBrowserActivity : AppCompatActivity() {
     private lateinit var repository: SettingsRepository
     private lateinit var dlnaClient: DlnaClient
     private lateinit var header: TextView
+    private lateinit var settingsButton: ImageButton
+    private lateinit var appIcon: ImageView
     private lateinit var pathView: TextView
     private lateinit var emptyView: TextView
     private lateinit var progress: ProgressBar
@@ -132,9 +135,12 @@ class FileBrowserActivity : AppCompatActivity() {
         list.layoutManager = LinearLayoutManager(this)
         list.adapter = adapter
 
-        findViewById<ImageButton>(R.id.btn_files_settings).setOnClickListener {
+        settingsButton = findViewById(R.id.btn_files_settings)
+        settingsButton.setOnClickListener {
             startActivity(Intent(this, GlobalSettingsActivity::class.java))
         }
+        findViewById<ImageButton>(R.id.btn_files_close).setOnClickListener { finish() }
+        appIcon = findViewById(R.id.files_app_icon)
 
         // Назад - на уровень выше, с главного экрана - выход
         onBackPressedDispatcher.addCallback(this) {
@@ -158,6 +164,24 @@ class FileBrowserActivity : AppCompatActivity() {
             // Возврат из плеера: история обновилась
             open(Location.Home, focusPath = focusedPath())
         }
+    }
+
+    /**
+     * Вверх с верхней строки списка (выше только заголовки разделов) - сразу на кнопку настроек.
+     * Иначе RecyclerView ищет фокус выше, не находит его среди заголовков и дергает прокрутку.
+     */
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (event.action == KeyEvent.ACTION_DOWN && event.keyCode == KeyEvent.KEYCODE_DPAD_UP) {
+            val focused = currentFocus
+            val item = focused?.let { list.findContainingItemView(it) }
+            val position = item?.let { list.getChildAdapterPosition(it) } ?: RecyclerView.NO_POSITION
+            if (position != RecyclerView.NO_POSITION && rows.take(position).all { it.type == RowType.HEADER }) {
+                list.scrollToPosition(0)
+                settingsButton.requestFocus()
+                return true
+            }
+        }
+        return super.dispatchKeyEvent(event)
     }
 
     // ==================== РАЗРЕШЕНИЯ ====================
@@ -243,6 +267,7 @@ class FileBrowserActivity : AppCompatActivity() {
             is Location.Smb -> SmbLogic.format(target.address)
         }
         pathView.isVisible = target != Location.Home
+        appIcon.isVisible = target == Location.Home
         progress.isVisible = true
         emptyView.isVisible = false
 
@@ -395,7 +420,8 @@ class FileBrowserActivity : AppCompatActivity() {
     // Фокус на строку после загрузки списка (для пульта): сначала прокрутка, затем фокус после разметки
     private fun focusRow(index: Int) {
         if (index !in rows.indices) return
-        list.scrollToPosition(index)
+        // Заголовок раздела над строкой ("Продолжить просмотр") не должен уезжать за верх списка
+        list.scrollToPosition(if (index > 0 && rows[index - 1].type == RowType.HEADER) index - 1 else index)
         list.post {
             list.findViewHolderForAdapterPosition(index)?.itemView?.requestFocus()
                 ?: list.post { list.findViewHolderForAdapterPosition(index)?.itemView?.requestFocus() }
