@@ -42,6 +42,11 @@ import androidx.media3.exoplayer.upstream.DefaultLoadErrorHandlingPolicy
 import androidx.media3.exoplayer.video.MediaCodecVideoRenderer
 import androidx.media3.exoplayer.video.VideoRendererEventListener
 import androidx.media3.extractor.DefaultExtractorsFactory
+import androidx.media3.extractor.Extractor
+import androidx.media3.extractor.ExtractorsFactory
+import androidx.media3.extractor.mkv.MatroskaExtractor
+import androidx.media3.extractor.mp4.FragmentedMp4Extractor
+import androidx.media3.extractor.text.SubtitleParser
 import androidx.media3.extractor.mp4.Mp4Extractor
 import androidx.media3.extractor.ts.DefaultTsPayloadReaderFactory
 import androidx.media3.extractor.ts.TsExtractor
@@ -226,7 +231,7 @@ class PlayerManager(
             DefaultTsPayloadReaderFactory.FLAG_DETECT_ACCESS_UNITS or
             DefaultTsPayloadReaderFactory.FLAG_IGNORE_SPLICE_INFO_STREAM
 
-    private val extractorsFactory = DefaultExtractorsFactory()
+    private val defaultExtractorsFactory = DefaultExtractorsFactory()
         .setTsExtractorFlags(tsExtractorFlags)
         .setTsExtractorTimestampSearchBytes(5000 * TsExtractor.TS_PACKET_SIZE)
         .setMp4ExtractorFlags(
@@ -236,6 +241,39 @@ class PlayerManager(
         // Включаем поиск метаданных в начале каждого чанка для MKV
         .setMatroskaExtractorFlags(0)
         .setConstantBitrateSeekingEnabled(true)
+
+    // Dolby Vision Profile 7 -> 8.1: режим выбирается в initializePlayer(), MKV/MP4 оборачиваются при создании
+    @Volatile
+    private var dvConversionMode = DvConversionMode.DISABLED
+
+    private val extractorsFactory = object : ExtractorsFactory {
+        override fun createExtractors(): Array<Extractor> =
+            wrapDovi(defaultExtractorsFactory.createExtractors())
+
+        override fun createExtractors(uri: android.net.Uri, responseHeaders: Map<String, List<String>>): Array<Extractor> =
+            wrapDovi(defaultExtractorsFactory.createExtractors(uri, responseHeaders))
+
+        // Настройки субтитров и GOP передаем в исходную фабрику, иначе DefaultMediaSourceFactory их потеряет
+        override fun experimentalSetTextTrackTranscodingEnabled(enabled: Boolean): ExtractorsFactory =
+            apply { defaultExtractorsFactory.experimentalSetTextTrackTranscodingEnabled(enabled) }
+
+        override fun setSubtitleParserFactory(subtitleParserFactory: SubtitleParser.Factory): ExtractorsFactory =
+            apply { defaultExtractorsFactory.setSubtitleParserFactory(subtitleParserFactory) }
+
+        override fun experimentalSetCodecsToParseWithinGopSampleDependencies(codecFlags: Int): ExtractorsFactory =
+            apply { defaultExtractorsFactory.experimentalSetCodecsToParseWithinGopSampleDependencies(codecFlags) }
+    }
+
+    private fun wrapDovi(extractors: Array<Extractor>): Array<Extractor> {
+        val mode = dvConversionMode
+        if (mode == DvConversionMode.DISABLED) return extractors
+        return Array(extractors.size) { i ->
+            when (extractors[i].underlyingImplementation) {
+                is MatroskaExtractor, is Mp4Extractor, is FragmentedMp4Extractor -> DoviExtractorWrapper(extractors[i], mode)
+                else -> extractors[i]
+            }
+        }
+    }
 
     private val loadErrorHandlingPolicy = object : DefaultLoadErrorHandlingPolicy() {
         override fun getMinimumLoadableRetryCount(dataType: Int): Int = 5
@@ -247,9 +285,15 @@ class PlayerManager(
         }
 
         // === Кастомный MediaCodecSelector для Dolby Vision Fallback ===
-        val mapDvToHevc = when (settingsRepo.getDvMode()) {
+        val dvMode = settingsRepo.getDvMode()
+        val dvSupported by lazy { isDolbyVisionSupported() }
+        // Конвертация нужна только при DV экране и декодере, иначе режим ведет себя как "Авто"
+        val dvConvert = dvMode == SettingsRepository.DV_MODE_CONVERT && dvSupported && DoviBridge.isAvailable()
+        dvConversionMode = if (dvConvert) DvConversionMode.DV81 else DvConversionMode.DISABLED
+        Log.i("PlayerManager", "DV mode=$dvMode, P7->8.1 conversion=$dvConvert")
+        val mapDvToHevc = when (dvMode) {
             SettingsRepository.DV_MODE_ALWAYS -> true
-            SettingsRepository.DV_MODE_AUTO -> !isDolbyVisionSupported()
+            SettingsRepository.DV_MODE_AUTO, SettingsRepository.DV_MODE_CONVERT -> !dvSupported
             else -> false
         }
         val mediaCodecSelector = if (mapDvToHevc) {

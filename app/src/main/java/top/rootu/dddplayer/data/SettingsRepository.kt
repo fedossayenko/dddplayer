@@ -74,6 +74,7 @@ class SettingsRepository private constructor(context: Context) {
         const val DV_MODE_OFF = 0 // Системный DV декодер
         const val DV_MODE_AUTO = 1 // HEVC, только если экран или декодер не поддерживают Dolby Vision
         const val DV_MODE_ALWAYS = 2 // Всегда HEVC
+        const val DV_MODE_CONVERT = 3 // Profile 7 -> 8.1 (libdovi), иначе как Авто
         const val RENDER_API_AUTO = 0
         const val RENDER_API_GLES2 = 1
 
