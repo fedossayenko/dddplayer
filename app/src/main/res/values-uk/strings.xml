@@ -210,7 +210,7 @@
     <string name="buffer_panel">В панелі управління</string>
     <string name="buffer_clock">Поруч з годинником та в інфопанелі</string>
     <string name="pref_buffer_size">Розмір буфера</string>
-    <string name="pref_buffer_size_desc">Об\'єм ОЗП для буферизації мережевого відео. Локальні файли використовують буфер за замовчуванням</string>
+    <string name="pref_buffer_size_desc">Пам\'ять для буферизації мережевого відео. «Авто» тримає запас 15–50 секунд: довантажує відео, коли попереду лишається менше 15 с, і зупиняється на 50 с. З розміром у МБ плеєр завантажує наперед, доки не заповнить цей обсяг. Локальні файли завжди використовують «Авто»</string>
     <string name="buffer_size_auto">Авто</string>
     <string name="buffer_size_mb">%d МБ</string>
     <string name="buffer_percentage">Буфер: %d%%</string>
