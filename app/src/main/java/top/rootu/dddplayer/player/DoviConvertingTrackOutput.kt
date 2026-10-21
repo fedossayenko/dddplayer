@@ -1,3 +1,5 @@
+// Перенесено из edde746/plezy (GPL-3.0, https://github.com/edde746/plezy) для конвертации Dolby Vision Profile 7 -> 8.1.
+// Комментарии оставлены как в оригинале, чтобы переносить исправления из plezy простыми диффами.
 package top.rootu.dddplayer.player
 
 import android.util.Log

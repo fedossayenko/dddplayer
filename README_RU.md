@@ -194,7 +194,7 @@ intent.putParcelableArrayListExtra("video_list.subtitles", subsList)
 *   Версия берется из git (`versionCode` — число коммитов, `versionName` — `git describe --tags`), поэтому клонируйте репозиторий с полной историей.
 *   Каждый push и pull request в `main` собирается в [GitHub Actions](https://github.com/usmanec/dddplayer/actions/workflows/android-build.yml), debug APK прикладывается к запуску как артефакт.
 *   Релизы публикует [workflow Release](.github/workflows/release.yml) при пуше тега `vX.Y.Z`: он собирает подписанный `app-release.apk` и прикладывает его к GitHub Release (оттуда же обновляется приложение). Подпись берется из переменных окружения `KEYSTORE_FILE` (путь относительно `app/`), `KEYSTORE_PASSWORD`, `RELEASE_SIGN_KEY_ALIAS` и `RELEASE_SIGN_KEY_PASSWORD`; без них релиз собирается неподписанным.
-*   AAR декодеров FFmpeg и AV1 в `app/libs` уже собраны; как пересобрать — в [app/libs/README.md](app/libs/README.md).
+*   AAR декодеров FFmpeg и AV1 и AAR конвертации Dolby Vision (`lib-dovi-release.aar`, модуль `dovi`, сборка `./gradlew -Pdovi=true :dovi:assembleRelease`) в `app/libs` уже собраны; как пересобрать — в [app/libs/README.md](app/libs/README.md).
 *   Документация для разработчиков: [AGENTS.md](AGENTS.md) и [docs/](docs/README.md).
 
 ### Вклад в проект и Обратная связь

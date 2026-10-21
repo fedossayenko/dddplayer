@@ -1,3 +1,5 @@
+// JNI-мост к libdovi (MIT, quietvoid/dovi_tool). Перенесено из edde746/plezy (GPL-3.0,
+// https://github.com/edde746/plezy); комментарии оставлены как в оригинале.
 #include <android/log.h>
 #include <jni.h>
 

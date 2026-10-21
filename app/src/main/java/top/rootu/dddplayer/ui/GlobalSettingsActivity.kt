@@ -31,6 +31,7 @@ import top.rootu.dddplayer.R
 import top.rootu.dddplayer.data.SettingsRepository
 import top.rootu.dddplayer.logic.AudioMixerLogic
 import top.rootu.dddplayer.logic.UpdateInfo
+import top.rootu.dddplayer.player.DoviBridge
 import top.rootu.dddplayer.ui.calibration.CalibrationWizardActivity
 import top.rootu.dddplayer.utils.LocaleUtils
 import top.rootu.dddplayer.model.StereoOutputMode
@@ -436,8 +437,13 @@ class GlobalSettingsActivity : AppCompatActivity() {
         // Dolby Vision
         itemDv.setOnClickListener {
             // Порядок пунктов совпадает с SettingsRepository.DV_MODE_*
-            val options = listOf(getString(R.string.dv_mode_off), getString(R.string.dv_mode_auto), getString(R.string.dv_mode_always), getString(R.string.dv_mode_convert))
-            showSingleChoiceDialog(getString(R.string.pref_map_dv), options, settingsViewModel.dvMode.value ?: SettingsRepository.DV_MODE_ALWAYS) {
+            val options = listOf(getString(R.string.dv_mode_off), getString(R.string.dv_mode_auto), getString(R.string.dv_mode_always)) +
+                // Конвертация P7 -> 8.1 только при собранной нативной части (lib-dovi-release.aar в app/libs)
+                listOfNotNull(getString(R.string.dv_mode_convert).takeIf { DoviBridge.isAvailable() })
+            // Конвертация выбрана, но библиотеки нет - режим работает как Авто, его и отмечаем
+            val current = (settingsViewModel.dvMode.value ?: SettingsRepository.DV_MODE_ALWAYS)
+                .let { if (it > options.lastIndex) SettingsRepository.DV_MODE_AUTO else it }
+            showSingleChoiceDialog(getString(R.string.pref_map_dv), options, current) {
                 settingsViewModel.setDvMode(it)
             }
         }

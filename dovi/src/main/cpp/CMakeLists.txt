@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.22.1)
 project(dddplayer_native)
 
-# libdovi 2.3.1 prebuilt by edde746/libdovi-builds (see app/build.gradle.kts downloadLibdovi)
+# Статическая libdovi из quietvoid/dovi_tool, собирается dovi/build_libdovi.sh (задача :dovi:buildLibdovi)
 add_library(dovi_static STATIC IMPORTED)
 set_target_properties(dovi_static PROPERTIES
     IMPORTED_LOCATION "${CMAKE_SOURCE_DIR}/libdovi/${ANDROID_ABI}/libdovi.a")
