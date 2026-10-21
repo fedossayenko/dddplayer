@@ -85,6 +85,7 @@ class PlayerManager(
     private var bufferAllocator: DefaultAllocator? = null
     private var networkBufferBytes: Int = C.LENGTH_UNSET
     private var loudnessEnhancer: LoudnessEnhancer? = null
+    private var iecSink: IecCarrierSink? = null
 
     // Состояние для восстановления
     private var currentWindowIndex = 0
@@ -319,7 +320,7 @@ class PlayerManager(
                 out: ArrayList<Renderer>
             ) {
                 // Решаем, какой Sink использовать
-                val finalSink = if (settingsRepo.isStereoDownmixEnabled()) {
+                val baseSink = if (settingsRepo.isStereoDownmixEnabled()) {
                     // Если нужен Downmix -> создаем свой Sink с процессором
 
                     // Ограничиваем аудиобуффер, чтобы не упасть по памяти
@@ -366,6 +367,11 @@ class PlayerManager(
                     // Если Downmix не нужен -> используем стандартный (для Passthrough и т.д.)
                     audioSink
                 }
+                // DTS-HD MA и TrueHD через несущую IEC 61937 поверх любого из Sink: даунмикс касается только
+                // декодированного PCM, а битстрим и так идет мимо процессоров
+                val iec = if (settingsRepo.isHdAudioIecEnabled()) IecCarrierOutput.wrap(appContext, baseSink) else null
+                iecSink = iec
+                val finalSink = iec ?: baseSink
 
                 super.buildAudioRenderers(
                     context,
@@ -433,6 +439,8 @@ class PlayerManager(
             override fun onMediaItemTransition(mediaItem: Media3MediaItem?, reason: Int) {
                 // Заголовки (Referer, Cookie и т.п.) у каждого элемента плейлиста свои
                 applyHeadersForIndex(player.currentMediaItemIndex)
+                // Новое видео снова может идти через несущую, даже если прошлое не подошло
+                iecSink?.beginMediaItem()
             }
         })
         if (player.audioSessionId != C.AUDIO_SESSION_ID_UNSET) {
@@ -466,7 +474,8 @@ class PlayerManager(
                 // config.encoding говорит нам, в каком формате данные идут на железо.
                 // Если это PCM (16-bit, Float), значит плеер декодировал звук.
                 // Если это AC3, DTS и т.д., значит работает Passthrough.
-                isDirectAudioOutput = !Util.isEncodingLinearPcm(config.encoding)
+                // Несущая IEC 61937 учитывается как PCM 16 бит, поэтому спрашиваем и ее
+                isDirectAudioOutput = !Util.isEncodingLinearPcm(config.encoding) || iecSink?.isCarrierActive == true
                 val encodingName = MediaFormatHelper.getAudioCodecName(config.encoding)
                 val channelStr = MediaFormatHelper.getChannelConfigString(config.channelConfig)
                 val passthrough = if (config.tunneling) " ↳" else ""

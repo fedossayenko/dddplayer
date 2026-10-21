@@ -140,6 +140,8 @@
     <string name="pref_downmix_lfe">Subwoofer (LFE)</string>
     <string name="pref_tunneling">Tunneled Playback</string>
     <string name="pref_tunneling_summary">Tunneling allows video to bypass the app and Android framework code, which can provide more efficient rendering of 4K/HDR content, but may not work on all devices.\nWarning!!! With tunneled playback, video processing and synchronization are handled by the end device, so some player features will not work with this option.</string>
+    <string name="pref_hd_audio_iec">Lossless HD audio (IEC 61937)</string>
+    <string name="pref_hd_audio_iec_summary">Send DTS-HD MA and TrueHD/Atmos to the receiver unchanged over HDMI, the way Kodi does. Needed on Fire TV, which otherwise sends only the DTS core. Turn off if the receiver plays noise or silence.</string>
     <string name="pref_map_dv">Dolby Vision compatibility</string>
     <string name="pref_afr_sec">AFR</string>
     <string name="pref_framerate_matching">Auto Frame Rate Matching</string>

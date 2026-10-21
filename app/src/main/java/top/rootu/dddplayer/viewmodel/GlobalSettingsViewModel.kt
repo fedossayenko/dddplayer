@@ -28,6 +28,8 @@ class GlobalSettingsViewModel(application: Application) : AndroidViewModel(appli
 
     private val _isTunnelingEnabled = MutableLiveData(repository.isTunnelingEnabled())
     val isTunnelingEnabled: LiveData<Boolean> = _isTunnelingEnabled
+    private val _isHdAudioIecEnabled = MutableLiveData(repository.isHdAudioIecEnabled())
+    val isHdAudioIecEnabled: LiveData<Boolean> = _isHdAudioIecEnabled
 
     private val _dvMode = MutableLiveData(repository.getDvMode())
     val dvMode: LiveData<Int> = _dvMode
@@ -245,6 +247,11 @@ class GlobalSettingsViewModel(application: Application) : AndroidViewModel(appli
     fun toggleTunneling(enabled: Boolean) {
         repository.setTunnelingEnabled(enabled)
         _isTunnelingEnabled.value = enabled
+    }
+
+    fun toggleHdAudioIec(enabled: Boolean) {
+        repository.setHdAudioIecEnabled(enabled)
+        _isHdAudioIecEnabled.value = enabled
     }
 
     fun setDvMode(mode: Int) {

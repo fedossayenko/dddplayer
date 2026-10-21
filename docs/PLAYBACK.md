@@ -13,6 +13,14 @@
     `enableDecoderFallback`. При `stereo_downmix` подключается свой `DefaultAudioSink` с
     `ChannelMixingAudioProcessor` (матрицы из `AudioMixerLogic`) и аудиобуфером не больше 256 КБ,
     чтобы не упасть по памяти. Без даунмикса используется стандартный sink, и passthrough работает;
+  - `hd_audio_iec`: выбранный sink оборачивается в `IecCarrierSink` (`IecCarrierOutput.wrap`). DTS-HD MA и
+    TrueHD упаковываются в IEC 61937 (`DtsHdIecPacker`, `TrueHdMatPacker`, порт из plezy, совпадает с FFmpeg
+    байт в байт) и идут отдельным `DefaultAudioSink` без процессоров с `AudioTrack` в `ENCODING_IEC61937`
+    192 кГц/7.1. Остальное идет как раньше. Зачем: Fire OS принимает сырой `ENCODING_DTS_HD`, но передает
+    только ядро DTS (а на части ресиверов тишину), сырой TrueHD передает не везде. Даунмикс на битстрим не
+    влияет, как и для AC3/DTS passthrough. Несущая не используется при туннелировании, скорости не 1.0x,
+    частотах семейства 44.1 кГц и если маршрут HDMI не принимает IEC 61937 192 кГц/7.1. Трек с меткой A_DTS
+    (MKV) проверяется по первому блоку: без HD-части он уходит в обычный sink;
   - `NetworkBufferLoadControl` (см. ниже);
   - `LoudnessEnhancer` по `audioSessionId` (`loudness_boost`), `skipSilence`, шаг перемотки 15 с.
 - `loadPlaylist(items, startIndex, startPosMs)` превращает `MediaItem` в `Media3MediaItem`
