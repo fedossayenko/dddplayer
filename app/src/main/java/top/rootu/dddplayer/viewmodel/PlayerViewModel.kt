@@ -289,6 +289,9 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
     // Безопасный доступ к плееру (может быть null, если не инициализирован)
     val player: ExoPlayer? get() = playerManager.exoPlayer
+    val isDirectAudioOutput: Boolean get() = playerManager.isDirectAudioOutput
+    /** Плеер остановлен в onStop, чтобы освободить HDMI-выход; в onStart его нужно подготовить заново. */
+    var stoppedInBackground = false
 
     // Событие: Плеер был пересоздан (нужно привязать Surface)
     private val _playerRecreatedEvent = MutableLiveData<ExoPlayer>()

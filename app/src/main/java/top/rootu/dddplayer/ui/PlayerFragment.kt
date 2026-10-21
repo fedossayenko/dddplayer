@@ -1641,6 +1641,11 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
         super.onStart()
         // Возобновляем, только если видео играло при уходе с экрана (или это новый плейлист).
         // Пауза снимается в onStop, а не в onPause, чтобы видео продолжало играть в PiP.
+        // Плеер остановлен в onStop ради HDMI-выхода: готовим заново с той же позиции
+        if (viewModel.stoppedInBackground) {
+            viewModel.stoppedInBackground = false
+            viewModel.player?.prepare()
+        }
         if (viewModel.resumePlayWhenReady) {
             viewModel.player?.play()
         }
@@ -1658,6 +1663,13 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
         viewModel.player?.let { player ->
             viewModel.resumePlayWhenReady = player.playWhenReady
             player.pause()
+            // Битстрим на HDMI в системе один: плеер в фоне держит его, и следующий
+            // запуск (например, из Lampa) получает ошибку AudioTrack. Освобождаем, позиция сохраняется.
+            // При декодированном PCM поведение прежнее: только пауза.
+            if (viewModel.isDirectAudioOutput) {
+                player.stop()
+                viewModel.stoppedInBackground = true
+            }
         }
         viewModel.saveCurrentSettings()
         ui.glSurfaceView.onPause()
