@@ -2,6 +2,8 @@ package top.rootu.dddplayer.ui
 
 import android.annotation.SuppressLint
 import android.app.Dialog
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Context
 import android.content.ActivityNotFoundException
 import android.content.Intent
@@ -43,6 +45,7 @@ import top.rootu.dddplayer.BuildConfig
 import top.rootu.dddplayer.R
 import top.rootu.dddplayer.data.SettingsRepository
 import top.rootu.dddplayer.logic.AnaglyphLogic
+import top.rootu.dddplayer.logic.StereoFormatLogic
 import top.rootu.dddplayer.logic.TrackLogic
 import top.rootu.dddplayer.model.AspectRatioMode
 import top.rootu.dddplayer.model.MenuItem
@@ -533,6 +536,13 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
         }
     }
     private fun setupControls() {
+        // Долгое нажатие на подробности ошибки копирует их (чтобы приложить к issue)
+        ui.errorDetails.setOnLongClickListener {
+            val clipboard = requireContext().getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+            clipboard?.setPrimaryClip(ClipData.newPlainText(getString(R.string.error), ui.errorDetails.text))
+            Toast.makeText(requireContext(), R.string.error_copied, Toast.LENGTH_SHORT).show()
+            true
+        }
         ui.buttonPip.isVisible = (activity as? PlayerActivity)?.supportsPictureInPicture == true
         ui.buttonPip.setOnClickListener {
             (activity as? PlayerActivity)?.enterPlayerPictureInPicture(showError = true)
@@ -1109,8 +1119,16 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
         }
         viewModel.playlistSize.observe(viewLifecycleOwner) { ui.buttonPlaylist.isVisible = it > 1 }
         viewModel.currentQualityName.observe(viewLifecycleOwner) { ui.buttonQuality.text = it }
+        // Выбор качества и аудио - только если есть из чего выбирать, субтитры - если они есть
+        // (загрузка субтитров из файла остается в боковом меню)
+        viewModel.trackCounts.observe(viewLifecycleOwner) { counts ->
+            ui.buttonQuality.isVisible = counts.video > 1
+            ui.buttonAudio.isVisible = counts.audio > 1
+            ui.buttonSubs.isVisible = counts.subtitles > 0
+        }
 
-        viewModel.videoResolution.observe(viewLifecycleOwner) { ui.badgeResolution.text = it }
+        viewModel.videoResolution.observe(viewLifecycleOwner) { updateVideoBadge() }
+        viewModel.tunnelingActive.observe(viewLifecycleOwner) { updateVideoBadge() }
         viewModel.videoAspectRatio.observe(viewLifecycleOwner) { ui.setAspectRatio(it) }
         viewModel.audioOutputInfo.observe(viewLifecycleOwner) { updateAudioBadge() }
         viewModel.currentAudioTrack.observe(viewLifecycleOwner) { trackOption ->
@@ -1171,18 +1189,18 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
                 }
             }
             ui.updateStereoLayout(viewModel.outputMode.value, viewModel.screenSeparation.value ?: 0f)
-            ui.updateInputModeIcon(type, viewModel.swapEyes.value ?: false)
+            updateStereoBadge()
         }
 
         // Обновление рендерера
         viewModel.swapEyes.observe(viewLifecycleOwner) { swap ->
             stereoRenderer?.setSwapEyes(swap)
-            ui.iconSwapEyes.alpha = if (swap) 1.0f else 0.3f
-            ui.updateInputModeIcon(viewModel.inputType.value ?: StereoInputType.NONE, swap)
+            updateStereoBadge()
         }
         viewModel.outputMode.observe(viewLifecycleOwner) { mode ->
             stereoRenderer?.setOutputMode(mode)
             ui.updateStereoLayout(mode, viewModel.screenSeparation.value ?: 0f)
+            updateStereoBadge()
         }
         viewModel.anaglyphType.observe(viewLifecycleOwner) { stereoRenderer?.setAnaglyphType(it) }
         viewModel.renderApiMode.observe(viewLifecycleOwner) { mode ->
@@ -1198,7 +1216,11 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
                 updateSettingsText()
             }
         }
-        viewModel.singleFrameSize.observe(viewLifecycleOwner) { (w, h) -> stereoRenderer?.setSingleFrameDimensions(w, h) }
+        viewModel.singleFrameSize.observe(viewLifecycleOwner) { (w, h) ->
+            stereoRenderer?.setSingleFrameDimensions(w, h)
+            // Размер кадра пересчитывается при смене видео - уточняем Half/Full в бейдже
+            updateStereoBadge()
+        }
         viewModel.depth.observe(viewLifecycleOwner) { stereoRenderer?.setDepth(it) }
         viewModel.screenSeparation.observe(viewLifecycleOwner) {
             stereoRenderer?.setScreenSeparation(it)
@@ -1471,6 +1493,25 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
         // список опций
         val optionsData = viewModel.getOptionsForSetting(type, context)
         ui.updateSettingsOptions(optionsData)
+    }
+
+    // "↳" - туннельный режим: видео выводится напрямую аппаратным декодером
+    private fun updateVideoBadge() {
+        val info = viewModel.videoResolution.value.orEmpty()
+        ui.badgeResolution.text = if (viewModel.tunnelingActive.value == true) "$info ↳" else info
+    }
+
+    private fun updateStereoBadge() {
+        val size = viewModel.videoSize
+        ui.updateStereoBadge(
+            StereoFormatLogic.badgeLabel(
+                viewModel.inputType.value ?: StereoInputType.NONE,
+                size?.width?.toFloat() ?: 0f,
+                size?.height?.toFloat() ?: 0f,
+                viewModel.outputMode.value,
+                viewModel.swapEyes.value ?: false
+            )
+        )
     }
 
     private fun updateAudioBadge() {

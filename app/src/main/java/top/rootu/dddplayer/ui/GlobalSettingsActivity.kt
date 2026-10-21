@@ -9,7 +9,6 @@ import android.view.ViewGroup
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.Button
-import android.widget.EditText
 import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
@@ -138,8 +137,6 @@ class GlobalSettingsActivity : AppCompatActivity() {
     private lateinit var textShowClockValue: TextView
     private lateinit var itemPauseDim: LinearLayout
     private lateinit var textPauseDimValue: TextView
-    private lateinit var itemStartupPlaylist: LinearLayout
-    private lateinit var textStartupPlaylistValue: TextView
     private lateinit var itemLiveMode: LinearLayout
     private lateinit var switchLiveMode: SwitchCompat
     private lateinit var itemRememberAudio: LinearLayout
@@ -391,8 +388,6 @@ class GlobalSettingsActivity : AppCompatActivity() {
         textShowClockValue = findViewById(R.id.text_show_clock_value)
         itemPauseDim = findViewById(R.id.item_pause_dim)
         textPauseDimValue = findViewById(R.id.text_pause_dim_value)
-        itemStartupPlaylist = findViewById(R.id.item_startup_playlist)
-        textStartupPlaylistValue = findViewById(R.id.text_startup_playlist_value)
         itemLiveMode = findViewById(R.id.item_live_mode)
         switchLiveMode = findViewById(R.id.switch_live_mode)
         itemRememberAudio = findViewById(R.id.item_remember_audio)
@@ -411,6 +406,9 @@ class GlobalSettingsActivity : AppCompatActivity() {
         btnClose.setOnClickListener { finish() }
         itemExit.setOnClickListener { finish() }
 
+        findViewById<View>(R.id.item_diagnostics).setOnClickListener {
+            startActivity(Intent(this, DeviceInfoActivity::class.java))
+        }
         itemSubtitleStyle.setOnClickListener {
             startActivity(Intent(this, SubtitleStyleActivity::class.java))
         }
@@ -553,7 +551,6 @@ class GlobalSettingsActivity : AppCompatActivity() {
             }
         }
 
-        itemStartupPlaylist.setOnClickListener { showUrlInputDialog() }
         itemLiveMode.setOnClickListener { settingsViewModel.toggleLiveMode(!switchLiveMode.isChecked) }
         itemSubtitleAuto.setOnClickListener {
             // Порядок пунктов совпадает с SettingsRepository.SUB_AUTO_*
@@ -737,9 +734,6 @@ class GlobalSettingsActivity : AppCompatActivity() {
         }
 
 
-        settingsViewModel.startupPlaylistUri.observe(this) { uri ->
-            textStartupPlaylistValue.text = if (uri.isNullOrEmpty()) getString(R.string.pref_startup_playlist_not_set) else uri
-        }
         settingsViewModel.isLiveModeEnabled.observe(this) { switchLiveMode.isChecked = it }
         settingsViewModel.default3dMode.observe(this) { textDefault3dModeValue.text = default3dModeLabel(it) }
         settingsViewModel.subtitleAutoMode.observe(this) { mode ->
@@ -779,28 +773,6 @@ class GlobalSettingsActivity : AppCompatActivity() {
             if (checking) textUpdateDesc.text = getString(R.string.update_btn_checking) else updateUpdateUI()
         }
         updateViewModel.downloadProgress.observe(this) { updateDownloadProgress(it) }
-    }
-
-    private fun showUrlInputDialog() {
-        val dialog = Dialog(this, R.style.Theme_App_Dialog)
-        dialog.setContentView(R.layout.dialog_input_url)
-
-        val editUrl = dialog.findViewById<EditText>(R.id.edit_url)
-        val btnSave = dialog.findViewById<Button>(R.id.btn_save)
-        val btnCancel = dialog.findViewById<Button>(R.id.btn_cancel)
-
-        editUrl.setText(settingsViewModel.startupPlaylistUri.value ?: "")
-        editUrl.setSelection(editUrl.text.length)
-
-        btnSave.setOnClickListener {
-            settingsViewModel.setStartupPlaylistUri(editUrl.text.toString())
-            dialog.dismiss()
-        }
-
-        btnCancel.setOnClickListener { dialog.dismiss() }
-
-        dialog.show()
-        editUrl.requestFocus()
     }
 
     /**

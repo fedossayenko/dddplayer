@@ -8,13 +8,18 @@ import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
 import top.rootu.dddplayer.logic.AnaglyphLogic
+import top.rootu.dddplayer.logic.HomeLogic
 import top.rootu.dddplayer.model.AnaglyphCalibration
 import top.rootu.dddplayer.model.AudioTrackStat
+import top.rootu.dddplayer.model.HistoryEntry
+import top.rootu.dddplayer.model.SavedPlaylist
+import top.rootu.dddplayer.model.SmbServer
 import top.rootu.dddplayer.model.StereoOutputMode
 import top.rootu.dddplayer.model.SubtitleStyle
 import top.rootu.dddplayer.player.NetworkBufferLoadControl
 import top.rootu.dddplayer.renderer.StereoRenderer
 import top.rootu.dddplayer.viewmodel.GlassesGroup
+import java.util.UUID
 
 class SettingsRepository private constructor(context: Context) {
 
@@ -116,8 +121,130 @@ class SettingsRepository private constructor(context: Context) {
 
     // --- Playlist Settings ---
     // Плейлист, который открывается при запуске из лаунчера
-    fun getStartupPlaylistUri(): String? = prefs.getString("startup_playlist_uri", null)
-    fun setStartupPlaylistUri(uri: String?) = prefs.edit { putString("startup_playlist_uri", uri) }
+    // --- Стартовый экран: плейлисты по ссылке и история просмотра ---
+
+    /**
+     * Плейлисты стартового экрана. Прежний "стартовый плейлист" (startup_playlist_uri) переносится сюда
+     * один раз отдельным пунктом.
+     */
+    fun getSavedPlaylists(): List<SavedPlaylist> {
+        migrateStartupPlaylist()
+        val json = prefs.getString("saved_playlists", null) ?: return emptyList()
+        return try {
+            val array = JSONArray(json)
+            (0 until array.length()).map { i ->
+                val obj = array.getJSONObject(i)
+                SavedPlaylist(obj.getString("id"), obj.optString("name"), obj.getString("url"))
+            }
+        } catch (e: JSONException) {
+            emptyList()
+        }
+    }
+
+    fun saveSavedPlaylists(playlists: List<SavedPlaylist>) {
+        val array = JSONArray()
+        playlists.forEach { array.put(JSONObject().put("id", it.id).put("name", it.name).put("url", it.url)) }
+        prefs.edit { putString("saved_playlists", array.toString()) }
+    }
+
+    /** Добавляет новый плейлист или заменяет плейлист с тем же id. */
+    fun putSavedPlaylist(playlist: SavedPlaylist) {
+        val list = getSavedPlaylists()
+        val updated = if (list.any { it.id == playlist.id }) list.map { if (it.id == playlist.id) playlist else it } else list + playlist
+        saveSavedPlaylists(updated)
+    }
+
+    fun removeSavedPlaylist(id: String) = saveSavedPlaylists(getSavedPlaylists().filter { it.id != id })
+
+    private fun migrateStartupPlaylist() {
+        if (!prefs.contains("startup_playlist_uri")) return
+        val url = prefs.getString("startup_playlist_uri", null)?.trim()
+        prefs.edit { remove("startup_playlist_uri") }
+        if (url.isNullOrEmpty()) return
+        val json = prefs.getString("saved_playlists", null)
+        val array = try { if (json != null) JSONArray(json) else JSONArray() } catch (e: JSONException) { JSONArray() }
+        array.put(JSONObject().put("id", UUID.randomUUID().toString()).put("name", HomeLogic.defaultPlaylistName(url)).put("url", url))
+        prefs.edit { putString("saved_playlists", array.toString()) }
+    }
+
+    /** Сетевые папки SMB стартового экрана (пароль хранится в настройках приложения, недоступных другим приложениям). */
+    fun getSmbServers(): List<SmbServer> {
+        val json = prefs.getString("smb_servers", null) ?: return emptyList()
+        return try {
+            val array = JSONArray(json)
+            (0 until array.length()).map { i ->
+                val obj = array.getJSONObject(i)
+                SmbServer(
+                    id = obj.getString("id"),
+                    name = obj.optString("name"),
+                    address = obj.getString("address"),
+                    user = obj.optString("user"),
+                    password = obj.optString("password"),
+                    domain = obj.optString("domain")
+                )
+            }
+        } catch (e: JSONException) {
+            emptyList()
+        }
+    }
+
+    private fun saveSmbServers(servers: List<SmbServer>) {
+        val array = JSONArray()
+        servers.forEach {
+            array.put(
+                JSONObject().put("id", it.id).put("name", it.name).put("address", it.address)
+                    .put("user", it.user).put("password", it.password).put("domain", it.domain)
+            )
+        }
+        prefs.edit { putString("smb_servers", array.toString()) }
+    }
+
+    fun putSmbServer(server: SmbServer) {
+        val list = getSmbServers()
+        saveSmbServers(if (list.any { it.id == server.id }) list.map { if (it.id == server.id) server else it } else list + server)
+    }
+
+    fun removeSmbServer(id: String) = saveSmbServers(getSmbServers().filter { it.id != id })
+
+    /** История "Продолжить просмотр", новые сверху. */
+    fun getWatchHistory(): List<HistoryEntry> {
+        val json = prefs.getString("watch_history", null) ?: return emptyList()
+        return try {
+            val array = JSONArray(json)
+            (0 until array.length()).map { i ->
+                val obj = array.getJSONObject(i)
+                HistoryEntry(
+                    kind = obj.getString("kind"),
+                    source = obj.getString("source"),
+                    sourceName = obj.optString("sourceName"),
+                    title = obj.optString("title"),
+                    uri = obj.getString("uri"),
+                    positionMs = obj.optLong("position"),
+                    durationMs = obj.optLong("duration"),
+                    updatedAt = obj.optLong("updatedAt")
+                )
+            }
+        } catch (e: JSONException) {
+            emptyList()
+        }
+    }
+
+    private fun saveWatchHistory(history: List<HistoryEntry>) {
+        val array = JSONArray()
+        history.forEach {
+            array.put(
+                JSONObject().put("kind", it.kind).put("source", it.source).put("sourceName", it.sourceName)
+                    .put("title", it.title).put("uri", it.uri).put("position", it.positionMs)
+                    .put("duration", it.durationMs).put("updatedAt", it.updatedAt)
+            )
+        }
+        prefs.edit { putString("watch_history", array.toString()) }
+    }
+
+    /** Обновляет запись источника (серия в той же папке заменяет прежнюю запись). */
+    fun recordWatchHistory(entry: HistoryEntry) = saveWatchHistory(HomeLogic.upsertHistory(getWatchHistory(), entry))
+
+    fun removeWatchHistory(key: String) = saveWatchHistory(getWatchHistory().filter { it.key != key })
 
     // Последний канал M3U плейлиста (восстанавливается только по точному URI)
     fun getLastPlayedChannelUri(): String? = prefs.getString("last_channel_uri", null)
@@ -333,7 +460,6 @@ class SettingsRepository private constructor(context: Context) {
     fun getExternalPositionMode(): Int = prefs.getInt("external_position_mode", EXTERNAL_POSITION_APPLY)
     fun setExternalPositionMode(mode: Int) = prefs.edit { putInt("external_position_mode", mode) }
 
-    // Действие кнопки "Вверх" ( 0 = Nothing, 1 = OSD, 2 = Side Menu)
     // Действие кнопки "Вверх" (UP_ACTION_*). По умолчанию - боковое меню
     fun getUpButtonAction(): Int = prefs.getInt("up_button_action", UP_ACTION_MENU)
     fun setUpButtonAction(action: Int) = prefs.edit { putInt("up_button_action", action) }

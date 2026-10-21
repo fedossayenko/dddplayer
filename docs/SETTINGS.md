@@ -18,7 +18,7 @@
 |:---|:---|:---|
 | `resume_mode` | `RESUME_ASK` (0) | 0 спрашивать, 1 всегда, 2 никогда |
 | `external_position_mode` | `EXTERNAL_POSITION_APPLY` (0) | Позиция из Intent: 0 применять сразу, 1 спрашивать |
-| `up_button_action` | `UP_ACTION_MENU` (2) | 0 ничего, 1 OSD-настройки, 2 боковое меню, 3 инфопанель |
+| `up_button_action` | `UP_ACTION_MENU` (2) | 0 ничего, 1 OSD-настройки, 2 боковое меню, 3 инфопанель, повторное нажатие — боковое меню |
 | `ok_button_action` | `OK_ACTION_PAUSE_PANEL` (1) | 0 пауза, 1 пауза + панель, 2 панель |
 | `horizontal_swipe_action` | 2 | Действие горизонтального свайпа (телефон) |
 | `sub_font`, `sub_size`, `sub_text_color`, `sub_bg_color`, `sub_edge_type`, `sub_edge_color`, `sub_bottom`, `sub_embedded` | как у стандартного `SubtitleView` | Стиль субтитров (`SubtitleStyle`, экран `SubtitleStyleActivity`, применение `SubtitleStyleOptions.apply`) |
@@ -28,7 +28,9 @@
 | `live_mode_control` | false | Эфирный режим (см. [PLAYLISTS.md](PLAYLISTS.md)) |
 | `show_info_on_change` | false | Инфопанель при смене элемента плейлиста |
 | `show_playlist_index` | true | Номера в плейлисте |
-| `startup_playlist_uri` | null | Стартовый плейлист (M3U/ссылка) |
+| `saved_playlists` | — | Плейлисты по ссылке на стартовом экране (JSON: id, name, url). Прежний `startup_playlist_uri` переносится сюда один раз и удаляется |
+| `smb_servers` | — | Сетевые папки SMB стартового экрана (JSON: id, name, address, user, password, domain) |
+| `watch_history` | — | История «Продолжить просмотр» (JSON, до 30 записей, одна на источник: папку или плейлист) |
 | `last_channel_uri` | null | Последний канал M3U (служебное) |
 | `clock_transparency` | `CLOCK_OFF` (-1) | -1 выкл, 0..80 % прозрачности. Мигрирует из старого `show_clock` |
 | `buffer_display_mode` | `BUFFER_DISPLAY_OFF` (0) | 0 выкл, 1 в панели, 2 рядом с часами (и в инфопанели) |

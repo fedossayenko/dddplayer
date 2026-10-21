@@ -22,10 +22,10 @@
 
     <!-- Режимы 3D -->
     <string name="stereo_mode_mono">Обычное 2D</string>
-    <string name="stereo_mode_sbs">Горизонтальная стереопара (SBS)</string>
-    <string name="stereo_mode_tb">Вертикальная стереопара (OU)</string>
+    <string name="stereo_mode_sbs">Горизонтальная стереопара (SBS, HSBS)</string>
+    <string name="stereo_mode_ou">Вертикальная стереопара (OU, HOU)</string>
     <string name="stereo_mode_interlaced">Чересстрочная стереопара (Interlaced)</string>
-    <string name="stereo_mode_tiled">3D(z) Tiled (720p в 1080p)</string>
+    <string name="stereo_mode_tiled">3D(z)Tiled (720p в 1080p)</string>
     <string name="output_mode_anaglyph">Анаглиф (Очки)</string>
     <string name="output_mode_left">Только левый</string>
     <string name="output_mode_right">Только правый</string>
@@ -96,6 +96,8 @@
 
     <!-- Сообщения и ошибки в плеере -->
     <string name="error_playback_title">Ошибка воспроизведения</string>
+    <string name="error_copied">Подробности ошибки скопированы</string>
+    <string name="error_hint_content_source">Приложение, через которое открыт файл (файловый менеджер, SMB-клиент), не смогло отдать данные. Такие приложения часто отдают файл без перемотки, а MP4 с индексом в конце так не открыть. Попробуйте другой файловый менеджер или перепакуйте файл с faststart.</string>
     <string name="playback_error">Ошибка воспроизведения</string>
     <string name="error_video_decoder">Ошибка видео декодера.\nВоспроизводится только звук.</string>
     <string name="error_audio_disabled">Ошибка аудио. Звук отключен.\n%s</string>
@@ -183,7 +185,7 @@
     <string name="pref_up_action_desc">Что открывать при нажатии \'Вверх\' в плеере</string>
     <string name="pref_up_action_osd">Панель настройки</string>
     <string name="pref_up_action_menu">Меню настроек (Боковое)</string>
-    <string name="pref_up_action_info">Инфо-панель</string>
+    <string name="pref_up_action_info">Инфопанель, затем боковое меню</string>
     <string name="pref_up_action_none">Ничего</string>
     <string name="pref_ok_action">Действие кнопки \'OK\'</string>
     <string name="pref_ok_action_desc">Что делать при нажатии \'OK\' в плеере</string>
@@ -211,9 +213,6 @@
     <string name="swipe_release_exit">Отпустите для выхода</string>
     <string name="pref_pause_dim">Затемнение экрана на паузе</string>
     <string name="pref_pause_dim_desc">Защищает OLED экраны от выгорания</string>
-    <string name="pref_startup_playlist">Плейлист при запуске</string>
-    <string name="pref_startup_playlist_desc">Ссылка на M3U плейлист</string>
-    <string name="pref_startup_playlist_not_set">Не задан</string>
     <string name="dialog_input_url_title">Введите ссылку на плейлист</string>
     <string name="dialog_input_url_hint">http://...</string>
     <string name="save">Сохранить</string>
@@ -227,7 +226,7 @@
     <string name="buffer_panel">В панели управления</string>
     <string name="buffer_clock">Рядом с часами и в инфопанели</string>
     <string name="pref_buffer_size">Размер буфера</string>
-    <string name="pref_buffer_size_desc">Объём ОЗУ для буферизации сетевого видео. Локальные файлы используют буфер по умолчанию</string>
+    <string name="pref_buffer_size_desc">Память для буферизации сетевого видео. «Авто» держит запас 15–50 секунд: догружает видео, когда впереди остаётся меньше 15 с, и останавливается на 50 с. С размером в МБ плеер загружает вперёд, пока не заполнит этот объём. Локальные файлы всегда используют «Авто»</string>
     <string name="buffer_size_auto">Авто</string>
     <string name="buffer_size_mb">%d МБ</string>
     <string name="buffer_percentage">Буфер: %d%%</string>
@@ -286,6 +285,10 @@
     <string name="show_logs">Показать лог</string>
     <string name="error_logs">Лог ошибки</string>
     <string name="error_log_upload">Загрузить лог (Termbin)</string>
+    <string name="log_uploading">Загрузка…</string>
+    <string name="log_upload_retry">Ошибка. Повторить?</string>
+    <string name="log_upload_failed">Ошибка соединения с termbin.com</string>
+    <string name="log_copied">Скопировано в буфер обмена</string>
     <string name="qr_code">QR-код</string>
 
     <!-- ==================================================== -->
@@ -416,4 +419,69 @@
     <string name="wizard_ana_ghost_left_text">Закройте правый глаз и смотрите левым — через светофильтр «%1$s». Буква L видна четко, а на месте R может быть тень — темнее или светлее серого фона. Меняйте подавление двоения (◀ ▶): если тень темнее фона — увеличивайте, если светлее — уменьшайте. Найдите значение, при котором буква R заметна меньше всего (в идеале не видна вовсе).</string>
     <string name="wizard_ana_ghost_right_text">Закройте левый глаз и смотрите правым — через светофильтр «%1$s». Буква R видна четко, а на месте L может быть тень — темнее или светлее серого фона. Меняйте подавление двоения (◀ ▶): если тень темнее фона — увеличивайте, если светлее — уменьшайте. Найдите значение, при котором буква L заметна меньше всего (в идеале не видна вовсе).</string>
     <string name="wizard_param_ghost">Подавление двоения</string>
+    <string name="files_title">Файлы</string>
+    <string name="files_internal_storage">Внутренняя память</string>
+    <string name="files_empty">Здесь нет видео</string>
+    <string name="files_no_access">Нет доступа к этой папке</string>
+    <string name="files_all_access_title">Доступ ко всем файлам</string>
+    <string name="files_all_access_desc">Нужен, чтобы видеть субтитры рядом с видео (Android 11+)</string>
+    <string name="files_all_access_unavailable">На этом устройстве нет экрана для выдачи доступа ко всем файлам</string>
+    <string name="files_permission_denied">Без доступа к хранилищу файлы не видны</string>
+    <string name="files_folder">Папка</string>
+    <string name="home_continue">Продолжить просмотр</string>
+    <string name="home_playlists">Плейлисты</string>
+    <string name="home_devices">Устройства</string>
+    <string name="home_history_all">Вся история (%1$d)</string>
+    <string name="home_history_collapse">Свернуть</string>
+    <string name="home_history_remove">Удалить из истории</string>
+    <string name="home_playlist_add">Добавить плейлист</string>
+    <string name="home_playlist_add_desc">Ссылка на M3U, например IPTV. Долгое нажатие — изменить</string>
+    <string name="home_playlist_edit">Плейлист</string>
+    <string name="home_playlist_name_hint">Название</string>
+    <string name="home_playlist_url_empty">Укажите ссылку на плейлист</string>
+    <string name="home_delete">УДАЛИТЬ</string>
+    <string name="home_unavailable">Источник недоступен (например, USB-диск отключен)</string>
+    <string name="home_network">Сеть</string>
+    <string name="home_dlna_server">Медиасервер DLNA</string>
+    <string name="home_dlna_searching">Поиск медиасерверов…</string>
+    <string name="home_dlna_not_found">Медиасерверы не найдены. Искать снова</string>
+    <string name="home_dlna_search_again">Искать снова</string>
+    <string name="home_dlna_search_desc">Серверы DLNA в локальной сети (NAS, компьютер, роутер)</string>
+    <string name="home_smb_add">Добавить сетевую папку (SMB)</string>
+    <string name="home_smb_add_desc">Например smb://192.168.1.5/Video. Долгое нажатие — изменить</string>
+    <string name="home_smb_title">Сетевая папка</string>
+    <string name="home_smb_address_hint">smb://сервер/общая_папка</string>
+    <string name="home_smb_user_hint">Пользователь (пусто — гость, ДОМЕН\\user)</string>
+    <string name="home_smb_password_hint">Пароль</string>
+    <string name="home_smb_address_invalid">Укажите адрес вида smb://сервер/общая_папка</string>
+    <string name="home_smb_error">Не удалось открыть: %1$s</string>
+    <string-array name="file_size_units">
+        <item>Б</item>
+        <item>КБ</item>
+        <item>МБ</item>
+        <item>ГБ</item>
+        <item>ТБ</item>
+    </string-array>
+    <!-- Диагностика устройства -->
+    <string name="pref_diagnostics">Диагностика устройства</string>
+    <string name="pref_diagnostics_desc">Экран, HDR, аудиовыход и декодеры. Отчёт можно скопировать для сообщения об ошибке</string>
+    <string name="diag_sec_device">Устройство</string>
+    <string name="diag_sec_display">Экран</string>
+    <string name="diag_sec_audio_out">Аудиовыход</string>
+    <string name="diag_sec_video_dec">Видеодекодеры</string>
+    <string name="diag_sec_audio_dec">Аудиодекодеры</string>
+    <string name="diag_model">Модель</string>
+    <string name="diag_app_version">Версия плеера</string>
+    <string name="diag_abi">Архитектура</string>
+    <string name="diag_heap">Память приложения</string>
+    <string name="diag_mode">Текущий режим</string>
+    <string name="diag_modes">Доступные режимы</string>
+    <string name="diag_hdr">HDR</string>
+    <string name="diag_wide_gamut">Широкий цветовой охват</string>
+    <string name="diag_passthrough">Проброс (Media3)</string>
+    <string name="diag_max_channels">Макс. каналов</string>
+    <string name="diag_none">нет</string>
+    <string name="diag_yes">да</string>
+    <string name="diag_no">нет</string>
+    <string name="diag_builtin">встроенный</string>
 </resources>

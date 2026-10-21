@@ -30,10 +30,10 @@ To experience the 3D effect, you will need **anaglyph glasses** (e.g., Red-Cyan)
 ### Key Features
 
 *   **Stereo Formats Support**:
-    *   Side-by-Side (SBS)
-    *   Top-Bottom (Over-Under)
+    *   Side-by-Side: SBS and anamorphic HSBS (Half SBS)
+    *   Over-Under: OU and anamorphic HOU (Half OU)
     *   Interlaced
-    *   3D(z) Tile Format (720p in 1080p)
+    *   3D(z)Tiled (720p in 1080p)
     *   Auto-detection from container metadata and file name markers (`sbs`, `ou`, `tb`, ...).
 *   **Output Modes**:
     *   **Anaglyph**: High-quality Dubois algorithm with customizable color matrices (Red-Cyan, Green-Magenta, Yellow-Blue, Red-Blue).
@@ -46,7 +46,7 @@ To experience the 3D effect, you will need **anaglyph glasses** (e.g., Red-Cyan)
 *   **Playlists & IPTV**:
     *   Playlists passed by other apps (see Intent API) with posters and subtitles.
     *   M3U / M3U8 playlists with groups (`group-title`, `#EXTGRP`), logos and per-channel HTTP headers (`#EXTVLCOPT`, `#EXTHTTP`). HLS streams are detected and played without a second request.
-    *   Startup playlist opened when the app is launched from the launcher; the last watched M3U channel is restored.
+    *   Start screen: continue watching, saved playlist links (M3U/IPTV) and a built-in file browser for internal storage, SD cards, USB drives, SMB network folders and DLNA media servers; the last watched M3U channel is restored.
     *   Optional **live mode** for playlists with live streams: OK opens the channel list, Left/Right switch channels, Up shows the info panel.
 *   **Playback**:
     *   Resume playback (ask / always / never), optional prompt for a position passed by another app.

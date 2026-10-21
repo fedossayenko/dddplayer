@@ -98,6 +98,12 @@ android {
             isIncludeAndroidResources = true
         }
     }
+    packaging {
+        resources {
+            // BouncyCastle (зависимость smbj) - multi-release jar с манифестами OSGi
+            excludes += "META-INF/versions/9/OSGI-INF/MANIFEST.MF"
+        }
+    }
     lint {
         disable.add("MissingTranslation")
         disable.add("UnsafeOptInUsageError")
@@ -118,6 +124,7 @@ dependencies {
     implementation(libs.androidx.constraintlayout)
     implementation(libs.androidx.fragment.ktx)
     implementation(libs.okhttp)
+    implementation(libs.smbj)
 
     // Media3 dependencies
     implementation(libs.media3.exoplayer)

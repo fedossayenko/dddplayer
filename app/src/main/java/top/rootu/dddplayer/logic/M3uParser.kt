@@ -19,6 +19,16 @@ object M3uParser {
     private val attrRegex = Regex("""([a-zA-Z0-9_-]+)=((?:"[^"]*")|(?:[^\s,]+))""")
 
     /**
+     * Ответ сервера по ссылке может быть самим видео или звуком: тогда проверять его на плейлист не нужно.
+     * Но плейлисты M3U часто отдаются как audio/x-mpegurl (TorrServer, Icecast) или application/vnd.apple.mpegurl.
+     */
+    fun isMediaContentType(contentType: String?): Boolean {
+        val type = contentType?.substringBefore(';')?.trim()?.lowercase().orEmpty()
+        if (type.contains("mpegurl")) return false
+        return type.startsWith("video/") || type.startsWith("audio/")
+    }
+
+    /**
      * true, если это M3U плейлист с элементами (#EXTINF), а не HLS.
      */
     fun isPlaylist(content: String): Boolean {

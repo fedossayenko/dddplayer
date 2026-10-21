@@ -112,15 +112,6 @@ class GlobalSettingsViewModel(application: Application) : AndroidViewModel(appli
     val horizontalSwipeAction: LiveData<Int> = _horizontalSwipeAction
 
     // --- Playlist Settings ---
-    private val _startupPlaylistUri = MutableLiveData(repository.getStartupPlaylistUri())
-    val startupPlaylistUri: LiveData<String?> = _startupPlaylistUri
-
-    fun setStartupPlaylistUri(uri: String?) {
-        val finalUri = if (uri.isNullOrBlank()) null else uri.trim()
-        repository.setStartupPlaylistUri(finalUri)
-        _startupPlaylistUri.value = finalUri
-    }
-
     private val _isLiveModeEnabled = MutableLiveData(repository.isLiveModeEnabled())
     val isLiveModeEnabled: LiveData<Boolean> = _isLiveModeEnabled
 

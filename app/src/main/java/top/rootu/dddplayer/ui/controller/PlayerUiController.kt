@@ -27,6 +27,7 @@ import androidx.recyclerview.widget.RecyclerView
 import coil.load
 import top.rootu.dddplayer.R
 import top.rootu.dddplayer.data.SettingsRepository
+import top.rootu.dddplayer.logic.PlaybackErrorLogic
 import top.rootu.dddplayer.model.MediaItem
 import top.rootu.dddplayer.model.ResizeMode
 import top.rootu.dddplayer.model.StereoInputType
@@ -79,8 +80,7 @@ class PlayerUiController(private val rootView: View) {
     val posterNumberBadge: TextView = topInfoPanel.findViewById(R.id.poster_number_badge)
     val textClock: TextView = topInfoPanel.findViewById(R.id.text_clock)
     val textEndsAt: TextView = topInfoPanel.findViewById(R.id.text_ends_at)
-    val iconInputMode: ImageView = topInfoPanel.findViewById(R.id.icon_input_mode)
-    val iconSwapEyes: ImageView = topInfoPanel.findViewById(R.id.icon_swap_eyes)
+    val badgeStereo: TextView = topInfoPanel.findViewById(R.id.badge_stereo)
     val badgeResolution: TextView = topInfoPanel.findViewById(R.id.badge_resolution)
     val badgeAudio: TextView = topInfoPanel.findViewById(R.id.badge_audio)
     val badgeSubtitle: TextView = topInfoPanel.findViewById(R.id.badge_subtitle)
@@ -120,6 +120,7 @@ class PlayerUiController(private val rootView: View) {
     val errorScreen: View = rootView.findViewById(R.id.error_screen)
     val errorText: TextView = rootView.findViewById(R.id.error_text)
     val errorDetails: TextView = rootView.findViewById(R.id.error_details)
+    val errorHint: TextView = rootView.findViewById(R.id.error_hint)
 
     val buttonUpdate: TextView = controlsView.findViewById(R.id.button_update)
 
@@ -418,6 +419,7 @@ class PlayerUiController(private val rootView: View) {
     fun showFatalError(error: PlaybackException) {
         errorText.text = rootView.context.getString(R.string.error_playback_title)
         errorDetails.text = formatErrorDetails(error)
+        showErrorHint(error)
         errorScreen.isVisible = true
         errorScreen.setBackgroundColor("#CC000000".toColorInt())
         bufferingContainer.isVisible = false
@@ -427,6 +429,7 @@ class PlayerUiController(private val rootView: View) {
     fun showVideoErrorState(error: PlaybackException) {
         errorText.text = rootView.context.getString(R.string.error_video_decoder)
         errorDetails.text = formatErrorDetails(error)
+        showErrorHint(error)
         errorScreen.isVisible = true
         errorScreen.setBackgroundColor("#80000000".toColorInt())
         bufferingContainer.isVisible = false
@@ -435,6 +438,14 @@ class PlayerUiController(private val rootView: View) {
 
     fun hideError() {
         errorScreen.isVisible = false
+    }
+
+    // Подсказка для известных причин: файл не отдало приложение-источник (content://)
+    private fun showErrorHint(error: PlaybackException) {
+        val isIoError = error.errorCode in 2000..2999
+        val showHint = isIoError && PlaybackErrorLogic.isContentSourceError(error)
+        errorHint.isVisible = showHint
+        if (showHint) errorHint.setText(R.string.error_hint_content_source)
     }
 
     private fun formatErrorDetails(error: PlaybackException): String {
@@ -462,7 +473,9 @@ class PlayerUiController(private val rootView: View) {
         val msg = error.message ?: ""
         val displayMsg = if (msg.length > 303) msg.take(300) + "..." else msg
 
-        return "${error.errorCodeName} (${error.errorCode})\n$displayMsg"
+        // Причины ниже кода ошибки: там видно, что именно не удалось (например, ответ файлового менеджера)
+        val causes = PlaybackErrorLogic.causeLines(error).joinToString("") { "\n→ $it" }
+        return "${error.errorCodeName} (${error.errorCode})\n$displayMsg$causes"
     }
 
     fun updateSettingsOptions(optionsData: Pair<List<String>, Int>?) {
@@ -869,15 +882,10 @@ class PlayerUiController(private val rootView: View) {
         loaderRight.translationX = shiftPx
     }
 
-    fun updateInputModeIcon(type: StereoInputType, swapEyes: Boolean) {
-        val iconRes = when (type) {
-            StereoInputType.NONE -> R.drawable.ic_input_mode_mono
-            StereoInputType.SIDE_BY_SIDE -> if (swapEyes) R.drawable.ic_input_mode_ss_rl else R.drawable.ic_input_mode_ss_lr
-            StereoInputType.TOP_BOTTOM -> if (swapEyes) R.drawable.ic_input_mode_ou_rl else R.drawable.ic_input_mode_ou_lr
-            StereoInputType.INTERLACED -> R.drawable.ic_input_mode_interlaced
-            StereoInputType.TILED_1080P -> R.drawable.ic_input_mode_3dz
-        }
-        iconInputMode.setImageResource(iconRes)
+    /** Бейдж стереоформата ("3D (HSBS) RL", "2D (OU) L"); null - видео не стерео, бейдж скрыт */
+    fun updateStereoBadge(label: String?) {
+        badgeStereo.text = label.orEmpty()
+        badgeStereo.isVisible = label != null
     }
 
     fun formatTime(millis: Long): String {

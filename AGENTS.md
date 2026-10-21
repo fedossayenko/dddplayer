@@ -6,7 +6,7 @@
 ## Что это за проект
 
 DDD Video Player (`top.rootu.dddplayer`) — видеоплеер для Android TV и телефонов (minSdk 23, targetSdk 34,
-compileSdk 36). Умеет обычное 2D/HDR видео и стереопары (SBS, Top-Bottom, Interlaced, 3D(z) Tile).
+compileSdk 36). Умеет обычное 2D/HDR видео и стереопары (SBS/HSBS, OU/HOU, Interlaced, 3D(z)Tiled).
 Стерео выводится в анаглиф (матрицы Дюбуа), Cardboard VR или моно (один глаз).
 Кроме того, плеер открывает плейлисты из Intent и M3U/IPTV (группы, эфирный режим, переключение каналов),
 а еще поддерживает PiP, AFR (подстройку частоты экрана), микшер даунмикса и встроенное обновление с GitHub Releases.
@@ -54,18 +54,20 @@ app/src/main/java/top/rootu/dddplayer/
 ├── player/                     PlayerManager (ExoPlayer, OkHttp, источники, M3U-проба),
 │                               NetworkBufferLoadControl, PrefetchingDataSource, ParsingDataSource
 ├── logic/                      Чистая логика: M3uParser, TrackLogic, AnaglyphLogic, AudioMixerLogic,
-│                               Matroska/Mp4/UnifiedMetadataReader, SettingsMutator, UpdateManager
+│                               Matroska/Mp4/UnifiedMetadataReader, SettingsMutator, StereoFormatLogic, DeviceInfoLogic,
+│                               UpdateManager
 ├── renderer/                   StereoGLSurfaceView, StereoRenderer, ShaderSource (GLSL ES 2.0/3.0)
 ├── viewmodel/                  PlayerViewModel (центр всего), AnaglyphDelegate, SettingsViewModel,
 │                               GlobalSettingsViewModel, UpdateViewModel
 ├── ui/                         PlayerActivity (Intent, PiP, результат), PlayerFragment (экран плеера),
-│                               GlobalSettingsActivity, VrConfigActivity, CrashActivity
+│                               GlobalSettingsActivity, FileBrowserActivity (файлы), DeviceInfoActivity (диагностика),
+│                               VrConfigActivity, CrashActivity
 │   ├── controller/             PlayerUiController (вьюхи), PlayerInputHandler (пульт),
 │   │                           PlayerTouchHandler (жесты), PlayerTimerController (таймеры, часы)
 │   ├── adapter/                RecyclerView адаптеры меню/плейлиста
 │   └── wiget/                  OutlineTextView (часы с обводкой), CenterLayoutManager
 └── utils/                      IntentUtils (разбор Intent), MediaFormatHelper, StereoTypeDetector,
-                                DuboisMath, CardboardParamsParser, CrashHandler, LocaleUtils, afr/*
+                                DuboisMath, CardboardParamsParser, CrashHandler, LocaleUtils, DeviceInfoCollector, afr/*
 ```
 
 Самые большие файлы: `PlayerViewModel.kt`, `PlayerFragment.kt`, `PlayerUiController.kt`,
@@ -74,8 +76,8 @@ app/src/main/java/top/rootu/dddplayer/
 ## Ключевые потоки (кратко)
 
 1. **Запуск:** `PlayerActivity.onCreate` разбирает Intent (`IntentUtils.parseIntent`) и вызывает
-   `PlayerViewModel.loadMedia`. Если Intent пустой, загружается стартовый плейлист из настроек
-   (`forceM3uProbe = true`). При запуске из лаунчера без стартового плейлиста release-сборка открывает настройки.
+   `PlayerViewModel.loadMedia`. Запуск из лаунчера открывает стартовый экран `FileBrowserActivity`:
+   «Продолжить просмотр», плейлисты по ссылке (`forceM3uProbe = true`), хранилища, SMB и DLNA.
 2. **Загрузка:** `loadMedia` проверяет одиночную ссылку `.m3u`/`.m3u8` через `PlayerManager.expandM3u`.
    Ссылка скачивается один раз, HLS (`#EXT-X-`) отдается плееру из `PrefetchStore`.
    Затем `loadPlaylist` (VM) передает список в `PlayerManager.loadPlaylist`, а тот собирает `MediaSource`.

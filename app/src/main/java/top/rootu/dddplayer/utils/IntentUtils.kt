@@ -9,10 +9,27 @@ import android.os.Bundle
 import android.os.Parcelable
 import android.provider.OpenableColumns
 import androidx.core.net.toUri
+import top.rootu.dddplayer.model.HistorySource
 import top.rootu.dddplayer.model.MediaItem
 import top.rootu.dddplayer.model.SubtitleItem
 
 object IntentUtils {
+
+    // Внутренние ключи стартового экрана (FileBrowserActivity -> PlayerActivity), внешним приложениям не нужны
+    const val EXTRA_HISTORY_KIND = "top.rootu.dddplayer.history_kind"
+    const val EXTRA_HISTORY_SOURCE = "top.rootu.dddplayer.history_source"
+    const val EXTRA_HISTORY_NAME = "top.rootu.dddplayer.history_name"
+    // Ссылка может быть плейлистом без расширения .m3u (например, get.php?...): проверить содержимое
+    const val EXTRA_FORCE_M3U = "top.rootu.dddplayer.force_m3u"
+
+    /** Источник для истории "Продолжить просмотр" или null, если видео открыто не со стартового экрана. */
+    fun parseHistorySource(intent: Intent): HistorySource? {
+        val kind = intent.getStringExtra(EXTRA_HISTORY_KIND) ?: return null
+        val source = intent.getStringExtra(EXTRA_HISTORY_SOURCE) ?: return null
+        return HistorySource(kind, source, intent.getStringExtra(EXTRA_HISTORY_NAME).orEmpty())
+    }
+
+    fun isForceM3u(intent: Intent): Boolean = intent.getBooleanExtra(EXTRA_FORCE_M3U, false)
 
     /**
      * Парсит Intent и возвращает список медиа-элементов и стартовую позицию.
@@ -86,6 +103,8 @@ object IntentUtils {
         val headersMap = parseHeaders(extras)
 
         val playlist = mutableListOf<MediaItem>()
+        // Видео плейлиста обычно лежат в одной папке: читаем ее для поиска субтитров один раз
+        val listDir = SubtitleFinder.cachedLister()
         // Стартовый элемент: явный start_index, либо элемент, совпадающий с intent.data (ниже)
         var startIndex = extras.getInt("start_index", 0)
 
@@ -113,7 +132,7 @@ object IntentUtils {
                     filename = filenames?.getOrNull(i),
                     posterUri = posters?.getOrNull(i)?.takeIf { it.isNotEmpty() }?.toUri(),
                     headers = headersMap,
-                    subtitles = itemSubs.ifEmpty { SubtitleFinder.findSidecarSubtitles(uri) },
+                    subtitles = itemSubs.ifEmpty { SubtitleFinder.findSidecarSubtitles(uri, listDir) },
                     startPositionMs = pos
                 )
             )

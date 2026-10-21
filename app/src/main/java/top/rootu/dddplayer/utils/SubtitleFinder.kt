@@ -12,17 +12,22 @@ import java.io.File
 object SubtitleFinder {
     private val EXTENSIONS = setOf("srt", "vtt", "ass", "ssa", "ttml", "dfxp")
 
-    fun findSidecarSubtitles(videoUri: Uri): List<SubtitleItem> {
+    /**
+     * @param listDir чтение содержимого папки. Для плейлиста из одной папки передайте кэширующий вариант
+     * ([cachedLister]), чтобы не читать папку заново для каждого видео (на USB-дисках это заметно).
+     */
+    fun findSidecarSubtitles(videoUri: Uri, listDir: (File) -> Array<File>? = { it.listFiles() }): List<SubtitleItem> {
         if (videoUri.scheme != "file") return emptyList()
         val path = videoUri.path ?: return emptyList()
         return try {
             val video = File(path)
             val dir = video.parentFile ?: return emptyList()
             val baseName = video.name.substringBeforeLast('.')
-            val files = dir.listFiles() ?: return emptyList()
+            val files = listDir(dir) ?: return emptyList()
             files.filter { file ->
-                file.isFile && file.extension.lowercase() in EXTENSIONS &&
-                        file.name.startsWith("$baseName.", ignoreCase = true)
+                // Сначала проверки по имени, isFile последним: на USB каждый запрос к файлу заметен
+                file.extension.lowercase() in EXTENSIONS &&
+                        file.name.startsWith("$baseName.", ignoreCase = true) && file.isFile
             }
                 .sortedBy { it.name.lowercase() }
                 .map { file ->
@@ -36,5 +41,11 @@ object SubtitleFinder {
         } catch (e: SecurityException) {
             emptyList()
         }
+    }
+
+    /** Чтение папок с кэшем на время разбора одного плейлиста. */
+    fun cachedLister(): (File) -> Array<File>? {
+        val cache = HashMap<String, Array<File>?>()
+        return { dir -> cache.getOrPut(dir.absolutePath) { dir.listFiles() } }
     }
 }

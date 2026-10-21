@@ -12,6 +12,9 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import top.rootu.dddplayer.model.AnaglyphCalibration
+import top.rootu.dddplayer.model.HistoryEntry
+import top.rootu.dddplayer.model.SavedPlaylist
+import top.rootu.dddplayer.model.SmbServer
 import top.rootu.dddplayer.model.StereoOutputMode
 import top.rootu.dddplayer.model.SubtitleStyle
 import top.rootu.dddplayer.renderer.StereoRenderer
@@ -186,5 +189,54 @@ class SettingsRepositoryTest {
         // Сохранение настроек видео в OSD обновляет тот же ключ
         repo.saveGlobalDefaults(StereoOutputMode.CARDBOARD_VR, StereoRenderer.AnaglyphType.RC_DUBOIS)
         assertEquals(StereoOutputMode.CARDBOARD_VR, repo.getDefaultOutputMode())
+    }
+
+    @Test
+    fun `old startup playlist becomes a saved playlist once`() {
+        prefs.edit { putString("startup_playlist_uri", "http://iptv.example.com/get.php?u=1") }
+        val repo = repo()
+        val playlists = repo.getSavedPlaylists()
+        assertEquals(1, playlists.size)
+        assertEquals("iptv.example.com", playlists[0].name)
+        assertEquals("http://iptv.example.com/get.php?u=1", playlists[0].url)
+        assertFalse(prefs.contains("startup_playlist_uri"))
+        // Повторное чтение не добавляет копию
+        assertEquals(1, repo.getSavedPlaylists().size)
+    }
+
+    @Test
+    fun `saved playlists can be added, edited and removed`() {
+        val repo = repo()
+        repo.putSavedPlaylist(SavedPlaylist("1", "TV", "http://a/tv.m3u"))
+        repo.putSavedPlaylist(SavedPlaylist("2", "Films", "http://b/f.m3u"))
+        repo.putSavedPlaylist(SavedPlaylist("1", "TV HD", "http://a/hd.m3u"))
+        assertEquals(listOf("TV HD", "Films"), repo.getSavedPlaylists().map { it.name })
+        repo.removeSavedPlaylist("1")
+        assertEquals(listOf("2"), repo.getSavedPlaylists().map { it.id })
+    }
+
+    @Test
+    fun `watch history keeps one entry per source`() {
+        val repo = repo()
+        fun entry(source: String, uri: String) = HistoryEntry(HistoryEntry.KIND_FOLDER, source, "S", uri, uri, 5, 10, 0)
+        repo.recordWatchHistory(entry("/series", "/series/e1.mkv"))
+        repo.recordWatchHistory(entry("/movies", "/movies/m.mkv"))
+        repo.recordWatchHistory(entry("/series", "/series/e2.mkv"))
+        assertEquals(listOf("/series/e2.mkv", "/movies/m.mkv"), repo.getWatchHistory().map { it.uri })
+        repo.removeWatchHistory("folder:/movies")
+        assertEquals(1, repo.getWatchHistory().size)
+    }
+
+    @Test
+    fun `smb servers keep credentials`() {
+        val repo = repo()
+        repo.putSmbServer(SmbServer("1", "NAS", "smb://nas/Video", "user", "secret", "HOME"))
+        repo.putSmbServer(SmbServer("1", "NAS 2", "smb://nas/Video", "user", "secret2", "HOME"))
+        val saved = repo.getSmbServers().single()
+        assertEquals("NAS 2", saved.name)
+        assertEquals("secret2", saved.password)
+        assertEquals("HOME", saved.domain)
+        repo.removeSmbServer("1")
+        assertTrue(repo.getSmbServers().isEmpty())
     }
 }

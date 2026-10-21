@@ -7,8 +7,12 @@
 - `initializePlayer()` собирает плеер из текущих настроек:
   - `MediaCodecSelector`: запрос декодера Dolby Vision подменяется на HEVC по `dv_mode` — всегда, никогда или
     «авто» (если нет DV декодера или экран не сообщает о поддержке DV, `isDolbyVisionSupported`);
+    селектор видит только MIME-тип, поэтому при подмене видеорендерер заменяется на `DolbyVisionVideoRenderer`:
+    для профилей без совместимого слоя HEVC (5, 9, 10, см. `DolbyVisionLogic`) он берет обычный выбор декодера;
   - `DefaultTrackSelector`: туннелирование, предпочтительные языки аудио и субтитров (`""` — по умолчанию,
-    `device` — языки системы), `exceedRendererCapabilitiesIfNecessary`;
+    `device` — языки системы), `exceedRendererCapabilitiesIfNecessary`. Включилось ли туннелирование на деле,
+    видно по `AudioTrackConfig.tunneling` (`onAudioTrackInitialized`): тогда у бейджа видео в инфопанели стоит `↳`.
+    Бейдж аудио показывает дорожку и формат вывода (`AC3 5.1 > AC3 5.1` — проброс, `> PCM` — декодирует плеер);
   - `DefaultRenderersFactory`: приоритет декодеров-расширений (`decoder_priority`, ffmpeg и AV1 из AAR),
     `enableDecoderFallback`. При `stereo_downmix` подключается свой `DefaultAudioSink` с
     `ChannelMixingAudioProcessor` (матрицы из `AudioMixerLogic`) и аудиобуфером не больше 256 КБ,
@@ -90,6 +94,9 @@ ParsingDataSource → PrefetchingDataSource → DefaultDataSource (file/content/
 - Ошибка рендерера видео: видеодорожка отключается, звук продолжает играть (`videoDisabledError`
   и тост). При переходе на другой элемент видео включается обратно.
 - Ошибка рендерера аудио: аудио выключается, тост подсказывает выбрать другую дорожку.
+- Экран ошибки показывает код, сообщение и цепочку причин (`PlaybackErrorLogic.causeLines`), долгое нажатие
+  копирует подробности. Для IO-ошибки чтения через провайдер другого приложения (`content://`) добавляется
+  подсказка: такие приложения часто отдают файл без перемотки.
 
 ## AFR и FPS
 

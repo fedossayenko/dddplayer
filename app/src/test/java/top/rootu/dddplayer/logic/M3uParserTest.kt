@@ -88,4 +88,16 @@ class M3uParserTest {
         // Пустое название - null (UI покажет имя из ссылки)
         assertNull(items[1].title)
     }
+
+    @Test
+    fun `playlist content types are not treated as media`() {
+        // TorrServer отдает плейлист "Играть все" как audio/x-mpegurl
+        assertFalse(M3uParser.isMediaContentType("audio/x-mpegurl"))
+        assertFalse(M3uParser.isMediaContentType("application/vnd.apple.mpegurl; charset=utf-8"))
+        assertFalse(M3uParser.isMediaContentType("Audio/MPEGURL"))
+        assertFalse(M3uParser.isMediaContentType("text/plain"))
+        assertFalse(M3uParser.isMediaContentType(null))
+        assertTrue(M3uParser.isMediaContentType("video/mp4"))
+        assertTrue(M3uParser.isMediaContentType("audio/mpeg"))
+    }
 }

@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Сетевая папка SMB на стартовом экране: название, адрес, пользователь и пароль, удаление -->
+<!-- Прокрутка: на телефоне клавиатура занимает пол-экрана, и без нее нижние поля недоступны -->
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="400dp"
+    android:layout_height="wrap_content"
+    android:background="@drawable/bg_dialog"
+    android:fillViewport="true">
+
+<LinearLayout
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="24dp">
+
+    <TextView
+        android:id="@+id/dialog_title"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="16dp"
+        android:text="@string/home_smb_add"
+        android:textColor="@color/tv_white"
+        android:textSize="20sp"
+        android:textStyle="bold" />
+
+    <EditText
+        android:id="@+id/edit_name"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="12dp"
+        android:background="@drawable/bg_error_details"
+        android:hint="@string/home_playlist_name_hint"
+        android:imeOptions="actionNext"
+        android:importantForAutofill="no"
+        android:inputType="text"
+        android:maxLines="1"
+        android:padding="16dp"
+        android:singleLine="true"
+        android:textColor="@color/tv_white"
+        android:textColorHint="@color/text_tertiary" />
+
+    <EditText
+        android:id="@+id/edit_address"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="12dp"
+        android:background="@drawable/bg_error_details"
+        android:hint="@string/home_smb_address_hint"
+        android:imeOptions="actionNext"
+        android:importantForAutofill="no"
+        android:inputType="textUri"
+        android:maxLines="1"
+        android:padding="16dp"
+        android:singleLine="true"
+        android:textColor="@color/tv_white"
+        android:textColorHint="@color/text_tertiary" />
+
+    <EditText
+        android:id="@+id/edit_user"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="12dp"
+        android:background="@drawable/bg_error_details"
+        android:hint="@string/home_smb_user_hint"
+        android:imeOptions="actionNext"
+        android:importantForAutofill="no"
+        android:inputType="text"
+        android:maxLines="1"
+        android:padding="16dp"
+        android:singleLine="true"
+        android:textColor="@color/tv_white"
+        android:textColorHint="@color/text_tertiary" />
+
+    <EditText
+        android:id="@+id/edit_password"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/bg_error_details"
+        android:hint="@string/home_smb_password_hint"
+        android:imeOptions="actionDone"
+        android:importantForAutofill="no"
+        android:inputType="textPassword"
+        android:maxLines="1"
+        android:padding="16dp"
+        android:singleLine="true"
+        android:textColor="@color/tv_white"
+        android:textColorHint="@color/text_tertiary" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="24dp"
+        android:gravity="center_vertical">
+
+        <Button
+            android:id="@+id/btn_delete"
+            style="?android:attr/buttonBarButtonStyle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_crash_btn_secondary"
+            android:paddingHorizontal="16dp"
+            android:text="@string/home_delete"
+            android:textColor="@color/selector_settings_secondary"
+            android:visibility="gone" />
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_weight="1" />
+
+        <Button
+            android:id="@+id/btn_cancel"
+            style="?android:attr/buttonBarButtonStyle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_crash_btn_secondary"
+            android:paddingHorizontal="16dp"
+            android:text="@string/cancel_uppercase"
+            android:textColor="@color/selector_settings_secondary" />
+
+        <Button
+            android:id="@+id/btn_save"
+            style="?android:attr/buttonBarButtonStyle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:background="@drawable/bg_crash_btn_primary"
+            android:paddingHorizontal="16dp"
+            android:text="@string/save"
+            android:textColor="@color/selector_settings_primary" />
+    </LinearLayout>
+</LinearLayout>
+</ScrollView>

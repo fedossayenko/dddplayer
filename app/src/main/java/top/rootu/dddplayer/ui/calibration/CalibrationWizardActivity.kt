@@ -12,6 +12,7 @@ import android.view.View
 import android.view.WindowManager
 import android.widget.Button
 import android.widget.LinearLayout
+import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.addCallback
@@ -79,6 +80,7 @@ class CalibrationWizardActivity : AppCompatActivity(), OnSurfaceReadyListener {
     /** Панель для одного глаза (в VR - половина экрана, обрезает содержимое по своей границе). */
     private class Panel(val root: View) {
         val card: View = root.findViewById(R.id.wizard_card)
+        val scroll: ScrollView = root.findViewById(R.id.wizard_scroll)
         val step: TextView = root.findViewById(R.id.wizard_step)
         val title: TextView = root.findViewById(R.id.wizard_title)
         val text: TextView = root.findViewById(R.id.wizard_text)
@@ -176,7 +178,7 @@ class CalibrationWizardActivity : AppCompatActivity(), OnSurfaceReadyListener {
     private fun applyRenderer() {
         renderer.setInputType(StereoInputType.SIDE_BY_SIDE)
         renderer.setVideoDimensions(CalibrationPatterns.FRAME_WIDTH, CalibrationPatterns.FRAME_HEIGHT)
-        // Full SBS: каждый глаз растягивается на весь кадр 16:9
+        // Half SBS (HSBS): каждый глаз 960x1080 растягивается на весь кадр 16:9
         renderer.setSingleFrameDimensions(CalibrationPatterns.FRAME_WIDTH.toFloat(), CalibrationPatterns.FRAME_HEIGHT.toFloat())
         renderer.setDepth(0)
         renderer.setSwapEyes(false)
@@ -338,6 +340,8 @@ class CalibrationWizardActivity : AppCompatActivity(), OnSurfaceReadyListener {
     private fun showStep(index: Int) {
         stepIndex = index
         paramIndex = 0
+        // Длинный текст прошлого шага мог быть прокручен - новый шаг читаем с начала
+        panels.forEach { it.scroll.scrollTo(0, 0) }
         showCard()
         applyRenderer()
         drawPattern()
@@ -381,6 +385,10 @@ class CalibrationWizardActivity : AppCompatActivity(), OnSurfaceReadyListener {
             panel.back.setOnClickListener { previousStep() }
             panel.adjust.setOnClickListener { hideCard() }
             panel.next.setOnClickListener { nextStep() }
+            // В VR текст прокручивается одинаково для обоих глаз
+            panel.scroll.setOnScrollChangeListener { _, _, scrollY, _, _ ->
+                panels.forEach { other -> if (other !== panel && other.scroll.scrollY != scrollY) other.scroll.scrollTo(0, scrollY) }
+            }
             if (i > 0) {
                 // Кнопки второй панели только для касания; фокус показывается копией выделения первой
                 listOf(panel.back, panel.adjust, panel.next).forEach { it.isFocusable = false }

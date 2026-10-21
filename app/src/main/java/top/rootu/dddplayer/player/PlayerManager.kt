@@ -38,6 +38,8 @@ import androidx.media3.exoplayer.source.MediaSource
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import androidx.media3.exoplayer.upstream.DefaultAllocator
 import androidx.media3.exoplayer.upstream.DefaultLoadErrorHandlingPolicy
+import androidx.media3.exoplayer.video.MediaCodecVideoRenderer
+import androidx.media3.exoplayer.video.VideoRendererEventListener
 import androidx.media3.extractor.DefaultExtractorsFactory
 import androidx.media3.extractor.mp4.Mp4Extractor
 import androidx.media3.extractor.ts.DefaultTsPayloadReaderFactory
@@ -75,6 +77,11 @@ class PlayerManager(
     private val appContext = context.applicationContext
     private val settingsRepo = SettingsRepository.getInstance(appContext)
 
+    init {
+        // Учетные данные сетевых папок SMB берутся из настроек
+        SmbConnections.init(appContext)
+    }
+
     var exoPlayer: ExoPlayer? = null
         private set
 
@@ -99,6 +106,8 @@ class PlayerManager(
     var onPlayerCreated: ((ExoPlayer) -> Unit)? = null
     var onVideoFormatChanged: ((Format) -> Unit)? = null
     var onAudioOutputFormatChanged: ((String) -> Unit)? = null
+    // Туннельный режим реально включился (декодеры и аудиовыход его поддержали)
+    var onTunnelingChanged: ((Boolean) -> Unit)? = null
 
     private val resolvedMediaTypes = ConcurrentHashMap<String, String>()
 
@@ -184,7 +193,9 @@ class PlayerManager(
 
     // Ответы, уже скачанные при проверке ссылки на M3U: плеер получает их без повторного запроса
     private val prefetchStore = PrefetchStore()
-    private val prefetchingDataSourceFactory = PrefetchingDataSource.Factory(defaultDataSourceFactory, prefetchStore)
+    // smb:// (сетевые папки стартового экрана) читает SmbDataSource, остальное - универсальная фабрика
+    private val prefetchingDataSourceFactory =
+        PrefetchingDataSource.Factory(SmbRoutingDataSource.Factory(defaultDataSourceFactory), prefetchStore)
 
     // Типы, определенные при проверке ссылки (переживают очистку resolvedMediaTypes в loadPlaylist)
     private val probedMediaTypes = ConcurrentHashMap<String, String>()
@@ -297,6 +308,37 @@ class PlayerManager(
         val renderersFactory = object : DefaultRenderersFactory(appContext) {
             init {
                 setMediaCodecSelector(mediaCodecSelector)
+            }
+
+            override fun buildVideoRenderers(
+                context: Context,
+                extensionRendererMode: Int,
+                mediaCodecSelector: MediaCodecSelector,
+                enableDecoderFallback: Boolean,
+                eventHandler: Handler,
+                eventListener: VideoRendererEventListener,
+                allowedVideoJoiningTimeMs: Long,
+                out: ArrayList<Renderer>
+            ) {
+                val start = out.size
+                super.buildVideoRenderers(
+                    context, extensionRendererMode, mediaCodecSelector, enableDecoderFallback,
+                    eventHandler, eventListener, allowedVideoJoiningTimeMs, out
+                )
+                if (!mapDvToHevc) return
+                // При подмене DV на HEVC стандартный рендерер заменяем на тот, что не подменяет декодер
+                // для профилей без совместимого слоя HEVC (профиль 5 и др.). Параметры - как в DefaultRenderersFactory
+                val index = (start until out.size).firstOrNull { out[it] is MediaCodecVideoRenderer } ?: return
+                out[index] = DolbyVisionVideoRenderer(
+                    MediaCodecVideoRenderer.Builder(context)
+                        .setCodecAdapterFactory(getCodecAdapterFactory())
+                        .setMediaCodecSelector(mediaCodecSelector)
+                        .setAllowedJoiningTimeMs(allowedVideoJoiningTimeMs)
+                        .setEnableDecoderFallback(enableDecoderFallback)
+                        .setEventHandler(eventHandler)
+                        .setEventListener(eventListener)
+                        .setMaxDroppedFramesToNotify(DefaultRenderersFactory.MAX_DROPPED_VIDEO_FRAME_COUNT_TO_NOTIFY)
+                )
             }
 
             override fun buildAudioRenderers(
@@ -459,10 +501,9 @@ class PlayerManager(
                 // Если это AC3, DTS и т.д., значит работает Passthrough.
                 val encodingName = MediaFormatHelper.getAudioCodecName(config.encoding)
                 val channelStr = MediaFormatHelper.getChannelConfigString(config.channelConfig)
-                val passthrough = if (config.tunneling) " ↳" else ""
-                val info = "$encodingName $channelStr$passthrough"
-
-                onAudioOutputFormatChanged?.invoke(info)
+                onAudioOutputFormatChanged?.invoke("$encodingName $channelStr")
+                // Туннелирование касается видео (кадры идут прямо в аппаратный вывод), показывается у видео
+                onTunnelingChanged?.invoke(config.tunneling)
             }
         })
 
@@ -658,9 +699,8 @@ class PlayerManager(
 
         okHttpClient.newCall(requestBuilder.build()).execute().use { response ->
             if (!response.isSuccessful) return null
-            val contentType = response.header("Content-Type")?.lowercase().orEmpty()
-            // Видео/аудио по ссылке .m3u - не плейлист, плеер откроет его сам
-            if (contentType.startsWith("video/") || contentType.startsWith("audio/")) return null
+            // Видео/аудио по ссылке .m3u - не плейлист, плеер откроет его сам (audio/x-mpegurl - плейлист)
+            if (M3uParser.isMediaContentType(response.header("Content-Type"))) return null
             val contentLength = response.body.contentLength()
             if (contentLength > MAX_PROBE_BYTES) return null
 
@@ -802,6 +842,7 @@ class PlayerManager(
             onPlayerCreated = null
             onVideoFormatChanged = null
             onAudioOutputFormatChanged = null
+            onTunnelingChanged = null
         }
     }
 

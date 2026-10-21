@@ -33,8 +33,11 @@ import top.rootu.dddplayer.data.SettingsRepository
 import top.rootu.dddplayer.data.VideoSettings
 import top.rootu.dddplayer.logic.AnaglyphLogic
 import top.rootu.dddplayer.logic.SettingsMutator
+import top.rootu.dddplayer.logic.StereoFormatLogic
 import top.rootu.dddplayer.logic.TrackLogic
 import top.rootu.dddplayer.model.AspectRatioMode
+import top.rootu.dddplayer.model.HistoryEntry
+import top.rootu.dddplayer.model.HistorySource
 import top.rootu.dddplayer.model.MediaItem
 import top.rootu.dddplayer.model.MenuItem
 import top.rootu.dddplayer.model.PlaybackSpeed
@@ -177,6 +180,8 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     // Quality & Info
     private val _videoResolution = MutableLiveData<String>()
     val videoResolution: LiveData<String> = _videoResolution
+    private val _tunnelingActive = MutableLiveData(false)
+    val tunnelingActive: LiveData<Boolean> = _tunnelingActive
     // Соотношение сторон для отображения: принудительное (если выбрано) или из видео
     private val _videoAspectRatio = MutableLiveData(1.777f)
     val videoAspectRatio: LiveData<Float> = _videoAspectRatio
@@ -185,6 +190,11 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     val aspectRatioMode: LiveData<AspectRatioMode> = _aspectRatioMode
     private val _videoQualityOptions = MutableLiveData<List<VideoQualityOption>>()
     val videoQualityOptions: LiveData<List<VideoQualityOption>> = _videoQualityOptions
+
+    /** Число дорожек видео/аудио/субтитров (без "Авто" и "Выкл") - для скрытия лишних кнопок панели */
+    data class TrackCounts(val video: Int, val audio: Int, val subtitles: Int)
+    private val _trackCounts = MutableLiveData<TrackCounts>()
+    val trackCounts: LiveData<TrackCounts> = _trackCounts
     private val _currentQualityName = MutableLiveData("Auto")
     val currentQualityName: LiveData<String> = _currentQualityName
 
@@ -274,6 +284,9 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     private var isSettingsLoadedFromDb = false
     private var currentUri: String? = null
     private var lastVideoSize: VideoSize? = null
+
+    /** Размер кадра текущего видео (для подписи стереоформата: Half или Full) */
+    val videoSize: VideoSize? get() = lastVideoSize
     var isUserInteracting = false
 
     // Состояние воспроизведения при уходе с экрана (onPause), чтобы в onResume
@@ -442,6 +455,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         playerManager.onAudioOutputFormatChanged = { info ->
             _audioOutputInfo.postValue(info)
         }
+        playerManager.onTunnelingChanged = { _tunnelingActive.postValue(it) }
 
         // Инициализируем плеер сразу
         playerManager.initializePlayer()
@@ -639,6 +653,8 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             if (_isM3uPlaylist.value == true && currentUri != null) {
                 repository.setLastPlayedChannelUri(currentUri)
             }
+            // Новая серия сразу заменяет запись истории источника
+            updateWatchHistory()
 
             // Инфопанель при смене элемента: по настройке или в эфирном режиме
             if (p.mediaItemCount > 1 && (repository.isShowInfoOnTrackChange() || isOverallLiveMode())) {
@@ -981,7 +997,18 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         }
 
         // 3. Видео (Quality)
-        _videoQualityOptions.postValue(TrackLogic.extractVideoTracks(tracks))
+        val videoOptions = TrackLogic.extractVideoTracks(tracks)
+        _videoQualityOptions.postValue(videoOptions)
+        // Пустой список приходит при перезагрузке источника - кнопки не прячем, чтобы не мигали
+        if (!tracks.isEmpty) {
+            _trackCounts.postValue(
+                TrackCounts(
+                    video = videoOptions.count { !it.isAuto },
+                    audio = audioOptions.count { !it.isOff },
+                    subtitles = subtitleOptions.count { !it.isOff }
+                )
+            )
+        }
 
         updateAvailableSettings()
     }
@@ -1182,9 +1209,41 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         anaglyphDelegate.updateAnaglyphMatrix(anaglyphType)
     }
 
+    // Источник видео со стартового экрана: по нему обновляется история "Продолжить просмотр"
+    private var historySource: HistorySource? = null
+
+    fun setHistorySource(source: HistorySource?) {
+        historySource = source
+    }
+
+    /**
+     * Запись истории для источника: текущее видео и позиция. Серия в той же папке заменяет запись источника,
+     * а не добавляет новую.
+     */
+    private fun updateWatchHistory() {
+        val source = historySource ?: return
+        val p = player ?: return
+        val item = getPlayingItem() ?: return
+        val isLive = p.isCurrentMediaItemLive
+        val duration = p.duration.takeIf { it > 0 && it != C.TIME_UNSET && !isLive } ?: 0L
+        repository.recordWatchHistory(
+            HistoryEntry(
+                kind = source.kind,
+                source = source.source,
+                sourceName = source.name,
+                title = item.title ?: item.uri.lastPathSegment.orEmpty(),
+                uri = item.uri.toString(),
+                positionMs = if (isLive) 0L else p.currentPosition.coerceAtLeast(0L),
+                durationMs = duration,
+                updatedAt = System.currentTimeMillis()
+            )
+        )
+    }
+
     fun saveCurrentSettings() {
         val uri = currentUri ?: return
         val p = player ?: return
+        updateWatchHistory()
 
         val positionToSave = if (p.isCurrentMediaItemLive) 0L else p.currentPosition
         // Получаем ID текущих дорожек
@@ -1640,7 +1699,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                     val resId = when (it) {
                         StereoInputType.NONE -> R.string.stereo_mode_mono
                         StereoInputType.SIDE_BY_SIDE -> R.string.stereo_mode_sbs
-                        StereoInputType.TOP_BOTTOM -> R.string.stereo_mode_tb
+                        StereoInputType.TOP_BOTTOM -> R.string.stereo_mode_ou
                         StereoInputType.INTERLACED -> R.string.stereo_mode_interlaced
                         StereoInputType.TILED_1080P -> R.string.stereo_mode_tiled
                     }
@@ -1779,30 +1838,13 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
         when (inputType) {
             StereoInputType.SIDE_BY_SIDE -> {
-                val halfWidth = width / 2
-                val halfAR = halfWidth / height
-                // Логика определения Full/Half SBS. Если AR половины кадра не широкое (например, 1:1),
-                // то предполагаем Full SBS (кадр 2:1), иначе Half SBS (кадр 1:1).
-                if (halfAR < 1.2f) {
-                    finalFrameWidth = width
-                    finalFrameHeight = height
-                } else {
-                    finalFrameWidth = halfWidth
-                    finalFrameHeight = height
-                }
+                // Half SBS растягивает каждый глаз на весь кадр, у Full SBS глаз - половина кадра
+                finalFrameWidth = if (StereoFormatLogic.isHalfFrame(inputType, width, height)) width else width / 2
+                finalFrameHeight = height
             }
             StereoInputType.TOP_BOTTOM -> {
-                val halfHeight = height / 2
-                val halfAR = width / halfHeight
-                // Логика определения Full/Half OU. Если AR половины кадра очень широкое,
-                // то предполагаем Full OU, иначе Half OU.
-                if (halfAR > 2.5f) {
-                    finalFrameWidth = width
-                    finalFrameHeight = height
-                } else {
-                    finalFrameWidth = width
-                    finalFrameHeight = halfHeight
-                }
+                finalFrameWidth = width
+                finalFrameHeight = if (StereoFormatLogic.isHalfFrame(inputType, width, height)) height else height / 2
             }
             else -> { finalFrameWidth = width; finalFrameHeight = height }
         }

@@ -35,10 +35,10 @@
 
     <!-- 3D 模式 -->
     <string name="stereo_mode_mono">普通 2D</string>
-    <string name="stereo_mode_sbs">左右格式 (SBS)</string>
-    <string name="stereo_mode_tb">上下格式 (OU)</string>
-    <string name="stereo_mode_interlaced">交错格式</string>
-    <string name="stereo_mode_tiled">3D(z) 平铺 (1080p 中的 720p)</string>
+    <string name="stereo_mode_sbs">左右格式 (SBS, HSBS)</string>
+    <string name="stereo_mode_ou">上下格式 (OU, HOU)</string>
+    <string name="stereo_mode_interlaced">交错格式 (Interlaced)</string>
+    <string name="stereo_mode_tiled">3D(z)Tiled (1080p 中的 720p)</string>
     <string name="output_mode_anaglyph">红蓝眼镜</string>
     <string name="output_mode_left">仅左眼</string>
     <string name="output_mode_right">仅右眼</string>
@@ -91,6 +91,8 @@
 
     <!-- 播放器消息和错误 -->
     <string name="error_playback_title">播放错误</string>
+    <string name="error_copied">已复制错误详情</string>
+    <string name="error_hint_content_source">打开此文件的应用（文件管理器、SMB 客户端）无法提供文件数据。此类应用经常以不可跳转的方式提供文件，而索引位于末尾的 MP4 无法这样打开。请尝试其他文件管理器，或使用 faststart 重新封装文件。</string>
     <string name="playback_error">播放错误</string>
     <string name="error_video_decoder">视频解码器错误。\n仅播放音频。</string>
     <string name="error_audio_disabled">音频错误。声音已禁用。\n%s</string>
@@ -176,7 +178,7 @@
     <string name="pref_up_action_desc">在播放器中按"上"键时打开什么</string>
     <string name="pref_up_action_osd">快捷设置面板</string>
     <string name="pref_up_action_menu">设置菜单（侧边）</string>
-    <string name="pref_up_action_info">信息面板</string>
+    <string name="pref_up_action_info">信息面板，再按打开侧边菜单</string>
     <string name="pref_up_action_none">无操作</string>
     <string name="pref_ok_action">\'OK\' 键动作</string>
     <string name="pref_ok_action_desc">在播放器中按下 \'OK\' 键时做什么</string>
@@ -204,9 +206,6 @@
     <string name="swipe_release_exit">松开退出</string>
     <string name="pref_pause_dim">暂停时调暗屏幕</string>
     <string name="pref_pause_dim_desc">保护 OLED 屏幕免受烧屏影响</string>
-    <string name="pref_startup_playlist">启动播放列表</string>
-    <string name="pref_startup_playlist_desc">M3U播放列表链接</string>
-    <string name="pref_startup_playlist_not_set">未设置</string>
     <string name="dialog_input_url_title">输入播放列表链接</string>
     <string name="dialog_input_url_hint">http://...</string>
     <string name="save">保存</string>
@@ -220,7 +219,7 @@
     <string name="buffer_panel">在控制面板中</string>
     <string name="buffer_clock">在时钟旁边和信息面板中</string>
     <string name="pref_buffer_size">缓冲区大小</string>
-    <string name="pref_buffer_size_desc">用于缓冲网络视频的内存大小。本地文件使用默认缓冲</string>
+    <string name="pref_buffer_size_desc">用于缓冲网络视频的内存。“自动”保持 15–50 秒的预读：剩余不足 15 秒时继续加载，达到 50 秒时停止。设置为 MB 时，播放器会一直预加载直到填满该容量。本地文件始终使用“自动”</string>
     <string name="buffer_size_auto">自动</string>
     <string name="buffer_size_mb">%d MB</string>
     <string name="buffer_percentage">缓冲: %d%%</string>
@@ -275,6 +274,10 @@
     <string name="show_logs">显示日志</string>
     <string name="error_logs">错误日志</string>
     <string name="error_log_upload">上传日志 (Termbin)</string>
+    <string name="log_uploading">正在上传…</string>
+    <string name="log_upload_retry">出错。重试？</string>
+    <string name="log_upload_failed">无法连接 termbin.com</string>
+    <string name="log_copied">已复制到剪贴板</string>
     <string name="qr_code">二维码</string>
 
     <!-- VR 配置 -->
@@ -402,4 +405,69 @@
     <string name="wizard_ana_ghost_left_text">闭上右眼，用左眼透过“%1$s”滤光片观看。字母 L 清晰可见，而 R 的位置可能有一个比灰色背景更暗或更亮的影子。调整重影抑制（◀ ▶）：影子比背景暗就增大，比背景亮就减小。找到使字母 R 最不明显的值（理想情况下完全看不见）。</string>
     <string name="wizard_ana_ghost_right_text">闭上左眼，用右眼透过“%1$s”滤光片观看。字母 R 清晰可见，而 L 的位置可能有一个比灰色背景更暗或更亮的影子。调整重影抑制（◀ ▶）：影子比背景暗就增大，比背景亮就减小。找到使字母 L 最不明显的值（理想情况下完全看不见）。</string>
     <string name="wizard_param_ghost">重影抑制</string>
+    <string name="files_title">文件</string>
+    <string name="files_internal_storage">内部存储</string>
+    <string name="files_empty">这里没有视频</string>
+    <string name="files_no_access">无法访问此文件夹</string>
+    <string name="files_all_access_title">所有文件访问权限</string>
+    <string name="files_all_access_desc">用于查看视频旁边的字幕（Android 11+）</string>
+    <string name="files_all_access_unavailable">此设备没有授予所有文件访问权限的界面</string>
+    <string name="files_permission_denied">没有存储访问权限，无法看到文件</string>
+    <string name="files_folder">文件夹</string>
+    <string name="home_continue">继续观看</string>
+    <string name="home_playlists">播放列表</string>
+    <string name="home_devices">设备</string>
+    <string name="home_history_all">全部历史（%1$d）</string>
+    <string name="home_history_collapse">收起</string>
+    <string name="home_history_remove">从历史记录中删除</string>
+    <string name="home_playlist_add">添加播放列表</string>
+    <string name="home_playlist_add_desc">M3U 链接，例如 IPTV。长按可编辑</string>
+    <string name="home_playlist_edit">播放列表</string>
+    <string name="home_playlist_name_hint">名称</string>
+    <string name="home_playlist_url_empty">请输入播放列表链接</string>
+    <string name="home_delete">删除</string>
+    <string name="home_unavailable">来源不可用（例如 USB 驱动器已断开）</string>
+    <string name="home_network">网络</string>
+    <string name="home_dlna_server">DLNA 媒体服务器</string>
+    <string name="home_dlna_searching">正在搜索媒体服务器…</string>
+    <string name="home_dlna_not_found">未找到媒体服务器。重新搜索</string>
+    <string name="home_dlna_search_again">重新搜索</string>
+    <string name="home_dlna_search_desc">局域网中的 DLNA 服务器（NAS、电脑、路由器）</string>
+    <string name="home_smb_add">添加网络文件夹（SMB）</string>
+    <string name="home_smb_add_desc">例如 smb://192.168.1.5/Video。长按可编辑</string>
+    <string name="home_smb_title">网络文件夹</string>
+    <string name="home_smb_address_hint">smb://服务器/共享文件夹</string>
+    <string name="home_smb_user_hint">用户（留空为访客，DOMAIN\\user）</string>
+    <string name="home_smb_password_hint">密码</string>
+    <string name="home_smb_address_invalid">请输入 smb://服务器/共享文件夹 格式的地址</string>
+    <string name="home_smb_error">无法打开：%1$s</string>
+    <string-array name="file_size_units">
+        <item>B</item>
+        <item>KB</item>
+        <item>MB</item>
+        <item>GB</item>
+        <item>TB</item>
+    </string-array>
+    <!-- Диагностика устройства -->
+    <string name="pref_diagnostics">设备诊断</string>
+    <string name="pref_diagnostics_desc">显示屏、HDR、音频输出和解码器。可复制报告用于反馈问题</string>
+    <string name="diag_sec_device">设备</string>
+    <string name="diag_sec_display">显示屏</string>
+    <string name="diag_sec_audio_out">音频输出</string>
+    <string name="diag_sec_video_dec">视频解码器</string>
+    <string name="diag_sec_audio_dec">音频解码器</string>
+    <string name="diag_model">型号</string>
+    <string name="diag_app_version">播放器版本</string>
+    <string name="diag_abi">架构</string>
+    <string name="diag_heap">应用内存</string>
+    <string name="diag_mode">当前模式</string>
+    <string name="diag_modes">支持的模式</string>
+    <string name="diag_hdr">HDR</string>
+    <string name="diag_wide_gamut">广色域</string>
+    <string name="diag_passthrough">直通 (Media3)</string>
+    <string name="diag_max_channels">最大声道数</string>
+    <string name="diag_none">无</string>
+    <string name="diag_yes">是</string>
+    <string name="diag_no">否</string>
+    <string name="diag_builtin">内置</string>
 </resources>

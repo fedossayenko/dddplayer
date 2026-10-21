@@ -4,15 +4,16 @@
 
 1. **Intent** (`IntentUtils.parseIntent`) — одиночный файл или `video_list`, см. [INTENT_API.md](INTENT_API.md).
 2. **Одиночная ссылка `.m3u`/`.m3u8`** из Intent — плеер проверяет, не плейлист ли это.
-3. **Стартовый плейлист** (`startup_playlist_uri`, задается в настройках) — открывается при запуске
-   без данных. Проверка на M3U делается принудительно (`forceM3uProbe = true`), потому что у таких ссылок
-   часто нет расширения (`get.php?...`).
+3. **Плейлисты по ссылке на стартовом экране** (`saved_playlists`: название и ссылка; прежний стартовый плейлист
+   `startup_playlist_uri` переносится сюда один раз). Проверка на M3U делается принудительно (`forceM3uProbe = true`,
+   ключ `EXTRA_FORCE_M3U`), потому что у таких ссылок часто нет расширения (`get.php?...`).
 
 ## M3U-проба (`PlayerManager.expandM3u`)
 
 - Проверяется только одиночная ссылка, путь которой заканчивается на `.m3u`/`.m3u8` (или любая при `force`).
 - http(s) скачивается **один раз** (`fetchForProbe`), остальное читается через `ContentResolver`.
-  Лимит — `MAX_PROBE_BYTES` (32 МБ). Content-Type `video/*` и `audio/*` сразу означает «не плейлист».
+  Лимит — `MAX_PROBE_BYTES` (32 МБ). Content-Type `video/*` и `audio/*` сразу означает «не плейлист»,
+  кроме типов `*mpegurl` (`M3uParser.isMediaContentType`): TorrServer отдает плейлист «Играть все» как `audio/x-mpegurl`.
 - `M3uParser.isPlaylist`: есть `#EXTINF` и **нет ни одного** `#EXT-X-`. Любой HLS-тег означает HLS.
 - Если это не M3U, ответ кладется в `PrefetchStore`, и плеер получает его без второго запроса.
   Если в тексте есть `#EXT-X-`, тип сразу помечается как HLS (`probedMediaTypes`).

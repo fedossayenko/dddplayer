@@ -40,10 +40,10 @@
 
     <!-- 3D Modes -->
     <string name="stereo_mode_mono">Normal 2D</string>
-    <string name="stereo_mode_sbs">Side-by-Side (SBS)</string>
-    <string name="stereo_mode_tb">Over-Under (OU)</string>
+    <string name="stereo_mode_sbs">Side-by-Side (SBS, HSBS)</string>
+    <string name="stereo_mode_ou">Over-Under (OU, HOU)</string>
     <string name="stereo_mode_interlaced">Interlaced</string>
-    <string name="stereo_mode_tiled">3D(z) Tiled (720p in 1080p)</string>
+    <string name="stereo_mode_tiled">3D(z)Tiled (720p in 1080p)</string>
     <string name="output_mode_anaglyph">Anaglyph (Glasses)</string>
     <string name="output_mode_left">Left Only</string>
     <string name="output_mode_right">Right Only</string>
@@ -103,6 +103,8 @@
 
     <!-- Player Messages & Errors -->
     <string name="error_playback_title">Playback Error</string>
+    <string name="error_copied">Error details copied</string>
+    <string name="error_hint_content_source">The file could not be read from the app that opened it (file manager, SMB client). Such apps often serve a file without seeking, and an MP4 with its index at the end can\'t be opened that way. Try another file manager or remux the file with faststart.</string>
     <string name="playback_error">Playback Error</string>
     <string name="error_video_decoder">Video decoder error.\nPlaying audio only.</string>
     <string name="error_audio_disabled">Audio error. Sound is disabled.\n%s</string>
@@ -193,7 +195,7 @@
     <string name="pref_up_action_desc">What to open when pressing \'Up\' in the player</string>
     <string name="pref_up_action_osd">Quick Settings Panel</string>
     <string name="pref_up_action_menu">Settings Menu (Side)</string>
-    <string name="pref_up_action_info">Info panel</string>
+    <string name="pref_up_action_info">Info panel, then side menu</string>
     <string name="pref_up_action_none">Nothing</string>
     <string name="pref_ok_action">\'OK\' Button Action</string>
     <string name="pref_ok_action_desc">What to do when pressing \'OK\' in the player</string>
@@ -221,9 +223,6 @@
     <string name="swipe_release_exit">Release to exit</string>
     <string name="pref_pause_dim">Dim screen on pause</string>
     <string name="pref_pause_dim_desc">Protects OLED screens from burn-in</string>
-    <string name="pref_startup_playlist">Startup Playlist</string>
-    <string name="pref_startup_playlist_desc">URL to M3U playlist</string>
-    <string name="pref_startup_playlist_not_set">Not set</string>
     <string name="dialog_input_url_title">Enter Playlist URL</string>
     <string name="dialog_input_url_hint">http://...</string>
     <string name="save">Save</string>
@@ -237,7 +236,7 @@
     <string name="buffer_panel">In control panel</string>
     <string name="buffer_clock">Near the clock and in the info panel</string>
     <string name="pref_buffer_size">Buffer size</string>
-    <string name="pref_buffer_size_desc">Amount of RAM for buffering network video. Local files use the default buffer</string>
+    <string name="pref_buffer_size_desc">Memory for buffering network video. “Auto” keeps 15–50 seconds ahead: it loads more when less than 15 s is left and stops at 50 s. With a size in MB the player loads ahead until that amount is filled. Local files always use “Auto”</string>
     <string name="buffer_size_auto">Auto</string>
     <string name="buffer_size_mb">%d MB</string>
     <string name="buffer_percentage">Buffer: %d%%</string>
@@ -293,6 +292,10 @@
     <string name="show_logs">Show Log</string>
     <string name="error_logs">Error Log</string>
     <string name="error_log_upload">Upload Log (Termbin)</string>
+    <string name="log_uploading">Uploading…</string>
+    <string name="log_upload_retry">Error. Retry?</string>
+    <string name="log_upload_failed">Could not connect to termbin.com</string>
+    <string name="log_copied">Copied to clipboard</string>
     <string name="qr_code">QR Code</string>
 
     <!-- VR Config -->
@@ -419,4 +422,69 @@
     <string name="wizard_ana_ghost_left_text">Close the right eye and look with the left one, through the “%1$s” filter. The letter L is clear, and in place of R there may be a shadow, darker or lighter than the gray background. Change the ghost suppression (◀ ▶): if the shadow is darker than the background, increase it; if lighter, decrease it. Find the value at which the letter R is least visible (ideally not visible at all).</string>
     <string name="wizard_ana_ghost_right_text">Close the left eye and look with the right one, through the “%1$s” filter. The letter R is clear, and in place of L there may be a shadow, darker or lighter than the gray background. Change the ghost suppression (◀ ▶): if the shadow is darker than the background, increase it; if lighter, decrease it. Find the value at which the letter L is least visible (ideally not visible at all).</string>
     <string name="wizard_param_ghost">Ghost suppression</string>
+    <string name="files_title">Files</string>
+    <string name="files_internal_storage">Internal storage</string>
+    <string name="files_empty">No videos here</string>
+    <string name="files_no_access">No access to this folder</string>
+    <string name="files_all_access_title">All files access</string>
+    <string name="files_all_access_desc">Needed to see subtitles next to videos (Android 11+)</string>
+    <string name="files_all_access_unavailable">This device has no screen to grant all files access</string>
+    <string name="files_permission_denied">Without storage access files are not visible</string>
+    <string name="files_folder">Folder</string>
+    <string name="home_continue">Continue watching</string>
+    <string name="home_playlists">Playlists</string>
+    <string name="home_devices">Devices</string>
+    <string name="home_history_all">All history (%1$d)</string>
+    <string name="home_history_collapse">Collapse</string>
+    <string name="home_history_remove">Remove from history</string>
+    <string name="home_playlist_add">Add playlist</string>
+    <string name="home_playlist_add_desc">M3U link, e.g. IPTV. Long press to edit</string>
+    <string name="home_playlist_edit">Playlist</string>
+    <string name="home_playlist_name_hint">Name</string>
+    <string name="home_playlist_url_empty">Enter the playlist link</string>
+    <string name="home_delete" tools:ignore="ButtonCase">DELETE</string>
+    <string name="home_unavailable">Source is not available (for example, the USB drive is disconnected)</string>
+    <string name="home_network">Network</string>
+    <string name="home_dlna_server">DLNA media server</string>
+    <string name="home_dlna_searching">Searching for media servers…</string>
+    <string name="home_dlna_not_found">No media servers found. Search again</string>
+    <string name="home_dlna_search_again">Search again</string>
+    <string name="home_dlna_search_desc">DLNA servers in the local network (NAS, PC, router)</string>
+    <string name="home_smb_add">Add network folder (SMB)</string>
+    <string name="home_smb_add_desc">For example smb://192.168.1.5/Video. Long press to edit</string>
+    <string name="home_smb_title">Network folder</string>
+    <string name="home_smb_address_hint">smb://server/shared_folder</string>
+    <string name="home_smb_user_hint">User (empty for guest, DOMAIN\\user)</string>
+    <string name="home_smb_password_hint">Password</string>
+    <string name="home_smb_address_invalid">Enter an address like smb://server/shared_folder</string>
+    <string name="home_smb_error">Could not open: %1$s</string>
+    <string-array name="file_size_units">
+        <item>B</item>
+        <item>KB</item>
+        <item>MB</item>
+        <item>GB</item>
+        <item>TB</item>
+    </string-array>
+    <!-- Диагностика устройства -->
+    <string name="pref_diagnostics">Device diagnostics</string>
+    <string name="pref_diagnostics_desc">Display, HDR, audio output and decoders. The report can be copied for a bug report</string>
+    <string name="diag_sec_device">Device</string>
+    <string name="diag_sec_display">Display</string>
+    <string name="diag_sec_audio_out">Audio output</string>
+    <string name="diag_sec_video_dec">Video decoders</string>
+    <string name="diag_sec_audio_dec">Audio decoders</string>
+    <string name="diag_model">Model</string>
+    <string name="diag_app_version">Player version</string>
+    <string name="diag_abi">Architecture</string>
+    <string name="diag_heap">App memory</string>
+    <string name="diag_mode">Current mode</string>
+    <string name="diag_modes">Supported modes</string>
+    <string name="diag_hdr">HDR</string>
+    <string name="diag_wide_gamut">Wide color gamut</string>
+    <string name="diag_passthrough">Passthrough (Media3)</string>
+    <string name="diag_max_channels">Max channels</string>
+    <string name="diag_none">none</string>
+    <string name="diag_yes">yes</string>
+    <string name="diag_no">no</string>
+    <string name="diag_builtin">built-in</string>
 </resources>
