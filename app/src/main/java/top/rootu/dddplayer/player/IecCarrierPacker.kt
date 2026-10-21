@@ -1,3 +1,5 @@
+// Перенесено из edde746/plezy (GPL-3.0, https://github.com/edde746/plezy). Комментарии на английском оставлены как
+// в оригинале, чтобы переносить исправления из plezy диффами; номера #1804/#1988 - issues plezy.
 package top.rootu.dddplayer.player
 
 import java.nio.ByteBuffer
@@ -6,7 +8,7 @@ import java.nio.ByteBuffer
  * The IEC 61937 carrier tuple every packed bitstream rides: 192kHz, 7.1, PCM-16 shaped.
  *
  * This is the high-bitrate HDMI shape Kodi uses for both TrueHD/MAT and DTS-HD Master Audio, and
- * the one [supportsIecCarrier] probes. The 44.1kHz family would need a 176.4kHz sibling, which is
+ * the one IecCarrierOutput.probeRoute checks. The 44.1kHz family would need a 176.4kHz sibling, which is
  * deliberately not built; streams from that family decode instead.
  */
 internal object IecCarrier {

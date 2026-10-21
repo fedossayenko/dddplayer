@@ -39,7 +39,7 @@ internal object IecCarrierOutput {
 
     /**
      * HDMI принимает IEC 61937 192 кГц/7.1 напрямую, а для DTS-HD приемник еще и объявляет DTS.
-     * ponytail: API 24–28 (проверка через AudioDeviceInfo) не сделана, там остается прежний путь.
+     * Не сделано: на API 24–28 (проверка через AudioDeviceInfo) несущей нет, там остается прежний путь.
      */
     // Проверка маршрута - несколько binder-вызовов, а ExoPlayer спрашивает о каждом формате много раз
     private const val ROUTE_CACHE_MS = 2_000L

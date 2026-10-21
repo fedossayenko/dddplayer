@@ -1,3 +1,5 @@
+// Перенесено из edde746/plezy (GPL-3.0, https://github.com/edde746/plezy). Комментарии на английском оставлены как
+// в оригинале, чтобы переносить исправления из plezy диффами; номера #1804/#1988 - issues plezy.
 package top.rootu.dddplayer.player
 
 import java.nio.ByteBuffer
