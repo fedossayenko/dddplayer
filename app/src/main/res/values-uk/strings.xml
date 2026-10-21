@@ -126,7 +126,7 @@
     <string name="pref_downmix_lfe">Сабвуфер (LFE)</string>
     <string name="pref_tunneling">Тунельне відтворення</string>
     <string name="pref_tunneling_summary">Туннелювання дозволяє відео йти в обхід коду додатку та Android, що може забезпечити більш ефективний рендеринг 4K/HDR контенту, але може не працювати на всіх пристроях.\nУвага!!! При туннельному відтворенні обробкою та синхронізацією відео займається кінцевий пристрій, тому з цією опцією не працюватиме частина функціоналу плеєра.</string>
-    <string name="pref_map_dv">Сумісність з Dolby Vision</string>
+    <string name="pref_map_dv">Режим Dolby Vision</string>
     <string name="pref_afr_sec">AFR</string>
     <string name="pref_framerate_matching">Автоматичне узгодження частоти кадрів</string>
     <string name="pref_framerate_matching_on">Перемикати частоту оновлення екрана відповідно до частоти кадрів відео</string>
@@ -271,10 +271,11 @@
     <string name="pref_app_language_desc">Змінити мову програми. Зміна вимагає перезапуску програми.</string>
     <string name="develop_tost">Вибачте, ця функція ще в розробці.</string>
     <string name="pref_remember_audio">Запам’ятовувати аудіодоріжку</string>
-    <string name="pref_dv_mode_desc">Відтворювати Dolby Vision базовим шаром HDR10/HLG (HEVC). Авто — лише якщо екран або декодер не підтримують Dolby Vision. Завжди — допомагає при чорному екрані (DV Profile 7).</string>
-    <string name="dv_mode_off">Вимк (декодер Dolby Vision)</string>
+    <string name="pref_dv_mode_desc">Як відтворювати Dolby Vision. Dolby Vision — декодером DV. Авто — DV, якщо екран і декодер його підтримують, інакше HDR10/HLG. HDR10/HLG — лише базовий шар, допомагає при чорному екрані (часто з Profile 7). Dolby Vision (P7 → P8.1) — фільми Profile 7 (ремукси UHD Blu-ray) конвертуються в Profile 8.1 і грають у DV на пристроях без підтримки Profile 7.</string>
+    <string name="dv_mode_off">Dolby Vision</string>
     <string name="dv_mode_auto">Авто</string>
-    <string name="dv_mode_always">Завжди (HDR10/HLG)</string>
+    <string name="dv_mode_always">HDR10/HLG</string>
+    <string name="dv_mode_convert">Dolby Vision (P7 → P8.1)</string>
     <string name="subtitle_load_file">Завантажити з файлу…</string>
     <string name="subtitle_unsupported">Непідтримуваний формат субтитрів</string>
     <string name="subtitle_no_file_picker">На пристрої немає системного вибору файлів</string>

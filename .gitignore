@@ -13,3 +13,5 @@
 .externalNativeBuild
 .cxx
 local.properties
+/dovi/src/main/cpp/libdovi/
+/dovi/build/

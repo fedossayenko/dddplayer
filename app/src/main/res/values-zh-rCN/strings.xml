@@ -130,7 +130,7 @@
     <string name="pref_downmix_lfe">低音炮 (LFE)</string>
     <string name="pref_tunneling">隧道播放</string>
     <string name="pref_tunneling_summary">隧道播放允许视频绕过应用程序和 Android 框架代码，从而可以更有效地渲染 4K/HDR 内容，但可能并非在所有设备上都能使用。\n注意！！！在隧道播放模式下，视频的处理和同步由终端设备负责，因此部分播放器功能将无法使用。</string>
-    <string name="pref_map_dv">Dolby Vision 兼容性</string>
+    <string name="pref_map_dv">Dolby Vision 模式</string>
     <string name="pref_afr_sec">AFR</string>
     <string name="pref_framerate_matching">自动帧率匹配</string>
     <string name="pref_framerate_matching_on">切换显示刷新率以匹配视频帧率</string>
@@ -286,10 +286,11 @@
     <string name="vr_config_error">读取 Cardboard 配置文件时出错。</string>
     <string name="pref_app_language_desc">切换应用语言。此更改需要重启应用。</string>
     <string name="pref_remember_audio">记住音轨</string>
-    <string name="pref_dv_mode_desc">以 HDR10/HLG 基础层 (HEVC) 播放 Dolby Vision。自动：仅当屏幕或解码器不支持 Dolby Vision 时。始终：可解决黑屏问题（DV Profile 7）。</string>
-    <string name="dv_mode_off">关闭（Dolby Vision 解码器）</string>
+    <string name="pref_dv_mode_desc">Dolby Vision 的播放方式。Dolby Vision：使用 DV 解码器。自动：屏幕和解码器支持时使用 DV，否则使用 HDR10/HLG。HDR10/HLG：仅播放基础层，可解决黑屏问题（常见于 Profile 7）。Dolby Vision（P7 → P8.1）：将 Profile 7 影片（UHD 蓝光 Remux）转换为 Profile 8.1，在不支持 Profile 7 的设备上以 DV 播放。</string>
+    <string name="dv_mode_off">Dolby Vision</string>
     <string name="dv_mode_auto">自动</string>
-    <string name="dv_mode_always">始终（HDR10/HLG）</string>
+    <string name="dv_mode_always">HDR10/HLG</string>
+    <string name="dv_mode_convert">Dolby Vision（P7 → P8.1）</string>
     <string name="subtitle_load_file">从文件加载…</string>
     <string name="subtitle_unsupported">不支持的字幕格式</string>
     <string name="subtitle_no_file_picker">此设备没有可用的文件选择器</string>

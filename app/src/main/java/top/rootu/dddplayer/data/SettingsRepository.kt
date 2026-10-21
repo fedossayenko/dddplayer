@@ -74,6 +74,7 @@ class SettingsRepository private constructor(context: Context) {
         const val DV_MODE_OFF = 0 // Системный DV декодер
         const val DV_MODE_AUTO = 1 // HEVC, только если экран или декодер не поддерживают Dolby Vision
         const val DV_MODE_ALWAYS = 2 // Всегда HEVC
+        const val DV_MODE_CONVERT = 3 // Profile 7 -> 8.1 (libdovi), иначе как Авто
         const val RENDER_API_AUTO = 0
         const val RENDER_API_GLES2 = 1
 
@@ -321,18 +322,27 @@ class SettingsRepository private constructor(context: Context) {
     fun getMixMiddle(): Float = prefs.getFloat("mix_middle", 1.0f)
     fun setMixMiddle(value: Float) = prefs.edit { putFloat("mix_middle", value) }
 
-    // Совместимость с Dolby Vision (DV_MODE_*).
-    // Миграция со старого переключателя "map_dv_to_hevc" (вкл по умолчанию): вкл -> "Всегда", выкл -> "Выкл".
+    // Режим Dolby Vision (DV_MODE_*), по умолчанию "Авто": DV там, где экран и декодер его умеют, иначе HDR10/HLG.
+    // Миграция (один раз): выключенный старый переключатель "map_dv_to_hevc" -> "Dolby Vision" (DV_MODE_OFF);
+    // "HDR10/HLG" (прежнее значение по умолчанию, его записывала и версия 1.4.0) -> "Авто".
+    // Явно выбранные "Dolby Vision" и "P7 -> P8.1" не меняются.
     fun getDvMode(): Int {
-        if (!prefs.contains("dv_mode")) {
-            val migrated = if (prefs.getBoolean("map_dv_to_hevc", true)) DV_MODE_ALWAYS else DV_MODE_OFF
-            prefs.edit {
-                putInt("dv_mode", migrated)
-                remove("map_dv_to_hevc")
+        if (!prefs.getBoolean("dv_mode_auto_default", false)) {
+            val legacyOff = prefs.contains("map_dv_to_hevc") && !prefs.getBoolean("map_dv_to_hevc", true)
+            val stored = if (prefs.contains("dv_mode")) prefs.getInt("dv_mode", DV_MODE_AUTO) else null
+            val mode = when {
+                legacyOff -> DV_MODE_OFF
+                stored == null || stored == DV_MODE_ALWAYS -> DV_MODE_AUTO
+                else -> stored
             }
-            return migrated
+            prefs.edit {
+                putInt("dv_mode", mode)
+                remove("map_dv_to_hevc")
+                putBoolean("dv_mode_auto_default", true)
+            }
+            return mode
         }
-        return prefs.getInt("dv_mode", DV_MODE_ALWAYS)
+        return prefs.getInt("dv_mode", DV_MODE_AUTO)
     }
     fun setDvMode(mode: Int) = prefs.edit { putInt("dv_mode", mode) }
 

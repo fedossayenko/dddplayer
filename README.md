@@ -194,7 +194,7 @@ When started with `startActivityForResult` and `return_result = true`, the playe
 *   The version is taken from git (`versionCode` = commit count, `versionName` = `git describe --tags`), so clone with full history.
 *   Every push and pull request to `main` is built by [GitHub Actions](https://github.com/usmanec/dddplayer/actions/workflows/android-build.yml); the debug APK is attached to the run as an artifact.
 *   Releases are published by the [Release workflow](.github/workflows/release.yml) when a `vX.Y.Z` tag is pushed: it builds a signed `app-release.apk` and attaches it to a GitHub Release (used by the in-app updater). Signing reads `KEYSTORE_FILE` (relative to `app/`), `KEYSTORE_PASSWORD`, `RELEASE_SIGN_KEY_ALIAS` and `RELEASE_SIGN_KEY_PASSWORD` from the environment; without them the release build is unsigned.
-*   The FFmpeg and AV1 decoder AARs in `app/libs` are prebuilt; see [app/libs/README.md](app/libs/README.md) to rebuild them.
+*   The FFmpeg and AV1 decoder AARs and the Dolby Vision conversion AAR (`lib-dovi-release.aar`, module `dovi`, built with `./gradlew -Pdovi=true :dovi:assembleRelease`) in `app/libs` are prebuilt; see [app/libs/README.md](app/libs/README.md) to rebuild them.
 *   Developer documentation: [AGENTS.md](AGENTS.md) and [docs/](docs/README.md) (in Russian).
 
 ### Contributing & Feedback

@@ -99,9 +99,26 @@ class SettingsRepositoryTest {
     }
 
     @Test
-    fun `dolby vision compatibility stays on by default`() {
-        assertEquals(SettingsRepository.DV_MODE_ALWAYS, repo().getDvMode())
+    fun `dolby vision is auto by default`() {
+        assertEquals(SettingsRepository.DV_MODE_AUTO, repo().getDvMode())
         assertTrue(prefs.contains("dv_mode"))
+    }
+
+    @Test
+    fun `hdr10 mode stored by default is moved to auto once`() {
+        // Версия 1.4.0 записывала "HDR10/HLG" (DV_MODE_ALWAYS) как значение по умолчанию
+        prefs.edit { putInt("dv_mode", SettingsRepository.DV_MODE_ALWAYS) }
+        val repo = repo()
+        assertEquals(SettingsRepository.DV_MODE_AUTO, repo.getDvMode())
+        // Выбранный после этого "HDR10/HLG" сохраняется
+        repo.setDvMode(SettingsRepository.DV_MODE_ALWAYS)
+        assertEquals(SettingsRepository.DV_MODE_ALWAYS, repo.getDvMode())
+    }
+
+    @Test
+    fun `explicit dolby vision mode is kept`() {
+        prefs.edit { putInt("dv_mode", SettingsRepository.DV_MODE_OFF) }
+        assertEquals(SettingsRepository.DV_MODE_OFF, repo().getDvMode())
     }
 
     @Test

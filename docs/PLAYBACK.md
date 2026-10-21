@@ -9,6 +9,13 @@
     «авто» (если нет DV декодера или экран не сообщает о поддержке DV, `isDolbyVisionSupported`);
     селектор видит только MIME-тип, поэтому при подмене видеорендерер заменяется на `DolbyVisionVideoRenderer`:
     для профилей без совместимого слоя HEVC (5, 9, 10, см. `DolbyVisionLogic`) он берет обычный выбор декодера;
+  - `dv_mode` = 3: `ExtractorsFactory` оборачивает MKV/MP4 в `DoviExtractorWrapper`. Для `dvhe.07` RPU
+    конвертируется в 8.1 (libdovi, режим 2, как `convertdovi` у Kodi), слой EL отбрасывается, формат
+    становится `dvhe.08`. Профили 5/8 проходят без изменений (в логе `DoviConvertTrack: DV ...: native`).
+    Нативная часть (`libdovi_bridge.so`: JNI-мост `DoviBridge` и статическая libdovi из quietvoid/dovi_tool)
+    собирается отдельным модулем `dovi` в `app/libs/lib-dovi-release.aar` (`./gradlew -Pdovi=true
+    :dovi:assembleRelease`, см. `app/libs/README.md`). Без AAR `DoviBridge.isAvailable()` = false: пункт
+    скрыт в настройках, а сохраненный `dv_mode` = 3 работает как «авто»;
   - `DefaultTrackSelector`: туннелирование, предпочтительные языки аудио и субтитров (`""` — по умолчанию,
     `device` — языки системы), `exceedRendererCapabilitiesIfNecessary`. Включилось ли туннелирование на деле,
     видно по `AudioTrackConfig.tunneling` (`onAudioTrackInitialized`): тогда у бейджа видео в инфопанели стоит `↳`.

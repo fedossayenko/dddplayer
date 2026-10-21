@@ -13,7 +13,8 @@ compileSdk 36). Умеет обычное 2D/HDR видео и стереопа�
 
 Модуль один — `:app`. Kotlin, Android Views (без Compose UI), MVVM на LiveData и корутинах.
 Плеер построен на Media3/ExoPlayer 1.9.0, сеть идет через OkHttp 5. Настройки видео хранятся в Room,
-глобальные — в SharedPreferences, постеры грузит Coil 2. Декодеры ffmpeg-audio и AV1 подключены как AAR из `app/libs`.
+глобальные — в SharedPreferences, постеры грузит Coil 2. Декодеры ffmpeg-audio и AV1 и нативная конвертация Dolby Vision P7 → 8.1 (модуль `dovi`, собирается
+только с `-Pdovi=true`) подключены как AAR из `app/libs`.
 
 ## Сборка и проверка
 
