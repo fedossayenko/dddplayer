@@ -441,7 +441,7 @@ class GlobalSettingsActivity : AppCompatActivity() {
                 // Конвертация P7 -> 8.1 только при собранной нативной части (lib-dovi-release.aar в app/libs)
                 listOfNotNull(getString(R.string.dv_mode_convert).takeIf { DoviBridge.isAvailable() })
             // Конвертация выбрана, но библиотеки нет - режим работает как Авто, его и отмечаем
-            val current = (settingsViewModel.dvMode.value ?: SettingsRepository.DV_MODE_ALWAYS)
+            val current = (settingsViewModel.dvMode.value ?: SettingsRepository.DV_MODE_AUTO)
                 .let { if (it > options.lastIndex) SettingsRepository.DV_MODE_AUTO else it }
             showSingleChoiceDialog(getString(R.string.pref_map_dv), options, current) {
                 settingsViewModel.setDvMode(it)

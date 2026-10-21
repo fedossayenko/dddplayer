@@ -27,17 +27,6 @@ class SettingsRepository private constructor(context: Context) {
     private val prefs: SharedPreferences =
         context.getSharedPreferences("global_prefs", Context.MODE_PRIVATE)
 
-    // Свежая установка, а не обновление: время установки и последнего обновления совпадают (подменяется в тестах)
-    internal var isFreshInstall: () -> Boolean = {
-        try {
-            @Suppress("DEPRECATION")
-            val info = context.packageManager.getPackageInfo(context.packageName, 0)
-            info.firstInstallTime == info.lastUpdateTime
-        } catch (e: Exception) {
-            false
-        }
-    }
-
     companion object {
         const val TRACK_DEFAULT = ""
         const val TRACK_DEVICE = "device"
@@ -333,24 +322,27 @@ class SettingsRepository private constructor(context: Context) {
     fun getMixMiddle(): Float = prefs.getFloat("mix_middle", 1.0f)
     fun setMixMiddle(value: Float) = prefs.edit { putFloat("mix_middle", value) }
 
-    // Совместимость с Dolby Vision (DV_MODE_*).
-    // Миграция со старого переключателя "map_dv_to_hevc" (вкл по умолчанию): вкл -> "Всегда", выкл -> "Выкл".
+    // Режим Dolby Vision (DV_MODE_*), по умолчанию "Авто": DV там, где экран и декодер его умеют, иначе HDR10/HLG.
+    // Миграция (один раз): выключенный старый переключатель "map_dv_to_hevc" -> "Dolby Vision" (DV_MODE_OFF);
+    // "HDR10/HLG" (прежнее значение по умолчанию, его записывала и версия 1.4.0) -> "Авто".
+    // Явно выбранные "Dolby Vision" и "P7 -> P8.1" не меняются.
     fun getDvMode(): Int {
-        if (!prefs.contains("dv_mode")) {
-            val migrated = when {
-                prefs.contains("map_dv_to_hevc") ->
-                    if (prefs.getBoolean("map_dv_to_hevc", true)) DV_MODE_ALWAYS else DV_MODE_OFF
-                // Новая установка - Авто (DV там, где экран и декодер его умеют), обновление - прежнее HDR10/HLG
-                isFreshInstall() -> DV_MODE_AUTO
-                else -> DV_MODE_ALWAYS
+        if (!prefs.getBoolean("dv_mode_auto_default", false)) {
+            val legacyOff = prefs.contains("map_dv_to_hevc") && !prefs.getBoolean("map_dv_to_hevc", true)
+            val stored = if (prefs.contains("dv_mode")) prefs.getInt("dv_mode", DV_MODE_AUTO) else null
+            val mode = when {
+                legacyOff -> DV_MODE_OFF
+                stored == null || stored == DV_MODE_ALWAYS -> DV_MODE_AUTO
+                else -> stored
             }
             prefs.edit {
-                putInt("dv_mode", migrated)
+                putInt("dv_mode", mode)
                 remove("map_dv_to_hevc")
+                putBoolean("dv_mode_auto_default", true)
             }
-            return migrated
+            return mode
         }
-        return prefs.getInt("dv_mode", DV_MODE_ALWAYS)
+        return prefs.getInt("dv_mode", DV_MODE_AUTO)
     }
     fun setDvMode(mode: Int) = prefs.edit { putInt("dv_mode", mode) }
 
