@@ -29,17 +29,27 @@ object DlnaLogic {
     const val SSDP_ADDRESS = "239.255.255.250"
     const val SSDP_PORT = 1900
     const val MEDIA_SERVER = "urn:schemas-upnp-org:device:MediaServer:1"
+
+    /**
+     * Что искать: часть серверов отвечает только на свой тип устройства, часть - только на службу каталога
+     * или на корневое устройство. Лишние устройства отсеет parseDeviceDescription.
+     */
+    val SEARCH_TARGETS = listOf(
+        MEDIA_SERVER,
+        "urn:schemas-upnp-org:service:ContentDirectory:1",
+        "upnp:rootdevice"
+    )
     private const val CONTENT_DIRECTORY = "urn:schemas-upnp-org:service:ContentDirectory"
     const val BROWSE_ACTION = "\"urn:schemas-upnp-org:service:ContentDirectory:1#Browse\""
     const val ROOT_ID = "0"
 
     /** Запрос поиска медиасерверов в сети. */
-    fun searchRequest(mx: Int = 2): String =
+    fun searchRequest(target: String = MEDIA_SERVER, mx: Int = 2): String =
         "M-SEARCH * HTTP/1.1\r\n" +
                 "HOST: $SSDP_ADDRESS:$SSDP_PORT\r\n" +
                 "MAN: \"ssdp:discover\"\r\n" +
                 "MX: $mx\r\n" +
-                "ST: $MEDIA_SERVER\r\n\r\n"
+                "ST: $target\r\n\r\n"
 
     /** Адрес описания устройства (LOCATION) из ответа SSDP. */
     fun parseLocation(response: String): String? = response.lineSequence()

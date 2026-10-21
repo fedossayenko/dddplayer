@@ -8,6 +8,15 @@ import org.junit.Test
 class DlnaLogicTest {
 
     @Test
+    fun `search request asks for the given target`() {
+        val request = DlnaLogic.searchRequest("upnp:rootdevice")
+        assertTrue(request.startsWith("M-SEARCH * HTTP/1.1\r\n"))
+        assertTrue(request.contains("ST: upnp:rootdevice\r\n"))
+        assertTrue(request.endsWith("\r\n\r\n"))
+        assertTrue(DlnaLogic.searchRequest().contains("ST: ${DlnaLogic.MEDIA_SERVER}\r\n"))
+    }
+
+    @Test
     fun `location is read from an ssdp response`() {
         val response = "HTTP/1.1 200 OK\r\nCACHE-CONTROL: max-age=1800\r\nLocation: http://192.168.1.10:8200/rootDesc.xml\r\n" +
                 "ST: urn:schemas-upnp-org:device:MediaServer:1\r\n\r\n"

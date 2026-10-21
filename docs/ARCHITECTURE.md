@@ -47,7 +47,8 @@ SurfaceView (2D/HDR)  или  StereoGLSurfaceView ─► StereoRenderer (GLSL)
   некоторых файловых менеджеров) и поиск субтитров рядом с видео. На Android 11+ субтитры (не медиафайлы) видны
   только с «доступом ко всем файлам» (`MANAGE_EXTERNAL_STORAGE`), браузер предлагает его отдельным пунктом.
 - **DLNA** (`logic/DlnaLogic`, `player/DlnaClient`) — без сторонних библиотек: поиск медиасерверов SSDP (M-SEARCH
-  на 239.255.255.250:1900 с `MulticastLock`), описание устройства (служба ContentDirectory), запрос `Browse`
+  на 239.255.255.250:1900 с `MulticastLock`, через каждый IPv4-интерфейс, на `MediaServer:1`, `ContentDirectory:1`
+  и `upnp:rootdevice`; описание устройства читается с таймаутом 4 с), описание устройства (служба ContentDirectory), запрос `Browse`
   постранично и разбор DIDL-Lite (папки, видео по `protocolInfo` video/*, субтитры text/srt и т. п.). Видео папки
   сервера открываются плейлистом по HTTP-ссылкам (перемотка через Range), субтитры сервера передаются в
   `video_list.subtitles`. В истории источник — адрес описания сервера и id папки (`HomeLogic.dlnaSource`): при
