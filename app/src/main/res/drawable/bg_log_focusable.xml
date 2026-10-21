@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Область лога на экране ошибки/диагностики: в фокусе (пульт) - яркая рамка, иначе как bg_error_details -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_focused="true">
+        <shape android:shape="rectangle">
+            <solid android:color="@color/bg_inner_detail" />
+            <stroke android:width="2dp" android:color="@color/white" />
+            <corners android:radius="8dp" />
+        </shape>
+    </item>
+    <item android:drawable="@drawable/bg_error_details" />
+</selector>

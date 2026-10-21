@@ -44,6 +44,7 @@ class LogReportView(
     private val progress: ProgressBar = root.findViewById(R.id.uploadProgress)
     private val qrImage: ImageView = root.findViewById(R.id.qrImage)
     private val urlText: TextView = root.findViewById(R.id.urlText)
+    private val urlBlock: View = root.findViewById(R.id.urlBlock)
 
     // Отдельный файл настроек: экран ошибки работает в процессе :crash, без синглтона SettingsRepository
     private val cachePrefs by lazy { activity.getSharedPreferences(CACHE_PREFS, Context.MODE_PRIVATE) }
@@ -52,7 +53,7 @@ class LogReportView(
         root.findViewById<TextView>(R.id.tvLogTitle).text = title
         close.setOnClickListener { onClose() }
         upload.setOnClickListener { startUpload() }
-        urlText.setOnClickListener { copy(urlText.text.toString()) }
+        urlBlock.setOnClickListener { copy(urlText.text.toString()) }
         // Копирование всего текста долгим нажатием (на пульте - долгий OK на области лога)
         val copyAll = View.OnLongClickListener {
             activity.lifecycleScope.launch { copy(textProvider()) }
@@ -89,7 +90,7 @@ class LogReportView(
         progress.visibility = View.GONE
         upload.visibility = View.GONE
         urlText.text = url
-        urlText.visibility = View.VISIBLE
+        urlBlock.visibility = View.VISIBLE
         loadQrCode(url)
         close.requestFocus()
     }
