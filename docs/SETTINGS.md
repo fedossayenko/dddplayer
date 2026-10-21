@@ -38,8 +38,8 @@
 | `render_api_mode` | `RENDER_API_AUTO` (0) | 0 авто (ES 3.0 если есть), 1 принудительно GLES 2.0 |
 | `pause_dim_level` | 60 | Затемнение на паузе, % |
 | `global_resize_mode`, `video_zoom_scale`, `remember_zoom` | 0 (FIT), 115, false | Масштаб |
-| `video_decoder_priority` | как `decoder_priority` (`EXTENSION_RENDERER_MODE_PREFER`) | Приоритет встроенного AV1 (dav1d) перед декодерами устройства, раздел «Видео» |
-| `audio_decoder_priority` | как `decoder_priority` (`EXTENSION_RENDERER_MODE_PREFER`) | Приоритет встроенного FFmpeg перед декодерами устройства, раздел «Аудио» |
+| `video_decoder_priority` | как `decoder_priority`, если его меняли, иначе `EXTENSION_RENDERER_MODE_ON` (HW+) | Приоритет встроенного AV1 (dav1d) перед декодерами устройства, раздел «Видео» |
+| `audio_decoder_priority` | как `decoder_priority`, если его меняли, иначе `EXTENSION_RENDERER_MODE_PREFER` (SW) | Приоритет встроенного FFmpeg перед декодерами устройства, раздел «Аудио» |
 | `decoder_priority` | — | Прежняя общая настройка; только значение по умолчанию для двух новых |
 | `tunneling_enabled` | false | Туннелирование |
 | `dv_mode` | `DV_MODE_AUTO` (1) | «Режим Dolby Vision»: 0 «Dolby Vision» (DV декодер), 1 «Авто» (HEVC, если экран или декодер не поддерживают DV), 2 «HDR10/HLG» (всегда HEVC), 3 «Dolby Vision (P7 → P8.1)» — конвертация Profile 7 → 8.1 (libdovi; без DV экрана или декодера ведет себя как «авто»). Мигрирует из старого `map_dv_to_hevc` (выкл → 0); прежнее значение по умолчанию 2 один раз переводится в 1 (флаг `dv_mode_auto_default`) |

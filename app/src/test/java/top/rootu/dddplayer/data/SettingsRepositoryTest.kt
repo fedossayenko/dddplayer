@@ -135,8 +135,8 @@ class SettingsRepositoryTest {
     }
 
     @Test
-    fun `decoder priorities default to prefer app decoders`() {
-        assertEquals(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER, repo().getVideoDecoderPriority())
+    fun `av1 prefers device decoders and ffmpeg prefers the app by default`() {
+        assertEquals(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON, repo().getVideoDecoderPriority())
         assertEquals(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER, repo().getAudioDecoderPriority())
     }
 

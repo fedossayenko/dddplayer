@@ -295,14 +295,16 @@ class SettingsRepository private constructor(context: Context) {
     fun setAutoPipEnabled(enabled: Boolean) = prefs.edit { putBoolean("auto_pip", enabled) }
 
     // Приоритет встроенных декодеров (EXTENSION_RENDERER_MODE_*) отдельно для видео (AV1) и аудио (FFmpeg).
-    // Пока не заданы, берут прежнюю общую настройку "decoder_priority"
-    private fun legacyDecoderPriority(): Int =
-        prefs.getInt("decoder_priority", DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
+    // Пока не заданы, берут прежнюю общую настройку "decoder_priority", если ее меняли
+    private fun legacyDecoderPriority(default: Int): Int = prefs.getInt("decoder_priority", default)
 
-    fun getVideoDecoderPriority(): Int = prefs.getInt("video_decoder_priority", legacyDecoderPriority())
+    // AV1 по умолчанию HW+: аппаратный декодер устройства, программный dav1d - запасной (он тяжел для 4K)
+    fun getVideoDecoderPriority(): Int =
+        prefs.getInt("video_decoder_priority", legacyDecoderPriority(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON))
     fun setVideoDecoderPriority(mode: Int) = prefs.edit { putInt("video_decoder_priority", mode) }
 
-    fun getAudioDecoderPriority(): Int = prefs.getInt("audio_decoder_priority", legacyDecoderPriority())
+    fun getAudioDecoderPriority(): Int =
+        prefs.getInt("audio_decoder_priority", legacyDecoderPriority(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER))
     fun setAudioDecoderPriority(mode: Int) = prefs.edit { putInt("audio_decoder_priority", mode) }
 
     fun isTunnelingEnabled(): Boolean = prefs.getBoolean("tunneling_enabled", false)
