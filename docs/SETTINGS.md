@@ -40,7 +40,7 @@
 | `global_resize_mode`, `video_zoom_scale`, `remember_zoom` | 0 (FIT), 115, false | Масштаб |
 | `decoder_priority` | `EXTENSION_RENDERER_MODE_PREFER` | Приоритет декодеров ffmpeg и AV1 |
 | `tunneling_enabled` | false | Туннелирование |
-| `dv_mode` | `DV_MODE_ALWAYS` (2) | Dolby Vision → HEVC: 0 выкл (DV декодер), 1 авто (если экран или декодер не поддерживают DV), 2 всегда, 3 конвертация Profile 7 → 8.1 (libdovi; без DV экрана или декодера ведет себя как «авто»). Мигрирует из старого `map_dv_to_hevc` |
+| `dv_mode` | `DV_MODE_ALWAYS` (2) | «Режим Dolby Vision»: 0 «Dolby Vision» (DV декодер), 1 «Авто» (HEVC, если экран или декодер не поддерживают DV), 2 «HDR10/HLG» (всегда HEVC), 3 «Dolby Vision (P7 → P8.1)» — конвертация Profile 7 → 8.1 (libdovi; без DV экрана или декодера ведет себя как «авто»). Мигрирует из старого `map_dv_to_hevc` |
 | `stereo_downmix`, `mix_*` | true, пресет 0 | Даунмикс многоканального звука в стерео и коэффициенты микшера |
 | `skip_silence`, `loudness_boost` | false, 0 | Пропуск тишины, усиление громкости |
 | `audio_track_memory`, `audio_track_stats` | `AUDIO_MEMORY_OFF` (0), — | Запоминание аудиодорожки: 0 выкл, 1 в пределах плейлиста (дорожка, выбранная в этом плейлисте), 2 + между видео (экспериментально): до 20 наиболее используемых дорожек (подпись: название, язык, кодек, каналы), порядок пользователь меняет в настройках |
