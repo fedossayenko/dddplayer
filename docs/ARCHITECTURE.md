@@ -69,7 +69,9 @@ SurfaceView (2D/HDR)  или  StereoGLSurfaceView ─► StereoRenderer (GLSL)
   10-bit/HDR10/HDR10+, профили Dolby Vision) плюс встроенные dav1d и FFmpeg. Данные собирает
   `DeviceInfoCollector` (каждый раздел отдельно, ошибка одного не ломает остальные), подписи профилей —
   `DeviceInfoLogic`. Экран тот же, что у лога ошибки: `LogReportView` (layout `dialog_error_log`) — выгрузка
-  на termbin.com со ссылкой и QR-кодом, копирование всего текста долгим нажатием на лог.
+  на termbin.com со ссылкой и QR-кодом, копирование всего текста долгим нажатием на лог. Последняя выгрузка
+  кешируется (`LogUploadCache`, файл настроек `log_upload_cache`): при том же SHA-256 текста ссылка и QR
+  показываются сразу. termbin хранит вставки месяц, кеш верит ссылке 15 дней.
 
 ## Модель данных
 

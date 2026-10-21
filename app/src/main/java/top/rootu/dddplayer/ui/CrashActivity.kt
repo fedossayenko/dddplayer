@@ -19,7 +19,6 @@ class CrashActivity : AppCompatActivity() {
 
     private var errorDialog: Dialog? = null
     private var errorDetails: String = ""
-    private var uploadedLogUrl: String? = null
 
     // Отчет об устройстве (экран, звук, декодеры) собирается здесь, в процессе :crash, а не в упавшем
     private lateinit var fullReport: Deferred<String>
@@ -71,12 +70,9 @@ class CrashActivity : AppCompatActivity() {
             textProvider = { fullReport.await() },
             onClose = { dialog.dismiss() }
         )
-        view.onUploaded = { uploadedLogUrl = it }
         // Сначала сама ошибка, отчет об устройстве дописывается, когда соберется
         view.setText(errorDetails)
         lifecycleScope.launch { view.setText(fullReport.await()) }
-        // Если уже загружали - показываем результат сразу
-        uploadedLogUrl?.let { view.showUploaded(it) }
 
         errorDialog = dialog
         dialog.show()

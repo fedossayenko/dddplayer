@@ -17,6 +17,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import top.rootu.dddplayer.R
+import top.rootu.dddplayer.logic.LogUploadCache
 import java.io.OutputStreamWriter
 import java.net.Socket
 import java.net.URL
@@ -25,6 +26,7 @@ import java.net.URLEncoder
 /**
  * Экран лога (layout dialog_error_log): текст, выгрузка на termbin.com со ссылкой и QR-кодом
  * (удобно на ТВ: сфотографировать телефоном), копирование долгим нажатием.
+ * Последняя выгрузка кешируется (LogUploadCache): тот же текст сразу показывает прошлую ссылку и QR.
  * Используется экраном фатальной ошибки (CrashActivity) и диагностикой устройства (DeviceInfoActivity).
  *
  * @param textProvider полный текст для выгрузки; suspend - диагностика может еще собираться
@@ -43,6 +45,9 @@ class LogReportView(
     private val qrImage: ImageView = root.findViewById(R.id.qrImage)
     private val urlText: TextView = root.findViewById(R.id.urlText)
 
+    // Отдельный файл настроек: экран ошибки работает в процессе :crash, без синглтона SettingsRepository
+    private val cachePrefs by lazy { activity.getSharedPreferences(CACHE_PREFS, Context.MODE_PRIVATE) }
+
     init {
         root.findViewById<TextView>(R.id.tvLogTitle).text = title
         close.setOnClickListener { onClose() }
@@ -55,6 +60,23 @@ class LogReportView(
         }
         log.setOnLongClickListener(copyAll)
         (log.parent as? View)?.setOnLongClickListener(copyAll)
+        // Этот же лог уже выгружали - показываем ссылку без повторной выгрузки
+        activity.lifecycleScope.launch {
+            val text = textProvider()
+            val url = withContext(Dispatchers.Default) { LogUploadCache.cachedUrl(readCache(), LogUploadCache.hash(text), System.currentTimeMillis()) }
+            if (url != null && upload.visibility == View.VISIBLE && upload.isEnabled) showUploaded(url)
+        }
+    }
+
+    private fun readCache(): LogUploadCache.Entry? {
+        val hash = cachePrefs.getString(KEY_HASH, null) ?: return null
+        val url = cachePrefs.getString(KEY_URL, null) ?: return null
+        return LogUploadCache.Entry(hash, url, cachePrefs.getLong(KEY_TIME, 0L))
+    }
+
+    private fun writeCache(hash: String, url: String) {
+        cachePrefs.edit().putString(KEY_HASH, hash).putString(KEY_URL, url)
+            .putLong(KEY_TIME, System.currentTimeMillis()).apply()
     }
 
     /** Текст на экране (диагностика дописывается, когда соберется) */
@@ -72,9 +94,6 @@ class LogReportView(
         close.requestFocus()
     }
 
-    /** Лог выгружен: ссылку можно запомнить, чтобы при повторном открытии не выгружать снова */
-    var onUploaded: ((String) -> Unit)? = null
-
     fun focusDefault() {
         if (upload.visibility == View.VISIBLE) upload.requestFocus() else close.requestFocus()
     }
@@ -87,7 +106,7 @@ class LogReportView(
             val text = textProvider()
             val url = withContext(Dispatchers.IO) { uploadToTermbin(text) }
             if (url != null) {
-                onUploaded?.invoke(url)
+                writeCache(LogUploadCache.hash(text), url)
                 showUploaded(url)
             } else {
                 progress.visibility = View.GONE
@@ -141,5 +160,9 @@ class LogReportView(
 
     companion object {
         private const val TAG = "LogReportView"
+        private const val CACHE_PREFS = "log_upload_cache"
+        private const val KEY_HASH = "hash"
+        private const val KEY_URL = "url"
+        private const val KEY_TIME = "uploaded_at"
     }
 }
