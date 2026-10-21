@@ -6,12 +6,24 @@
     android:layout_height="match_parent"
     android:background="@color/bg_app">
 
+    <!-- Иконка приложения слева от заголовка, как на стартовом экране -->
+    <ImageView
+        android:id="@+id/settings_app_icon"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:layout_marginStart="48dp"
+        android:importantForAccessibility="no"
+        android:src="@mipmap/ic_launcher_round"
+        app:layout_constraintBottom_toBottomOf="@id/settings_header"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="@id/settings_header" />
+
     <!-- Заголовок -->
     <TextView
         android:id="@+id/settings_header"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginStart="48dp"
+        android:layout_marginStart="12dp"
         android:layout_marginTop="20dp"
         android:layout_marginEnd="16dp"
         android:text="@string/pref_title"
@@ -19,7 +31,7 @@
         android:textSize="26sp"
         android:textStyle="bold"
         app:layout_constraintEnd_toStartOf="@id/btn_close"
-        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintStart_toEndOf="@id/settings_app_icon"
         app:layout_constraintTop_toTopOf="parent" />
 
     <!-- КНОПКА ЗАКРЫТИЯ (для сенсорных экранов, на ТВ - "Назад") -->
