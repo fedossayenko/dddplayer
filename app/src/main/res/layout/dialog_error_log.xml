@@ -107,7 +107,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:duplicateParentState="true"
-                android:textColor="@color/tv_white"
+                android:textColor="@color/selector_settings_primary"
                 android:textSize="18sp"
                 android:textStyle="bold" />
 
