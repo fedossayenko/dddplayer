@@ -18,6 +18,7 @@ import androidx.media3.common.MediaMetadata
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.Player
 import androidx.media3.common.audio.ChannelMixingAudioProcessor
+import androidx.media3.common.util.Util
 import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.DefaultLoadControl
@@ -108,6 +109,14 @@ class PlayerManager(
     var onAudioOutputFormatChanged: ((String) -> Unit)? = null
     // Туннельный режим реально включился (декодеры и аудиовыход его поддержали)
     var onTunnelingChanged: ((Boolean) -> Unit)? = null
+
+    /**
+     * Звук идет на HDMI битстримом. Такой выход в системе один: плеер в фоне держит его,
+     * и следующий экземпляр плеера получает ошибку инициализации AudioTrack.
+     */
+    @Volatile
+    var isDirectAudioOutput = false
+        private set
 
     private val resolvedMediaTypes = ConcurrentHashMap<String, String>()
 
@@ -499,11 +508,19 @@ class PlayerManager(
                 // config.encoding говорит нам, в каком формате данные идут на железо.
                 // Если это PCM (16-bit, Float), значит плеер декодировал звук.
                 // Если это AC3, DTS и т.д., значит работает Passthrough.
+                isDirectAudioOutput = !Util.isEncodingLinearPcm(config.encoding)
                 val encodingName = MediaFormatHelper.getAudioCodecName(config.encoding)
                 val channelStr = MediaFormatHelper.getChannelConfigString(config.channelConfig)
                 onAudioOutputFormatChanged?.invoke("$encodingName $channelStr")
                 // Туннелирование касается видео (кадры идут прямо в аппаратный вывод), показывается у видео
                 onTunnelingChanged?.invoke(config.tunneling)
+            }
+
+            override fun onAudioTrackReleased(
+                eventTime: AnalyticsListener.EventTime,
+                config: AudioSink.AudioTrackConfig
+            ) {
+                isDirectAudioOutput = false
             }
         })
 
