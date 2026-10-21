@@ -752,7 +752,8 @@ class FileBrowserActivity : AppCompatActivity() {
                     RowType.ADD_PLAYLIST -> R.drawable.ic_add
                     RowType.ACCESS -> R.drawable.ic_lock_open
                     RowType.STORAGE -> R.drawable.ic_storage
-                    RowType.DLNA_SERVER, RowType.SMB_SERVER -> R.drawable.ic_dlna
+                    RowType.DLNA_SERVER -> R.drawable.ic_dlna
+                    RowType.SMB_SERVER -> R.drawable.ic_folder_shared
                     RowType.ADD_SMB -> R.drawable.ic_add
                     RowType.DLNA_SEARCH -> R.drawable.ic_update
                     RowType.PARENT -> R.drawable.ic_arrow_left
