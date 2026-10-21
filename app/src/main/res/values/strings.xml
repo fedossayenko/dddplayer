@@ -292,6 +292,10 @@
     <string name="show_logs">Show Log</string>
     <string name="error_logs">Error Log</string>
     <string name="error_log_upload">Upload Log (Termbin)</string>
+    <string name="log_uploading">Uploading…</string>
+    <string name="log_upload_retry">Error. Retry?</string>
+    <string name="log_upload_failed">Could not connect to termbin.com</string>
+    <string name="log_copied">Copied to clipboard</string>
     <string name="qr_code">QR Code</string>
 
     <!-- VR Config -->
@@ -464,8 +468,6 @@
     <!-- Диагностика устройства -->
     <string name="pref_diagnostics">Device diagnostics</string>
     <string name="pref_diagnostics_desc">Display, HDR, audio output and decoders. The report can be copied for a bug report</string>
-    <string name="diag_copy">Copy</string>
-    <string name="diag_copied">Report copied</string>
     <string name="diag_sec_device">Device</string>
     <string name="diag_sec_display">Display</string>
     <string name="diag_sec_audio_out">Audio output</string>

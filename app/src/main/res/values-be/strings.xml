@@ -258,6 +258,10 @@
     <string name="show_logs">Паказаць лог</string>
     <string name="error_logs">Лог памылкі</string>
     <string name="error_log_upload">Загрузіць лог (Termbin)</string>
+    <string name="log_uploading">Загрузка…</string>
+    <string name="log_upload_retry">Памылка. Паўтарыць?</string>
+    <string name="log_upload_failed">Памылка злучэння з termbin.com</string>
+    <string name="log_copied">Скапіявана ў буфер абмену</string>
     <string name="qr_code">QR-код</string>
 
     <!-- VR Config -->
@@ -432,8 +436,6 @@
     <!-- Диагностика устройства -->
     <string name="pref_diagnostics">Дыягностыка прылады</string>
     <string name="pref_diagnostics_desc">Экран, HDR, аўдыявыхад і дэкодэры. Справаздачу можна скапіяваць для паведамлення пра памылку</string>
-    <string name="diag_copy">Капіяваць</string>
-    <string name="diag_copied">Справаздача скапіявана</string>
     <string name="diag_sec_device">Прылада</string>
     <string name="diag_sec_display">Экран</string>
     <string name="diag_sec_audio_out">Аўдыявыхад</string>

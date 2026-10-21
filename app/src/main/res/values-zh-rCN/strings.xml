@@ -274,6 +274,10 @@
     <string name="show_logs">显示日志</string>
     <string name="error_logs">错误日志</string>
     <string name="error_log_upload">上传日志 (Termbin)</string>
+    <string name="log_uploading">正在上传…</string>
+    <string name="log_upload_retry">出错。重试？</string>
+    <string name="log_upload_failed">无法连接 termbin.com</string>
+    <string name="log_copied">已复制到剪贴板</string>
     <string name="qr_code">二维码</string>
 
     <!-- VR 配置 -->
@@ -447,8 +451,6 @@
     <!-- Диагностика устройства -->
     <string name="pref_diagnostics">设备诊断</string>
     <string name="pref_diagnostics_desc">显示屏、HDR、音频输出和解码器。可复制报告用于反馈问题</string>
-    <string name="diag_copy">复制</string>
-    <string name="diag_copied">报告已复制</string>
     <string name="diag_sec_device">设备</string>
     <string name="diag_sec_display">显示屏</string>
     <string name="diag_sec_audio_out">音频输出</string>

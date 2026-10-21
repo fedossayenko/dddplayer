@@ -258,6 +258,10 @@
     <string name="show_logs">Показати лог</string>
     <string name="error_logs">Лог помилки</string>
     <string name="error_log_upload">Завантажити лог (Termbin)</string>
+    <string name="log_uploading">Завантаження…</string>
+    <string name="log_upload_retry">Помилка. Повторити?</string>
+    <string name="log_upload_failed">Помилка з\'єднання з termbin.com</string>
+    <string name="log_copied">Скопійовано в буфер обміну</string>
     <string name="qr_code">QR-код</string>
 
     <!-- VR Config -->
@@ -432,8 +436,6 @@
     <!-- Диагностика устройства -->
     <string name="pref_diagnostics">Діагностика пристрою</string>
     <string name="pref_diagnostics_desc">Екран, HDR, аудіовихід і декодери. Звіт можна скопіювати для повідомлення про помилку</string>
-    <string name="diag_copy">Копіювати</string>
-    <string name="diag_copied">Звіт скопійовано</string>
     <string name="diag_sec_device">Пристрій</string>
     <string name="diag_sec_display">Екран</string>
     <string name="diag_sec_audio_out">Аудіовихід</string>
