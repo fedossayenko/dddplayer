@@ -306,6 +306,7 @@
     <string name="dv_mode_off">Off (Dolby Vision decoder)</string>
     <string name="dv_mode_auto">Auto</string>
     <string name="dv_mode_always">Always (HDR10/HLG)</string>
+    <string name="dv_mode_convert">P7 → P8.1 (Dolby Vision)</string>
     <string name="subtitle_load_file">Load from file…</string>
     <string name="subtitle_unsupported">Unsupported subtitle format</string>
     <string name="subtitle_no_file_picker">No file picker available on this device</string>

@@ -289,6 +289,7 @@
     <string name="dv_mode_off">关闭（Dolby Vision 解码器）</string>
     <string name="dv_mode_auto">自动</string>
     <string name="dv_mode_always">始终（HDR10/HLG）</string>
+    <string name="dv_mode_convert">P7 → P8.1（Dolby Vision）</string>
     <string name="subtitle_load_file">从文件加载…</string>
     <string name="subtitle_unsupported">不支持的字幕格式</string>
     <string name="subtitle_no_file_picker">此设备没有可用的文件选择器</string>

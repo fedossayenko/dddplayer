@@ -447,7 +447,7 @@ class GlobalSettingsActivity : AppCompatActivity() {
         // Dolby Vision
         itemDv.setOnClickListener {
             // Порядок пунктов совпадает с SettingsRepository.DV_MODE_*
-            val options = listOf(getString(R.string.dv_mode_off), getString(R.string.dv_mode_auto), getString(R.string.dv_mode_always))
+            val options = listOf(getString(R.string.dv_mode_off), getString(R.string.dv_mode_auto), getString(R.string.dv_mode_always), getString(R.string.dv_mode_convert))
             showSingleChoiceDialog(getString(R.string.pref_map_dv), options, settingsViewModel.dvMode.value ?: SettingsRepository.DV_MODE_ALWAYS) {
                 settingsViewModel.setDvMode(it)
             }
@@ -639,6 +639,7 @@ class GlobalSettingsActivity : AppCompatActivity() {
             textDvValue.text = when (mode) {
                 SettingsRepository.DV_MODE_OFF -> getString(R.string.dv_mode_off)
                 SettingsRepository.DV_MODE_AUTO -> getString(R.string.dv_mode_auto)
+                SettingsRepository.DV_MODE_CONVERT -> getString(R.string.dv_mode_convert)
                 else -> getString(R.string.dv_mode_always)
             }
         }
