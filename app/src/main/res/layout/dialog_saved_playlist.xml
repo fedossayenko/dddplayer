@@ -1,9 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Плейлист по ссылке на стартовом экране: название и ссылка, удаление -->
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<!-- Прокрутка: на телефоне клавиатура занимает пол-экрана, и без нее нижние поля недоступны -->
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="400dp"
     android:layout_height="wrap_content"
     android:background="@drawable/bg_dialog"
+    android:fillViewport="true">
+
+<LinearLayout
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
     android:orientation="vertical"
     android:padding="24dp">
 
@@ -92,3 +98,4 @@
             android:textColor="@color/selector_settings_primary" />
     </LinearLayout>
 </LinearLayout>
+</ScrollView>

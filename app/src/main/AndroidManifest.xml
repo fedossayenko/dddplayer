@@ -388,6 +388,7 @@
             android:name=".ui.FileBrowserActivity"
             android:exported="false"
             android:screenOrientation="landscape"
+            android:windowSoftInputMode="adjustNothing"
             android:theme="@style/Theme.AppCompat.NoActionBar" />
         <activity
             android:name=".ui.SubtitleStyleActivity"

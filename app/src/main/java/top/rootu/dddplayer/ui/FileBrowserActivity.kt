@@ -13,6 +13,7 @@ import android.provider.Settings
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.WindowManager
 import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageButton
@@ -627,6 +628,8 @@ class FileBrowserActivity : AppCompatActivity() {
     private fun showPlaylistDialog(playlist: SavedPlaylist?) {
         val dialog = Dialog(this, R.style.Theme_App_Dialog)
         dialog.setContentView(R.layout.dialog_saved_playlist)
+        // Поля прокручиваются над клавиатурой, а не уходят под нее
+        dialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
         val title = dialog.findViewById<TextView>(R.id.dialog_title)
         val editName = dialog.findViewById<EditText>(R.id.edit_name)
         val editUrl = dialog.findViewById<EditText>(R.id.edit_url)
@@ -665,6 +668,8 @@ class FileBrowserActivity : AppCompatActivity() {
     private fun showSmbDialog(server: SmbServer?) {
         val dialog = Dialog(this, R.style.Theme_App_Dialog)
         dialog.setContentView(R.layout.dialog_smb_server)
+        // Поля прокручиваются над клавиатурой, а не уходят под нее
+        dialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
         val title = dialog.findViewById<TextView>(R.id.dialog_title)
         val editName = dialog.findViewById<EditText>(R.id.edit_name)
         val editAddress = dialog.findViewById<EditText>(R.id.edit_address)
