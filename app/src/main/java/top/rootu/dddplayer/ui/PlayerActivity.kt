@@ -342,16 +342,6 @@ class PlayerActivity : AppCompatActivity() {
 
         if (playlist.isNotEmpty()) {
             viewModel.loadMedia(playlist, startIndex, forceM3uProbe = IntentUtils.isForceM3u(intent))
-        } else {
-            if (BuildConfig.DEBUG) {
-                // Дефолтное видео для теста (только в DEBUG)
-                val defaultUri = "http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
-//                val defaultUri = "http://devstreaming-cdn.apple.com/videos/streaming/examples/img_bipbop_adv_example_fmp4/master.m3u8"
-                viewModel.loadMedia(
-                    listOf(top.rootu.dddplayer.model.MediaItem(defaultUri.toUri())),
-                    0
-                )
-            }
         }
     }
 
