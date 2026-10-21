@@ -15,39 +15,56 @@
         android:orientation="vertical"
         android:padding="20dp">
 
-        <TextView
-            android:id="@+id/wizard_step"
+        <!-- Текст прокручивается, если не помещается (узкий экран, панель на половину экрана в VR),
+             а кнопки остаются видны: при нехватке высоты LinearLayout ужимает элемент с весом -->
+        <ScrollView
+            android:id="@+id/wizard_scroll"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textColor="@color/text_secondary"
-            android:textSize="13sp" />
+            android:layout_weight="1"
+            android:fadeScrollbars="false"
+            android:scrollbarStyle="outsideOverlay">
 
-        <TextView
-            android:id="@+id/wizard_title"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:textColor="@color/tv_white"
-            android:textSize="20sp"
-            android:textStyle="bold" />
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
 
-        <TextView
-            android:id="@+id/wizard_text"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:lineSpacingExtra="3dp"
-            android:textColor="@color/tv_white"
-            android:textSize="15sp" />
+                <TextView
+                    android:id="@+id/wizard_step"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="13sp" />
 
-        <TextView
-            android:id="@+id/wizard_controls"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:lineSpacingExtra="2dp"
-            android:textColor="@color/text_secondary"
-            android:textSize="13sp" />
+                <TextView
+                    android:id="@+id/wizard_title"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:textColor="@color/tv_white"
+                    android:textSize="20sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/wizard_text"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:lineSpacingExtra="3dp"
+                    android:textColor="@color/tv_white"
+                    android:textSize="15sp" />
+
+                <TextView
+                    android:id="@+id/wizard_controls"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:lineSpacingExtra="2dp"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="13sp" />
+            </LinearLayout>
+        </ScrollView>
 
         <LinearLayout
             android:layout_width="match_parent"
