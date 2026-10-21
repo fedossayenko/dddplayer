@@ -23,8 +23,10 @@ class GlobalSettingsViewModel(application: Application) : AndroidViewModel(appli
     private val _isAutoPipEnabled = MutableLiveData(repository.isAutoPipEnabled())
     val isAutoPipEnabled: LiveData<Boolean> = _isAutoPipEnabled
 
-    private val _decoderPriority = MutableLiveData(repository.getDecoderPriority())
-    val decoderPriority: LiveData<Int> = _decoderPriority
+    private val _videoDecoderPriority = MutableLiveData(repository.getVideoDecoderPriority())
+    val videoDecoderPriority: LiveData<Int> = _videoDecoderPriority
+    private val _audioDecoderPriority = MutableLiveData(repository.getAudioDecoderPriority())
+    val audioDecoderPriority: LiveData<Int> = _audioDecoderPriority
 
     private val _isTunnelingEnabled = MutableLiveData(repository.isTunnelingEnabled())
     val isTunnelingEnabled: LiveData<Boolean> = _isTunnelingEnabled
@@ -224,15 +226,23 @@ class GlobalSettingsViewModel(application: Application) : AndroidViewModel(appli
         _clockTransparency.value = next
     }
 
-    fun toggleDecoderPriority() {
-        val current = _decoderPriority.value ?: DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER
-        val next = when (current) {
-            DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON -> DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER
-            DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER -> DefaultRenderersFactory.EXTENSION_RENDERER_MODE_OFF
-            else -> DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON
-        }
-        repository.setDecoderPriority(next)
-        _decoderPriority.value = next
+    // Перебор режимов по кругу: HW+ -> SW -> HW
+    private fun nextDecoderPriority(current: Int?): Int = when (current ?: DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER) {
+        DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON -> DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER
+        DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER -> DefaultRenderersFactory.EXTENSION_RENDERER_MODE_OFF
+        else -> DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON
+    }
+
+    fun toggleVideoDecoderPriority() {
+        val next = nextDecoderPriority(_videoDecoderPriority.value)
+        repository.setVideoDecoderPriority(next)
+        _videoDecoderPriority.value = next
+    }
+
+    fun toggleAudioDecoderPriority() {
+        val next = nextDecoderPriority(_audioDecoderPriority.value)
+        repository.setAudioDecoderPriority(next)
+        _audioDecoderPriority.value = next
     }
 
     fun toggleTunneling(enabled: Boolean) {
@@ -416,12 +426,12 @@ class GlobalSettingsViewModel(application: Application) : AndroidViewModel(appli
     }
 
     @StringRes
-    fun getDecoderDescResId(mode: Int): Int {
+    fun getDecoderDescResId(mode: Int, video: Boolean): Int {
         return when (mode) {
-            DefaultRenderersFactory.EXTENSION_RENDERER_MODE_OFF -> R.string.pref_decoder_priority_only_device
-            DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON -> R.string.pref_decoder_priority_prefer_device
-            DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER -> R.string.pref_decoder_priority_prefer_app
-            else -> R.string.pref_decoder_priority_prefer_device
+            DefaultRenderersFactory.EXTENSION_RENDERER_MODE_OFF -> R.string.decoder_only_device
+            DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER ->
+                if (video) R.string.decoder_video_prefer_app else R.string.decoder_audio_prefer_app
+            else -> if (video) R.string.decoder_video_prefer_device else R.string.decoder_audio_prefer_device
         }
     }
 

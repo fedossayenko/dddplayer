@@ -375,8 +375,9 @@ class PlayerManager(
                 out: ArrayList<Renderer>
             ) {
                 val start = out.size
+                // Приоритет встроенного AV1 (dav1d) - своя настройка видео, общий режим фабрики не используется
                 super.buildVideoRenderers(
-                    context, extensionRendererMode, mediaCodecSelector, enableDecoderFallback,
+                    context, settingsRepo.getVideoDecoderPriority(), mediaCodecSelector, enableDecoderFallback,
                     eventHandler, eventListener, allowedVideoJoiningTimeMs, out
                 )
                 if (!mapDvToHevc) return
@@ -459,9 +460,10 @@ class PlayerManager(
                 iecSink = iec
                 val finalSink = iec ?: baseSink
 
+                // Приоритет встроенного FFmpeg - своя настройка аудио
                 super.buildAudioRenderers(
                     context,
-                    extensionRendererMode,
+                    settingsRepo.getAudioDecoderPriority(),
                     mediaCodecSelector,
                     enableDecoderFallback,
                     finalSink,
@@ -471,7 +473,8 @@ class PlayerManager(
                 )
             }
         }.apply {
-            setExtensionRendererMode(settingsRepo.getDecoderPriority())
+            // Режим для остальных рендереров; видео и аудио берут свои настройки в build*Renderers
+            setExtensionRendererMode(settingsRepo.getVideoDecoderPriority())
             setEnableDecoderFallback(true) // Разрешаем софтовый декодер
         }
 

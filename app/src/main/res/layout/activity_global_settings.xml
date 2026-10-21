@@ -332,7 +332,7 @@
                 android:orientation="vertical"
                 android:visibility="gone">
 
-                <!-- Декодер -->
+                <!-- Декодер видео (встроенный AV1) -->
                 <LinearLayout
                     android:id="@+id/item_decoder"
                     style="@style/SettingsItemContainer">
@@ -346,16 +346,11 @@
 
                         <TextView
                             style="@style/SettingsItemTitle"
-                            android:text="@string/pref_decoder_priority" />
+                            android:text="@string/pref_video_decoder" />
 
                         <TextView
                             android:id="@+id/text_decoder_desc"
                             style="@style/SettingsItemDesc"
-                            tools:text="HW+SW" />
-                        <TextView
-                            android:id="@+id/text_decoder_sw_desc"
-                            style="@style/SettingsItemDesc"
-                            android:text="@string/pref_decoder_sw_desc"
                             tools:text="HW+SW" />
                     </LinearLayout>
 
@@ -639,6 +634,38 @@
                         <TextView style="@style/SettingsItemDesc" android:text="@string/pref_audio_priority_desc" />
                     </LinearLayout>
                     <TextView android:id="@+id/text_audio_priority_value" style="@style/SettingsItemValue" tools:text="5" />
+                </LinearLayout>
+
+                <!-- Декодер аудио (встроенный FFmpeg) -->
+                <LinearLayout
+                    android:id="@+id/item_audio_decoder"
+                    style="@style/SettingsItemContainer">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:duplicateParentState="true"
+                        android:orientation="vertical">
+
+                        <TextView
+                            style="@style/SettingsItemTitle"
+                            android:text="@string/pref_audio_decoder" />
+
+                        <TextView
+                            android:id="@+id/text_audio_decoder_desc"
+                            style="@style/SettingsItemDesc"
+                            tools:text="HW+SW" />
+
+                        <TextView
+                            style="@style/SettingsItemDesc"
+                            android:text="@string/pref_audio_decoder_sw_desc" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/text_audio_decoder_value"
+                        style="@style/SettingsItemValue"
+                        tools:text="SW" />
                 </LinearLayout>
 
                 <!-- Downmix -->

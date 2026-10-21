@@ -2,6 +2,7 @@ package top.rootu.dddplayer.data
 
 import android.content.Context
 import androidx.core.content.edit
+import androidx.media3.exoplayer.DefaultRenderersFactory
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -119,6 +120,24 @@ class SettingsRepositoryTest {
     fun `explicit dolby vision mode is kept`() {
         prefs.edit { putInt("dv_mode", SettingsRepository.DV_MODE_OFF) }
         assertEquals(SettingsRepository.DV_MODE_OFF, repo().getDvMode())
+    }
+
+    @Test
+    fun `video and audio decoder priorities start from the old common setting`() {
+        prefs.edit { putInt("decoder_priority", DefaultRenderersFactory.EXTENSION_RENDERER_MODE_OFF) }
+        val repo = repo()
+        assertEquals(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_OFF, repo.getVideoDecoderPriority())
+        assertEquals(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_OFF, repo.getAudioDecoderPriority())
+        // Настройки независимы
+        repo.setAudioDecoderPriority(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
+        assertEquals(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_OFF, repo.getVideoDecoderPriority())
+        assertEquals(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER, repo.getAudioDecoderPriority())
+    }
+
+    @Test
+    fun `decoder priorities default to prefer app decoders`() {
+        assertEquals(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER, repo().getVideoDecoderPriority())
+        assertEquals(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER, repo().getAudioDecoderPriority())
     }
 
     @Test

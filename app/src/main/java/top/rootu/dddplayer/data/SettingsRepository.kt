@@ -294,8 +294,16 @@ class SettingsRepository private constructor(context: Context) {
     fun isAutoPipEnabled(): Boolean = prefs.getBoolean("auto_pip", false)
     fun setAutoPipEnabled(enabled: Boolean) = prefs.edit { putBoolean("auto_pip", enabled) }
 
-    fun getDecoderPriority(): Int = prefs.getInt("decoder_priority", DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
-    fun setDecoderPriority(mode: Int) = prefs.edit { putInt("decoder_priority", mode) }
+    // Приоритет встроенных декодеров (EXTENSION_RENDERER_MODE_*) отдельно для видео (AV1) и аудио (FFmpeg).
+    // Пока не заданы, берут прежнюю общую настройку "decoder_priority"
+    private fun legacyDecoderPriority(): Int =
+        prefs.getInt("decoder_priority", DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
+
+    fun getVideoDecoderPriority(): Int = prefs.getInt("video_decoder_priority", legacyDecoderPriority())
+    fun setVideoDecoderPriority(mode: Int) = prefs.edit { putInt("video_decoder_priority", mode) }
+
+    fun getAudioDecoderPriority(): Int = prefs.getInt("audio_decoder_priority", legacyDecoderPriority())
+    fun setAudioDecoderPriority(mode: Int) = prefs.edit { putInt("audio_decoder_priority", mode) }
 
     fun isTunnelingEnabled(): Boolean = prefs.getBoolean("tunneling_enabled", false)
     fun setTunnelingEnabled(enabled: Boolean) = prefs.edit { putBoolean("tunneling_enabled", enabled) }
@@ -594,7 +602,7 @@ class SettingsRepository private constructor(context: Context) {
 
     // Сигнатура настроек, требующих полного перезапуска плеера
     fun getHardSettingsSignature(): String {
-        val videoParams = "${getDecoderPriority()}_${isTunnelingEnabled()}_${getDvMode()}_${isHdAudioIecEnabled()}"
+        val videoParams = "${getVideoDecoderPriority()}_${getAudioDecoderPriority()}_${isTunnelingEnabled()}_${getDvMode()}_${isHdAudioIecEnabled()}"
         val audioDownmix = "${isStereoDownmixEnabled()}_${getMixPreset()}_${getMixFront()}_${getMixCenter()}_${getMixRear()}_${getMixMiddle()}_${getMixLfe()}"
         return "${videoParams}_${audioDownmix}_${getTargetBufferCorrectMB()}"
     }

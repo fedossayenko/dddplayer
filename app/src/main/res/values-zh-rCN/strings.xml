@@ -112,11 +112,14 @@
     <string name="close_settings">关闭设置</string>
     <string name="exit">退出</string>
     <string name="pref_general_header">播放</string>
-    <string name="pref_decoder_priority">解码器优先级</string>
-    <string name="pref_decoder_priority_prefer_device">优先使用设备解码器（默认）HW+SW</string>
-    <string name="pref_decoder_priority_prefer_app" tools:ignore="Typos">优先使用应用解码器（AV1 + Ffmpeg）SW+HW</string>
-    <string name="pref_decoder_priority_only_device">仅使用设备解码器</string>
-    <string name="pref_decoder_sw_desc">¹ - SW 包括 AV1 和 Ffmpeg 解码器（内置音频编解码器：vorbis、opus、flac、alac、pcm_mulaw、pcm_alaw、mp3、amrnb、amrwb、aac、ac3、eac3、dca(DTS)、mlp、truehd）</string>
+    <string name="pref_video_decoder">视频解码器（AV1）</string>
+    <string name="pref_audio_decoder">音频解码器（FFmpeg）</string>
+    <string name="decoder_video_prefer_device">优先使用设备解码器，内置 AV1（dav1d）作为备用</string>
+    <string name="decoder_video_prefer_app">优先使用内置 AV1（dav1d），其次是设备解码器</string>
+    <string name="decoder_audio_prefer_device">优先使用设备解码器，内置 FFmpeg 作为备用</string>
+    <string name="decoder_audio_prefer_app">优先使用内置 FFmpeg，其次是设备解码器</string>
+    <string name="decoder_only_device">仅使用设备解码器</string>
+    <string name="pref_audio_decoder_sw_desc">FFmpeg 编解码器：vorbis, opus, flac, alac, pcm_mulaw, pcm_alaw, mp3, amrnb, amrwb, aac, ac3, eac3, dca (DTS), mlp, truehd</string>
     <string name="pref_auto_pip_desc">播放期间将应用最小化时，自动打开视频小窗。</string>
     <string name="pref_downmix">缩混至立体声</string>
     <string name="pref_downmix_desc">使用 SW 解码器时，可将多声道音频正确¹混合为立体声，解决人声/配音缺失问题（通常存在于中置声道）。\n¹ - 缩混矩阵的计算类似于 RFC 7845（第 5.1.1.5 节）。</string>

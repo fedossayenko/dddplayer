@@ -419,7 +419,8 @@ class GlobalSettingsActivity : AppCompatActivity() {
         }
 
         // Decoder
-        itemDecoder.setOnClickListener { settingsViewModel.toggleDecoderPriority() }
+        itemDecoder.setOnClickListener { settingsViewModel.toggleVideoDecoderPriority() }
+        findViewById<View>(R.id.item_audio_decoder).setOnClickListener { settingsViewModel.toggleAudioDecoderPriority() }
         itemAutoPip.setOnClickListener {
             settingsViewModel.toggleAutoPip(!switchAutoPip.isChecked)
         }
@@ -632,9 +633,13 @@ class GlobalSettingsActivity : AppCompatActivity() {
     private fun observeViewModel() {
         // Playback
         settingsViewModel.isAutoPipEnabled.observe(this) { switchAutoPip.isChecked = it }
-        settingsViewModel.decoderPriority.observe(this) { mode ->
+        settingsViewModel.videoDecoderPriority.observe(this) { mode ->
             textDecoderValue.text = settingsViewModel.getDecoderValueString(mode)
-            textDecoderDesc.setText(settingsViewModel.getDecoderDescResId(mode))
+            textDecoderDesc.setText(settingsViewModel.getDecoderDescResId(mode, video = true))
+        }
+        settingsViewModel.audioDecoderPriority.observe(this) { mode ->
+            findViewById<TextView>(R.id.text_audio_decoder_value).text = settingsViewModel.getDecoderValueString(mode)
+            findViewById<TextView>(R.id.text_audio_decoder_desc).setText(settingsViewModel.getDecoderDescResId(mode, video = false))
         }
         settingsViewModel.isTunnelingEnabled.observe(this) { switchTunneling.isChecked = it }
         settingsViewModel.isHdAudioIecEnabled.observe(this) { switchHdAudioIec.isChecked = it }

@@ -20,7 +20,8 @@
     `device` — языки системы), `exceedRendererCapabilitiesIfNecessary`. Включилось ли туннелирование на деле,
     видно по `AudioTrackConfig.tunneling` (`onAudioTrackInitialized`): тогда у бейджа видео в инфопанели стоит `↳`.
     Бейдж аудио показывает дорожку и формат вывода (`AC3 5.1 > AC3 5.1` — проброс, `> PCM` — декодирует плеер);
-  - `DefaultRenderersFactory`: приоритет декодеров-расширений (`decoder_priority`, ffmpeg и AV1 из AAR),
+  - `DefaultRenderersFactory`: приоритет декодеров-расширений отдельно для видео (`video_decoder_priority`, AV1) и аудио
+    (`audio_decoder_priority`, ffmpeg) — передается в `buildVideoRenderers`/`buildAudioRenderers`,
     `enableDecoderFallback`. При `stereo_downmix` подключается свой `DefaultAudioSink` с
     `ChannelMixingAudioProcessor` (матрицы из `AudioMixerLogic`) и аудиобуфером не больше 256 КБ,
     чтобы не упасть по памяти. Без даунмикса используется стандартный sink, и passthrough работает;

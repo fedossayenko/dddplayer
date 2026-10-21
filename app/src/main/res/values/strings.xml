@@ -124,11 +124,14 @@
     <string name="close_settings">Close settings</string>
     <string name="exit">Exit</string>
     <string name="pref_general_header">Playback</string>
-    <string name="pref_decoder_priority">Decoder Priority</string>
-    <string name="pref_decoder_priority_prefer_device">Prefer device decoders (default) HW+SW</string>
-    <string name="pref_decoder_priority_prefer_app" tools:ignore="Typos">Prefer app decoders (AV1 + Ffmpeg) SW+HW</string>
-    <string name="pref_decoder_priority_only_device">Device decoders only</string>
-    <string name="pref_decoder_sw_desc">¹ - SW includes AV1 and Ffmpeg decoders (built with audio codecs: vorbis, opus, flac, alac, pcm_mulaw, pcm_alaw, mp3, amrnb, amrwb, aac, ac3, eac3, dca(DTS), mlp, truehd)</string>
+    <string name="pref_video_decoder">Video decoder (AV1)</string>
+    <string name="pref_audio_decoder">Audio decoder (FFmpeg)</string>
+    <string name="decoder_video_prefer_device">Device decoders first, the built-in AV1 decoder (dav1d) as a fallback</string>
+    <string name="decoder_video_prefer_app">The built-in AV1 decoder (dav1d) first, then device decoders</string>
+    <string name="decoder_audio_prefer_device">Device decoders first, the built-in FFmpeg as a fallback</string>
+    <string name="decoder_audio_prefer_app">The built-in FFmpeg first, then device decoders</string>
+    <string name="decoder_only_device">Device decoders only</string>
+    <string name="pref_audio_decoder_sw_desc">FFmpeg codecs: vorbis, opus, flac, alac, pcm_mulaw, pcm_alaw, mp3, amrnb, amrwb, aac, ac3, eac3, dca (DTS), mlp, truehd</string>
     <string name="pref_auto_pip_desc">Automatically open a small video window when minimizing during playback.</string>
     <string name="pref_downmix">Downmix to Stereo</string>
     <string name="pref_downmix_desc">When using the SW decoder, this allows converting multi-channel audio into a properly¹ mixed stereo, which can solve the problem of missing voice/translation (usually present on the center channel).\n¹ - The downmix matrices are calculated similarly to RFC 7845 (Section 5.1.1.5).</string>
