@@ -23,6 +23,8 @@ class App : Application(), ImageLoaderFactory {
         instance = this
         CrashHandler.init(this)
         applyAppLanguage()
+        // Режим Dolby Vision по умолчанию выбирается при первом запуске (новая установка или обновление)
+        SettingsRepository.getInstance(this).getDvMode()
         super.onCreate()
     }
 

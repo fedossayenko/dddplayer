@@ -27,6 +27,17 @@ class SettingsRepository private constructor(context: Context) {
     private val prefs: SharedPreferences =
         context.getSharedPreferences("global_prefs", Context.MODE_PRIVATE)
 
+    // Свежая установка, а не обновление: время установки и последнего обновления совпадают (подменяется в тестах)
+    internal var isFreshInstall: () -> Boolean = {
+        try {
+            @Suppress("DEPRECATION")
+            val info = context.packageManager.getPackageInfo(context.packageName, 0)
+            info.firstInstallTime == info.lastUpdateTime
+        } catch (e: Exception) {
+            false
+        }
+    }
+
     companion object {
         const val TRACK_DEFAULT = ""
         const val TRACK_DEVICE = "device"
@@ -326,7 +337,13 @@ class SettingsRepository private constructor(context: Context) {
     // Миграция со старого переключателя "map_dv_to_hevc" (вкл по умолчанию): вкл -> "Всегда", выкл -> "Выкл".
     fun getDvMode(): Int {
         if (!prefs.contains("dv_mode")) {
-            val migrated = if (prefs.getBoolean("map_dv_to_hevc", true)) DV_MODE_ALWAYS else DV_MODE_OFF
+            val migrated = when {
+                prefs.contains("map_dv_to_hevc") ->
+                    if (prefs.getBoolean("map_dv_to_hevc", true)) DV_MODE_ALWAYS else DV_MODE_OFF
+                // Новая установка - Авто (DV там, где экран и декодер его умеют), обновление - прежнее HDR10/HLG
+                isFreshInstall() -> DV_MODE_AUTO
+                else -> DV_MODE_ALWAYS
+            }
             prefs.edit {
                 putInt("dv_mode", migrated)
                 remove("map_dv_to_hevc")
