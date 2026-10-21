@@ -30,10 +30,10 @@ To experience the 3D effect, you will need **anaglyph glasses** (e.g., Red-Cyan)
 ### Key Features
 
 *   **Stereo Formats Support**:
-    *   Side-by-Side (SBS)
-    *   Top-Bottom (Over-Under)
+    *   Side-by-Side: SBS and anamorphic HSBS (Half SBS)
+    *   Over-Under: OU and anamorphic HOU (Half OU)
     *   Interlaced
-    *   3D(z) Tile Format (720p in 1080p)
+    *   3D(z)Tiled (720p in 1080p)
     *   Auto-detection from container metadata and file name markers (`sbs`, `ou`, `tb`, ...).
 *   **Output Modes**:
     *   **Anaglyph**: High-quality Dubois algorithm with customizable color matrices (Red-Cyan, Green-Magenta, Yellow-Blue, Red-Blue).

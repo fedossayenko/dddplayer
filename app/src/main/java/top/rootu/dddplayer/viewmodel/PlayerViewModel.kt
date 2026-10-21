@@ -33,6 +33,7 @@ import top.rootu.dddplayer.data.SettingsRepository
 import top.rootu.dddplayer.data.VideoSettings
 import top.rootu.dddplayer.logic.AnaglyphLogic
 import top.rootu.dddplayer.logic.SettingsMutator
+import top.rootu.dddplayer.logic.StereoFormatLogic
 import top.rootu.dddplayer.logic.TrackLogic
 import top.rootu.dddplayer.model.AspectRatioMode
 import top.rootu.dddplayer.model.HistoryEntry
@@ -276,6 +277,9 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     private var isSettingsLoadedFromDb = false
     private var currentUri: String? = null
     private var lastVideoSize: VideoSize? = null
+
+    /** Размер кадра текущего видео (для подписи стереоформата: Half или Full) */
+    val videoSize: VideoSize? get() = lastVideoSize
     var isUserInteracting = false
 
     // Состояние воспроизведения при уходе с экрана (onPause), чтобы в onResume
@@ -1676,7 +1680,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                     val resId = when (it) {
                         StereoInputType.NONE -> R.string.stereo_mode_mono
                         StereoInputType.SIDE_BY_SIDE -> R.string.stereo_mode_sbs
-                        StereoInputType.TOP_BOTTOM -> R.string.stereo_mode_tb
+                        StereoInputType.TOP_BOTTOM -> R.string.stereo_mode_ou
                         StereoInputType.INTERLACED -> R.string.stereo_mode_interlaced
                         StereoInputType.TILED_1080P -> R.string.stereo_mode_tiled
                     }
@@ -1815,30 +1819,13 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
         when (inputType) {
             StereoInputType.SIDE_BY_SIDE -> {
-                val halfWidth = width / 2
-                val halfAR = halfWidth / height
-                // Логика определения Full/Half SBS. Если AR половины кадра не широкое (например, 1:1),
-                // то предполагаем Full SBS (кадр 2:1), иначе Half SBS (кадр 1:1).
-                if (halfAR < 1.2f) {
-                    finalFrameWidth = width
-                    finalFrameHeight = height
-                } else {
-                    finalFrameWidth = halfWidth
-                    finalFrameHeight = height
-                }
+                // Half SBS растягивает каждый глаз на весь кадр, у Full SBS глаз - половина кадра
+                finalFrameWidth = if (StereoFormatLogic.isHalfFrame(inputType, width, height)) width else width / 2
+                finalFrameHeight = height
             }
             StereoInputType.TOP_BOTTOM -> {
-                val halfHeight = height / 2
-                val halfAR = width / halfHeight
-                // Логика определения Full/Half OU. Если AR половины кадра очень широкое,
-                // то предполагаем Full OU, иначе Half OU.
-                if (halfAR > 2.5f) {
-                    finalFrameWidth = width
-                    finalFrameHeight = height
-                } else {
-                    finalFrameWidth = width
-                    finalFrameHeight = halfHeight
-                }
+                finalFrameWidth = width
+                finalFrameHeight = if (StereoFormatLogic.isHalfFrame(inputType, width, height)) height else height / 2
             }
             else -> { finalFrameWidth = width; finalFrameHeight = height }
         }

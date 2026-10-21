@@ -34,10 +34,10 @@
 
     <!-- Рэжымы 3D -->
     <string name="stereo_mode_mono">Звычайнае 2D</string>
-    <string name="stereo_mode_sbs">Гарызантальная стэрэапара (SBS)</string>
-    <string name="stereo_mode_tb">Вертыкальная стэрэапара (OU)</string>
-    <string name="stereo_mode_interlaced">Празрадковай стэрэапара (Interlaced)</string>
-    <string name="stereo_mode_tiled">3D(z) Tiled (720p у 1080p)</string>
+    <string name="stereo_mode_sbs">Гарызантальная стэрэапара (SBS, HSBS)</string>
+    <string name="stereo_mode_ou">Вертыкальная стэрэапара (OU, HOU)</string>
+    <string name="stereo_mode_interlaced">Празрадковая стэрэапара (Interlaced)</string>
+    <string name="stereo_mode_tiled">3D(z)Tiled (720p у 1080p)</string>
     <string name="output_mode_anaglyph">Анагліф (Акуляры)</string>
     <string name="output_mode_left">Толькі левае</string>
     <string name="output_mode_right">Толькі правае</string>

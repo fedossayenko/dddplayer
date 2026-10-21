@@ -45,6 +45,7 @@ import top.rootu.dddplayer.BuildConfig
 import top.rootu.dddplayer.R
 import top.rootu.dddplayer.data.SettingsRepository
 import top.rootu.dddplayer.logic.AnaglyphLogic
+import top.rootu.dddplayer.logic.StereoFormatLogic
 import top.rootu.dddplayer.logic.TrackLogic
 import top.rootu.dddplayer.model.AspectRatioMode
 import top.rootu.dddplayer.model.MenuItem
@@ -1180,18 +1181,18 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
                 }
             }
             ui.updateStereoLayout(viewModel.outputMode.value, viewModel.screenSeparation.value ?: 0f)
-            ui.updateInputModeIcon(type, viewModel.swapEyes.value ?: false)
+            updateStereoBadge()
         }
 
         // Обновление рендерера
         viewModel.swapEyes.observe(viewLifecycleOwner) { swap ->
             stereoRenderer?.setSwapEyes(swap)
-            ui.iconSwapEyes.alpha = if (swap) 1.0f else 0.3f
-            ui.updateInputModeIcon(viewModel.inputType.value ?: StereoInputType.NONE, swap)
+            updateStereoBadge()
         }
         viewModel.outputMode.observe(viewLifecycleOwner) { mode ->
             stereoRenderer?.setOutputMode(mode)
             ui.updateStereoLayout(mode, viewModel.screenSeparation.value ?: 0f)
+            updateStereoBadge()
         }
         viewModel.anaglyphType.observe(viewLifecycleOwner) { stereoRenderer?.setAnaglyphType(it) }
         viewModel.renderApiMode.observe(viewLifecycleOwner) { mode ->
@@ -1207,7 +1208,11 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
                 updateSettingsText()
             }
         }
-        viewModel.singleFrameSize.observe(viewLifecycleOwner) { (w, h) -> stereoRenderer?.setSingleFrameDimensions(w, h) }
+        viewModel.singleFrameSize.observe(viewLifecycleOwner) { (w, h) ->
+            stereoRenderer?.setSingleFrameDimensions(w, h)
+            // Размер кадра пересчитывается при смене видео - уточняем Half/Full в бейдже
+            updateStereoBadge()
+        }
         viewModel.depth.observe(viewLifecycleOwner) { stereoRenderer?.setDepth(it) }
         viewModel.screenSeparation.observe(viewLifecycleOwner) {
             stereoRenderer?.setScreenSeparation(it)
@@ -1480,6 +1485,19 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
         // список опций
         val optionsData = viewModel.getOptionsForSetting(type, context)
         ui.updateSettingsOptions(optionsData)
+    }
+
+    private fun updateStereoBadge() {
+        val size = viewModel.videoSize
+        ui.updateStereoBadge(
+            StereoFormatLogic.badgeLabel(
+                viewModel.inputType.value ?: StereoInputType.NONE,
+                size?.width?.toFloat() ?: 0f,
+                size?.height?.toFloat() ?: 0f,
+                viewModel.outputMode.value,
+                viewModel.swapEyes.value ?: false
+            )
+        )
     }
 
     private fun updateAudioBadge() {

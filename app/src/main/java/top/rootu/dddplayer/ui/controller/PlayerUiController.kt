@@ -80,8 +80,7 @@ class PlayerUiController(private val rootView: View) {
     val posterNumberBadge: TextView = topInfoPanel.findViewById(R.id.poster_number_badge)
     val textClock: TextView = topInfoPanel.findViewById(R.id.text_clock)
     val textEndsAt: TextView = topInfoPanel.findViewById(R.id.text_ends_at)
-    val iconInputMode: ImageView = topInfoPanel.findViewById(R.id.icon_input_mode)
-    val iconSwapEyes: ImageView = topInfoPanel.findViewById(R.id.icon_swap_eyes)
+    val badgeStereo: TextView = topInfoPanel.findViewById(R.id.badge_stereo)
     val badgeResolution: TextView = topInfoPanel.findViewById(R.id.badge_resolution)
     val badgeAudio: TextView = topInfoPanel.findViewById(R.id.badge_audio)
     val badgeSubtitle: TextView = topInfoPanel.findViewById(R.id.badge_subtitle)
@@ -883,15 +882,10 @@ class PlayerUiController(private val rootView: View) {
         loaderRight.translationX = shiftPx
     }
 
-    fun updateInputModeIcon(type: StereoInputType, swapEyes: Boolean) {
-        val iconRes = when (type) {
-            StereoInputType.NONE -> R.drawable.ic_input_mode_mono
-            StereoInputType.SIDE_BY_SIDE -> if (swapEyes) R.drawable.ic_input_mode_ss_rl else R.drawable.ic_input_mode_ss_lr
-            StereoInputType.TOP_BOTTOM -> if (swapEyes) R.drawable.ic_input_mode_ou_rl else R.drawable.ic_input_mode_ou_lr
-            StereoInputType.INTERLACED -> R.drawable.ic_input_mode_interlaced
-            StereoInputType.TILED_1080P -> R.drawable.ic_input_mode_3dz
-        }
-        iconInputMode.setImageResource(iconRes)
+    /** Бейдж стереоформата ("3D (HSBS) RL", "2D (OU) L"); null - видео не стерео, бейдж скрыт */
+    fun updateStereoBadge(label: String?) {
+        badgeStereo.text = label.orEmpty()
+        badgeStereo.isVisible = label != null
     }
 
     fun formatTime(millis: Long): String {

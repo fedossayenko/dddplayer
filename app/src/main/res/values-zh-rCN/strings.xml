@@ -35,10 +35,10 @@
 
     <!-- 3D 模式 -->
     <string name="stereo_mode_mono">普通 2D</string>
-    <string name="stereo_mode_sbs">左右格式 (SBS)</string>
-    <string name="stereo_mode_tb">上下格式 (OU)</string>
-    <string name="stereo_mode_interlaced">交错格式</string>
-    <string name="stereo_mode_tiled">3D(z) 平铺 (1080p 中的 720p)</string>
+    <string name="stereo_mode_sbs">左右格式 (SBS, HSBS)</string>
+    <string name="stereo_mode_ou">上下格式 (OU, HOU)</string>
+    <string name="stereo_mode_interlaced">交错格式 (Interlaced)</string>
+    <string name="stereo_mode_tiled">3D(z)Tiled (1080p 中的 720p)</string>
     <string name="output_mode_anaglyph">红蓝眼镜</string>
     <string name="output_mode_left">仅左眼</string>
     <string name="output_mode_right">仅右眼</string>

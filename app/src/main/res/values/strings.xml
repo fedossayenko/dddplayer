@@ -40,10 +40,10 @@
 
     <!-- 3D Modes -->
     <string name="stereo_mode_mono">Normal 2D</string>
-    <string name="stereo_mode_sbs">Side-by-Side (SBS)</string>
-    <string name="stereo_mode_tb">Over-Under (OU)</string>
+    <string name="stereo_mode_sbs">Side-by-Side (SBS, HSBS)</string>
+    <string name="stereo_mode_ou">Over-Under (OU, HOU)</string>
     <string name="stereo_mode_interlaced">Interlaced</string>
-    <string name="stereo_mode_tiled">3D(z) Tiled (720p in 1080p)</string>
+    <string name="stereo_mode_tiled">3D(z)Tiled (720p in 1080p)</string>
     <string name="output_mode_anaglyph">Anaglyph (Glasses)</string>
     <string name="output_mode_left">Left Only</string>
     <string name="output_mode_right">Right Only</string>

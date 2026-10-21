@@ -176,7 +176,7 @@ class CalibrationWizardActivity : AppCompatActivity(), OnSurfaceReadyListener {
     private fun applyRenderer() {
         renderer.setInputType(StereoInputType.SIDE_BY_SIDE)
         renderer.setVideoDimensions(CalibrationPatterns.FRAME_WIDTH, CalibrationPatterns.FRAME_HEIGHT)
-        // Full SBS: каждый глаз растягивается на весь кадр 16:9
+        // Half SBS (HSBS): каждый глаз 960x1080 растягивается на весь кадр 16:9
         renderer.setSingleFrameDimensions(CalibrationPatterns.FRAME_WIDTH.toFloat(), CalibrationPatterns.FRAME_HEIGHT.toFloat())
         renderer.setDepth(0)
         renderer.setSwapEyes(false)
