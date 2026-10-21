@@ -188,6 +188,11 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     val aspectRatioMode: LiveData<AspectRatioMode> = _aspectRatioMode
     private val _videoQualityOptions = MutableLiveData<List<VideoQualityOption>>()
     val videoQualityOptions: LiveData<List<VideoQualityOption>> = _videoQualityOptions
+
+    /** Число дорожек видео/аудио/субтитров (без "Авто" и "Выкл") - для скрытия лишних кнопок панели */
+    data class TrackCounts(val video: Int, val audio: Int, val subtitles: Int)
+    private val _trackCounts = MutableLiveData<TrackCounts>()
+    val trackCounts: LiveData<TrackCounts> = _trackCounts
     private val _currentQualityName = MutableLiveData("Auto")
     val currentQualityName: LiveData<String> = _currentQualityName
 
@@ -989,7 +994,18 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         }
 
         // 3. Видео (Quality)
-        _videoQualityOptions.postValue(TrackLogic.extractVideoTracks(tracks))
+        val videoOptions = TrackLogic.extractVideoTracks(tracks)
+        _videoQualityOptions.postValue(videoOptions)
+        // Пустой список приходит при перезагрузке источника - кнопки не прячем, чтобы не мигали
+        if (!tracks.isEmpty) {
+            _trackCounts.postValue(
+                TrackCounts(
+                    video = videoOptions.count { !it.isAuto },
+                    audio = audioOptions.count { !it.isOff },
+                    subtitles = subtitleOptions.count { !it.isOff }
+                )
+            )
+        }
 
         updateAvailableSettings()
     }

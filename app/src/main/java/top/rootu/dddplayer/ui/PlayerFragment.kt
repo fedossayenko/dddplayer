@@ -1119,6 +1119,13 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
         }
         viewModel.playlistSize.observe(viewLifecycleOwner) { ui.buttonPlaylist.isVisible = it > 1 }
         viewModel.currentQualityName.observe(viewLifecycleOwner) { ui.buttonQuality.text = it }
+        // Выбор качества и аудио - только если есть из чего выбирать, субтитры - если они есть
+        // (загрузка субтитров из файла остается в боковом меню)
+        viewModel.trackCounts.observe(viewLifecycleOwner) { counts ->
+            ui.buttonQuality.isVisible = counts.video > 1
+            ui.buttonAudio.isVisible = counts.audio > 1
+            ui.buttonSubs.isVisible = counts.subtitles > 0
+        }
 
         viewModel.videoResolution.observe(viewLifecycleOwner) { ui.badgeResolution.text = it }
         viewModel.videoAspectRatio.observe(viewLifecycleOwner) { ui.setAspectRatio(it) }
