@@ -1,6 +1,11 @@
+// Перенесено из edde746/plezy (GPL-3.0, https://github.com/edde746/plezy). Комментарии на английском оставлены как
+// в оригинале, чтобы переносить исправления из plezy диффами; номера #1804/#1988 - issues plezy.
+// Изменения DDD (комментарии на русском): сигнатура configure для Media3 1.9, A_DTS, перенос play() между
+// делегатами, туннелирование, прежний путь без несущей на выходе, ошибка запасного пути, кодек для бейджа.
 package top.rootu.dddplayer.player
 
 import android.media.AudioDeviceInfo
+import android.media.AudioTrack
 import androidx.annotation.OptIn
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.AuxEffectInfo
@@ -36,7 +41,7 @@ import java.util.concurrent.atomic.AtomicInteger
  * playback in the loudest possible way.
  *
  * [carrierSink] must therefore be built with no audio processors and with an output provider whose
- * `AudioTrack` is forced to `ENCODING_IEC61937`; see [PlezyRenderersFactory].
+ * `AudioTrack` is forced to `ENCODING_IEC61937`; see [IecCarrierOutput].
  *
  * Selection happens only in [configure]. Persistent controls and the listener are mirrored to both
  * delegates so either can be activated later; per-stream calls go to the active one alone.
@@ -62,6 +67,8 @@ internal class IecCarrierSink(
   private var activePacker: IecCarrierPacker = matPacker
 
   private var active: AudioSink = defaultSink
+  // Читается и из UI-потока (бейдж аудио, isDirectAudioOutput)
+  @Volatile
   private var carrierActive = false
   private var loggedCoreStrip = false
 
@@ -95,9 +102,9 @@ internal class IecCarrierSink(
    * the very handover this latch exists to cause. Clearing it there would re-offer the carrier and
    * loop straight back into the mismatch.
    *
-   * The real boundary is a new media item, which only the caller knows and which happens before
-   * selection asks anything. [beginMediaItem] is that hook; without it one malformed item would
-   * cost bitstreaming for every later item sharing the player.
+   * The real boundary is a new media item, which only the caller knows. [beginMediaItem] is that
+   * hook; without it one malformed item would cost bitstreaming for every later item sharing the
+   * player.
    *
    * It is held as a generation rather than a flag because that hook is called on the app thread
    * while the mismatch is discovered on the playback thread. A late buffer from the outgoing stream
@@ -131,6 +138,10 @@ internal class IecCarrierSink(
     if (!isCarrierRateFamily(format.sampleRate)) return false
     if (playbackParameters.speed != 1f) return false
     if (directOutputBlocked(format)) return false
+    // A_DTS может оказаться обычным ядром: тогда его заберет обычный Sink, и он должен это уметь
+    if (format.sampleMimeType == MimeTypes.AUDIO_DTS &&
+      defaultSink.getFormatSupport(format) != AudioSink.SINK_FORMAT_SUPPORTED_DIRECTLY
+    ) return false
     return carrierRouteAvailable(format)
   }
 
@@ -158,6 +169,9 @@ internal class IecCarrierSink(
    * 192kHz, which media3 never requests. So when the carrier is unavailable — no IEC route, a speed
    * change, downmix, normalization, or a 44.1kHz-family stream — report unsupported and let the
    * bundled FFmpeg decoder take it, exactly as the existing decoded-PCM fallback does.
+   *
+   * В DDD это действует только на маршруте с несущей (см. forceDecode): без нее TrueHD идет прежним путем,
+   * как с выключенной опцией, чтобы включенная опция не отнимала проброс там, где он работал.
    */
   private fun isTrueHd(format: Format): Boolean = format.sampleMimeType == MimeTypes.AUDIO_TRUEHD
 
@@ -181,6 +195,7 @@ internal class IecCarrierSink(
   private fun isDtsCandidate(format: Format): Boolean = isDtsHd(format) || format.sampleMimeType == MimeTypes.AUDIO_DTS
 
   /** Аргументы последнего configure: нужны, чтобы на месте переключить DTS-ядро в обычный Sink. */
+  @Volatile
   private var configuredFormat: Format? = null
   private var configuredBufferSize = 0
   private var configuredOutputChannels: IntArray? = null
@@ -191,17 +206,21 @@ internal class IecCarrierSink(
   /** Переиспользуемая копия входного буфера: без новой аллокации на каждый сэмпл. */
   private var scratch = ByteArray(0)
 
+  // Выход с несущей, но сейчас она недоступна (скорость, туннелирование, 44.1 кГц, несовпадение потока):
+  // сырой TrueHD/DTS-HD на таком выходе молчит, поэтому декодируем. Выход без несущей (Android < 10, нет
+  // IEC 61937) - прежний путь, как с выключенной опцией: там сырой поток мог работать и раньше
+  private fun forceDecode(format: Format): Boolean =
+    (isTrueHd(format) || isDtsHd(format)) && carrierRouteAvailable(format)
+
   override fun supportsFormat(format: Format): Boolean = when {
     shouldUseCarrier(format) -> true
-    isTrueHd(format) -> false
-    isDtsHd(format) && carrierRouteAvailable(format) -> false
+    forceDecode(format) -> false
     else -> defaultSink.supportsFormat(format)
   }
 
   override fun getFormatSupport(format: Format): Int = when {
     shouldUseCarrier(format) -> AudioSink.SINK_FORMAT_SUPPORTED_DIRECTLY
-    isTrueHd(format) -> AudioSink.SINK_FORMAT_UNSUPPORTED
-    isDtsHd(format) && carrierRouteAvailable(format) -> AudioSink.SINK_FORMAT_UNSUPPORTED
+    forceDecode(format) -> AudioSink.SINK_FORMAT_UNSUPPORTED
     else -> defaultSink.getFormatSupport(format)
   }
 
@@ -253,7 +272,11 @@ internal class IecCarrierSink(
     }
   }
 
-  private fun carrierCodecName(format: Format): String = if (isDtsHd(format)) "DTS-HD" else "TrueHD (MAT)"
+  private fun carrierCodecName(format: Format): String = if (isDtsCandidate(format)) "DTS-HD" else "TrueHD (MAT)"
+
+  /** Кодек на несущей для бейджа аудио (AudioTrack видит ее как PCM 16 бит 7.1); null - несущая не используется */
+  val carrierCodecLabel: String?
+    get() = if (carrierActive) configuredFormat?.let { if (isDtsCandidate(it)) "DTS-HD" else "TrueHD" } else null
 
   override fun handleBuffer(buffer: ByteBuffer, presentationTimeUs: Long, encodedAccessUnitCount: Int): Boolean {
     if (!carrierActive) return defaultSink.handleBuffer(buffer, presentationTimeUs, encodedAccessUnitCount)
@@ -350,7 +373,15 @@ internal class IecCarrierSink(
     discardCarrierState()
     carrierSink.flush()
     active = defaultSink
-    defaultSink.configure(format, configuredBufferSize, configuredOutputChannels)
+    try {
+      defaultSink.configure(format, configuredBufferSize, configuredOutputChannels)
+    } catch (e: AudioSink.ConfigurationException) {
+      // configure() бросает проверяемое исключение, которого нет в сигнатуре handleBuffer: без обертки оно
+      // уходит мимо обработки ошибок рендерера и роняет поток плеера
+      throw AudioSink.InitializationException(
+        "DTS core fallback to the normal sink failed", AudioTrack.STATE_UNINITIALIZED, format, false, e
+      )
+    }
     if (playing) defaultSink.play()
     return defaultSink.handleBuffer(buffer, presentationTimeUs, encodedAccessUnitCount)
   }
@@ -514,8 +545,11 @@ internal class IecCarrierSink(
   }
 
   /**
-   * Called by the owner immediately before a new media item is set, which is the only point where
+   * Called by the owner when a new media item starts, which is the only point where
    * "this stream lied about its shape" stops being true and the carrier can be offered again.
+   * В DDD: при загрузке плейлиста и при переходе к следующему элементу (onMediaItemTransition). Переход
+   * приходит уже после выбора дорожек следующего элемента, поэтому после несовпадения следующий элемент
+   * плейлиста может один раз декодироваться - это безопасная сторона.
    */
   fun beginMediaItem() {
     mediaGeneration.incrementAndGet()

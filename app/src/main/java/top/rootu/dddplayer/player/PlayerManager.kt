@@ -562,9 +562,15 @@ class PlayerManager(
                 // Если это AC3, DTS и т.д., значит работает Passthrough.
                 // Несущая IEC 61937 учитывается как PCM 16 бит, поэтому спрашиваем и ее
                 isDirectAudioOutput = !Util.isEncodingLinearPcm(config.encoding) || iecSink?.isCarrierActive == true
-                val encodingName = MediaFormatHelper.getAudioCodecName(config.encoding)
-                val channelStr = MediaFormatHelper.getChannelConfigString(config.channelConfig)
-                onAudioOutputFormatChanged?.invoke("$encodingName $channelStr")
+                // На несущей AudioTrack видит PCM 16 бит 7.1, а на ресивер уходит TrueHD или DTS-HD как есть
+                val carrierCodec = iecSink?.carrierCodecLabel
+                if (carrierCodec != null) {
+                    onAudioOutputFormatChanged?.invoke("$carrierCodec (IEC 61937)")
+                } else {
+                    val encodingName = MediaFormatHelper.getAudioCodecName(config.encoding)
+                    val channelStr = MediaFormatHelper.getChannelConfigString(config.channelConfig)
+                    onAudioOutputFormatChanged?.invoke("$encodingName $channelStr")
+                }
                 // Туннелирование касается видео (кадры идут прямо в аппаратный вывод), показывается у видео
                 onTunnelingChanged?.invoke(config.tunneling)
             }
@@ -862,6 +868,8 @@ class PlayerManager(
         currentWindowIndex = safeStartIndex
         currentPosition = if (startPosMs <= 0L) C.TIME_UNSET else startPosMs
         playWhenReady = true
+        // Новый плейлист снова может идти через несущую, даже если прошлое видео не подошло
+        iecSink?.beginMediaItem()
 
         if (exoPlayer == null) {
             initializePlayer()
