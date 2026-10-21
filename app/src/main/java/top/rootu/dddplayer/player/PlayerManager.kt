@@ -698,9 +698,8 @@ class PlayerManager(
 
         okHttpClient.newCall(requestBuilder.build()).execute().use { response ->
             if (!response.isSuccessful) return null
-            val contentType = response.header("Content-Type")?.lowercase().orEmpty()
-            // Видео/аудио по ссылке .m3u - не плейлист, плеер откроет его сам
-            if (contentType.startsWith("video/") || contentType.startsWith("audio/")) return null
+            // Видео/аудио по ссылке .m3u - не плейлист, плеер откроет его сам (audio/x-mpegurl - плейлист)
+            if (M3uParser.isMediaContentType(response.header("Content-Type"))) return null
             val contentLength = response.body.contentLength()
             if (contentLength > MAX_PROBE_BYTES) return null
 

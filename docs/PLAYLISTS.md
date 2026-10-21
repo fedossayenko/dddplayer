@@ -12,7 +12,8 @@
 
 - Проверяется только одиночная ссылка, путь которой заканчивается на `.m3u`/`.m3u8` (или любая при `force`).
 - http(s) скачивается **один раз** (`fetchForProbe`), остальное читается через `ContentResolver`.
-  Лимит — `MAX_PROBE_BYTES` (32 МБ). Content-Type `video/*` и `audio/*` сразу означает «не плейлист».
+  Лимит — `MAX_PROBE_BYTES` (32 МБ). Content-Type `video/*` и `audio/*` сразу означает «не плейлист»,
+  кроме типов `*mpegurl` (`M3uParser.isMediaContentType`): TorrServer отдает плейлист «Играть все» как `audio/x-mpegurl`.
 - `M3uParser.isPlaylist`: есть `#EXTINF` и **нет ни одного** `#EXT-X-`. Любой HLS-тег означает HLS.
 - Если это не M3U, ответ кладется в `PrefetchStore`, и плеер получает его без второго запроса.
   Если в тексте есть `#EXT-X-`, тип сразу помечается как HLS (`probedMediaTypes`).
