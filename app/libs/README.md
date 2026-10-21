@@ -25,7 +25,7 @@ Requirements: Android SDK with NDK `27.0.12077973` and CMake `3.22.1` (Android S
 Rust via [rustup](https://rustup.rs), `git`, `bash` (Linux, macOS or WSL).
 
 ```bash
-./gradlew -Pdovi=true :dovi:assembleRelease
+./gradlew -Pdovi=true -PdoviAbis=arm64-v8a,armeabi-v7a,x86_64,x86 :dovi:assembleRelease
 ```
 
 The task clones `dovi_tool` at the tag into `dovi/build/`, builds `libdovi.a` for each ABI with
@@ -53,7 +53,7 @@ AAR содержит `libdovi_bridge.so`: JNI-мост для `DoviBridge` и с
 Rust через [rustup](https://rustup.rs), `git`, `bash` (Linux, macOS или WSL).
 
 ```bash
-./gradlew -Pdovi=true :dovi:assembleRelease
+./gradlew -Pdovi=true -PdoviAbis=arm64-v8a,armeabi-v7a,x86_64,x86 :dovi:assembleRelease
 ```
 
 Задача клонирует `dovi_tool` нужного тега в `dovi/build/`, собирает `libdovi.a` под каждый ABI командой
