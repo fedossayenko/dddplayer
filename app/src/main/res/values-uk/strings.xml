@@ -272,6 +272,7 @@
     <string name="dv_mode_off">Вимк (декодер Dolby Vision)</string>
     <string name="dv_mode_auto">Авто</string>
     <string name="dv_mode_always">Завжди (HDR10/HLG)</string>
+    <string name="dv_mode_convert">P7 → P8.1 (Dolby Vision)</string>
     <string name="subtitle_load_file">Завантажити з файлу…</string>
     <string name="subtitle_unsupported">Непідтримуваний формат субтитрів</string>
     <string name="subtitle_no_file_picker">На пристрої немає системного вибору файлів</string>

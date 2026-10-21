@@ -7,6 +7,9 @@
 - `initializePlayer()` собирает плеер из текущих настроек:
   - `MediaCodecSelector`: запрос декодера Dolby Vision подменяется на HEVC по `dv_mode` — всегда, никогда или
     «авто» (если нет DV декодера или экран не сообщает о поддержке DV, `isDolbyVisionSupported`);
+  - `dv_mode` = 3: `ExtractorsFactory` оборачивает MKV/MP4 в `DoviExtractorWrapper`. Для `dvhe.07` RPU
+    конвертируется в 8.1 (libdovi, режим 2, как `convertdovi` у Kodi), слой EL отбрасывается, формат
+    становится `dvhe.08`. Профили 5/8 проходят без изменений (в логе `DoviConvertTrack: DV ...: native`);
   - `DefaultTrackSelector`: туннелирование, предпочтительные языки аудио и субтитров (`""` — по умолчанию,
     `device` — языки системы), `exceedRendererCapabilitiesIfNecessary`;
   - `DefaultRenderersFactory`: приоритет декодеров-расширений (`decoder_priority`, ffmpeg и AV1 из AAR),
