@@ -7,39 +7,36 @@
     android:layout_height="match_parent"
     android:background="@color/bg_app">
 
+    <!-- Иконка приложения слева от названия (только на главном экране) -->
+    <ImageView
+        android:id="@+id/files_app_icon"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:layout_marginStart="48dp"
+        android:importantForAccessibility="no"
+        android:src="@mipmap/ic_launcher_round"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="@id/files_header"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="@id/files_header" />
+
     <TextView
         android:id="@+id/files_header"
-        android:layout_width="wrap_content"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginStart="48dp"
+        android:layout_marginStart="12dp"
         android:layout_marginTop="20dp"
+        android:layout_marginEnd="16dp"
         android:ellipsize="middle"
         android:singleLine="true"
         android:text="@string/files_title"
         android:textColor="@color/tv_white"
         android:textSize="26sp"
         android:textStyle="bold"
-        app:layout_constrainedWidth="true"
-        app:layout_constraintEnd_toStartOf="@id/files_app_icon"
-        app:layout_constraintHorizontal_bias="0"
-        app:layout_constraintHorizontal_chainStyle="packed"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
-
-    <!-- Иконка приложения справа от названия (только на главном экране) -->
-    <ImageView
-        android:id="@+id/files_app_icon"
-        android:layout_width="36dp"
-        android:layout_height="36dp"
-        android:layout_marginStart="12dp"
-        android:layout_marginEnd="16dp"
-        android:importantForAccessibility="no"
-        android:src="@mipmap/ic_launcher"
-        android:visibility="gone"
-        app:layout_constraintBottom_toBottomOf="@id/files_header"
         app:layout_constraintEnd_toStartOf="@id/btn_files_settings"
-        app:layout_constraintStart_toEndOf="@id/files_header"
-        app:layout_constraintTop_toTopOf="@id/files_header" />
+        app:layout_constraintStart_toEndOf="@id/files_app_icon"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_goneMarginStart="48dp" />
 
     <TextView
         android:id="@+id/files_path"
