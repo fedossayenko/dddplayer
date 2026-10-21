@@ -18,7 +18,7 @@
 |:---|:---|:---|
 | `resume_mode` | `RESUME_ASK` (0) | 0 спрашивать, 1 всегда, 2 никогда |
 | `external_position_mode` | `EXTERNAL_POSITION_APPLY` (0) | Позиция из Intent: 0 применять сразу, 1 спрашивать |
-| `up_button_action` | `UP_ACTION_MENU` (2) | 0 ничего, 1 OSD-настройки, 2 боковое меню, 3 инфопанель |
+| `up_button_action` | `UP_ACTION_MENU` (2) | 0 ничего, 1 OSD-настройки, 2 боковое меню, 3 инфопанель, повторное нажатие — боковое меню |
 | `ok_button_action` | `OK_ACTION_PAUSE_PANEL` (1) | 0 пауза, 1 пауза + панель, 2 панель |
 | `horizontal_swipe_action` | 2 | Действие горизонтального свайпа (телефон) |
 | `sub_font`, `sub_size`, `sub_text_color`, `sub_bg_color`, `sub_edge_type`, `sub_edge_color`, `sub_bottom`, `sub_embedded` | как у стандартного `SubtitleView` | Стиль субтитров (`SubtitleStyle`, экран `SubtitleStyleActivity`, применение `SubtitleStyleOptions.apply`) |

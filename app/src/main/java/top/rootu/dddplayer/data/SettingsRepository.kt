@@ -460,7 +460,6 @@ class SettingsRepository private constructor(context: Context) {
     fun getExternalPositionMode(): Int = prefs.getInt("external_position_mode", EXTERNAL_POSITION_APPLY)
     fun setExternalPositionMode(mode: Int) = prefs.edit { putInt("external_position_mode", mode) }
 
-    // Действие кнопки "Вверх" ( 0 = Nothing, 1 = OSD, 2 = Side Menu)
     // Действие кнопки "Вверх" (UP_ACTION_*). По умолчанию - боковое меню
     fun getUpButtonAction(): Int = prefs.getInt("up_button_action", UP_ACTION_MENU)
     fun setUpButtonAction(action: Int) = prefs.edit { putInt("up_button_action", action) }

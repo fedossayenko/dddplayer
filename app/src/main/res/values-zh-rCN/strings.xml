@@ -178,7 +178,7 @@
     <string name="pref_up_action_desc">在播放器中按"上"键时打开什么</string>
     <string name="pref_up_action_osd">快捷设置面板</string>
     <string name="pref_up_action_menu">设置菜单（侧边）</string>
-    <string name="pref_up_action_info">信息面板</string>
+    <string name="pref_up_action_info">信息面板，再按打开侧边菜单</string>
     <string name="pref_up_action_none">无操作</string>
     <string name="pref_ok_action">\'OK\' 键动作</string>
     <string name="pref_ok_action_desc">在播放器中按下 \'OK\' 键时做什么</string>
