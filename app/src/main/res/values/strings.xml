@@ -303,7 +303,7 @@
     <string name="vr_config_success">Cardboard profile applied successfully!\n\nK1: %1$.3f\nK2: %2$.3f</string>
     <string name="vr_config_error">Error reading Cardboard profile.</string>
     <string name="pref_remember_audio">Remember audio track</string>
-    <string name="pref_dv_mode_desc">Play Dolby Vision as the base HDR10/HLG layer (HEVC). Auto: only if the screen or decoder does not support Dolby Vision. Always: helps with a black screen (DV Profile 7).</string>
+    <string name="pref_dv_mode_desc">Play Dolby Vision as the base HDR10/HLG layer (HEVC). Auto: only if the screen or decoder does not support Dolby Vision. Always: helps with a black screen (DV Profile 7). P7 → P8.1: Profile 7 films (UHD Blu-ray remuxes, MKV/MP4) are converted to Profile 8.1 and play in Dolby Vision on devices that cannot decode Profile 7.</string>
     <string name="dv_mode_off">Off (Dolby Vision decoder)</string>
     <string name="dv_mode_auto">Auto</string>
     <string name="dv_mode_always">Always (HDR10/HLG)</string>

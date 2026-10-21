@@ -300,7 +300,7 @@
     <string name="pref_app_language_desc">Изменить язык приложения. Изменение требует перезапуск приложения.</string>
 
     <string name="pref_remember_audio">Запоминать аудиодорожку</string>
-    <string name="pref_dv_mode_desc">Воспроизводить Dolby Vision базовым слоем HDR10/HLG (HEVC). Авто — только если экран или декодер не поддерживают Dolby Vision. Всегда — помогает при черном экране (DV Profile 7).</string>
+    <string name="pref_dv_mode_desc">Воспроизводить Dolby Vision базовым слоем HDR10/HLG (HEVC). Авто — только если экран или декодер не поддерживают Dolby Vision. Всегда — помогает при черном экране (DV Profile 7). P7 → P8.1 — фильмы Profile 7 (ремуксы UHD Blu-ray, MKV/MP4) конвертируются в Profile 8.1 и играют в Dolby Vision на устройствах, которые не умеют Profile 7.</string>
     <string name="dv_mode_off">Выкл (декодер Dolby Vision)</string>
     <string name="dv_mode_auto">Авто</string>
     <string name="dv_mode_always">Всегда (HDR10/HLG)</string>

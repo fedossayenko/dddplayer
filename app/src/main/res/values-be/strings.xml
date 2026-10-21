@@ -271,7 +271,7 @@
     <string name="pref_app_language_desc">Змяніць мову праграмы. Змена патрабуе перазапуску праграмы.</string>
     <string name="develop_tost">Выбачайце, гэтая функцыя яшчэ распрацоўваецца.</string>
     <string name="pref_remember_audio">Запамінаць аўдыядарожку</string>
-    <string name="pref_dv_mode_desc">Прайграваць Dolby Vision базавым пластом HDR10/HLG (HEVC). Аўта — толькі калі экран або дэкодэр не падтрымліваюць Dolby Vision. Заўсёды — дапамагае пры чорным экране (DV Profile 7).</string>
+    <string name="pref_dv_mode_desc">Прайграваць Dolby Vision базавым пластом HDR10/HLG (HEVC). Аўта — толькі калі экран або дэкодэр не падтрымліваюць Dolby Vision. Заўсёды — дапамагае пры чорным экране (DV Profile 7). P7 → P8.1 — фільмы Profile 7 (рэмуксы UHD Blu-ray, MKV/MP4) канвертуюцца ў Profile 8.1 і граюць у Dolby Vision на прыладах, якія не ўмеюць Profile 7.</string>
     <string name="dv_mode_off">Выкл (дэкодэр Dolby Vision)</string>
     <string name="dv_mode_auto">Аўта</string>
     <string name="dv_mode_always">Заўсёды (HDR10/HLG)</string>
