@@ -300,6 +300,10 @@ class SettingsRepository private constructor(context: Context) {
     fun isTunnelingEnabled(): Boolean = prefs.getBoolean("tunneling_enabled", false)
     fun setTunnelingEnabled(enabled: Boolean) = prefs.edit { putBoolean("tunneling_enabled", enabled) }
 
+    // DTS-HD MA и TrueHD через несущую IEC 61937 (как Kodi). По умолчанию выкл, чтобы не менять поведение
+    fun isHdAudioIecEnabled(): Boolean = prefs.getBoolean("hd_audio_iec", false)
+    fun setHdAudioIecEnabled(enabled: Boolean) = prefs.edit { putBoolean("hd_audio_iec", enabled) }
+
     // Принудительный Downmix в стерео
     fun isStereoDownmixEnabled(): Boolean = prefs.getBoolean("stereo_downmix", true)
     fun setStereoDownmixEnabled(enabled: Boolean) = prefs.edit { putBoolean("stereo_downmix", enabled) }
@@ -590,7 +594,7 @@ class SettingsRepository private constructor(context: Context) {
 
     // Сигнатура настроек, требующих полного перезапуска плеера
     fun getHardSettingsSignature(): String {
-        val videoParams = "${getDecoderPriority()}_${isTunnelingEnabled()}_${getDvMode()}"
+        val videoParams = "${getDecoderPriority()}_${isTunnelingEnabled()}_${getDvMode()}_${isHdAudioIecEnabled()}"
         val audioDownmix = "${isStereoDownmixEnabled()}_${getMixPreset()}_${getMixFront()}_${getMixCenter()}_${getMixRear()}_${getMixMiddle()}_${getMixLfe()}"
         return "${videoParams}_${audioDownmix}_${getTargetBufferCorrectMB()}"
     }

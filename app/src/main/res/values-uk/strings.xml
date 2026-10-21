@@ -126,6 +126,8 @@
     <string name="pref_downmix_lfe">Сабвуфер (LFE)</string>
     <string name="pref_tunneling">Тунельне відтворення</string>
     <string name="pref_tunneling_summary">Туннелювання дозволяє відео йти в обхід коду додатку та Android, що може забезпечити більш ефективний рендеринг 4K/HDR контенту, але може не працювати на всіх пристроях.\nУвага!!! При туннельному відтворенні обробкою та синхронізацією відео займається кінцевий пристрій, тому з цією опцією не працюватиме частина функціоналу плеєра.</string>
+    <string name="pref_hd_audio_iec">HD-звук без втрат (IEC 61937)</string>
+    <string name="pref_hd_audio_iec_summary">Передавати DTS-HD MA і TrueHD/Atmos на ресивер через HDMI без змін, як це робить Kodi. Потрібно на Fire TV, який інакше передає лише ядро DTS. Вимкніть, якщо ресивер видає шум або тишу.</string>
     <string name="pref_map_dv">Режим Dolby Vision</string>
     <string name="pref_afr_sec">AFR</string>
     <string name="pref_framerate_matching">Автоматичне узгодження частоти кадрів</string>

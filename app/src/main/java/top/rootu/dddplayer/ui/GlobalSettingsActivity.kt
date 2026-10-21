@@ -76,6 +76,8 @@ class GlobalSettingsActivity : AppCompatActivity() {
     private lateinit var textDecoderValue: TextView
     private lateinit var itemTunneling: LinearLayout
     private lateinit var switchTunneling: SwitchCompat
+    private lateinit var itemHdAudioIec: LinearLayout
+    private lateinit var switchHdAudioIec: SwitchCompat
     private lateinit var itemDv: LinearLayout
     private lateinit var textDvValue: TextView
     private lateinit var itemAfr: LinearLayout
@@ -327,6 +329,8 @@ class GlobalSettingsActivity : AppCompatActivity() {
         textDecoderValue = findViewById(R.id.text_decoder_value)
         itemTunneling = findViewById(R.id.item_tunneling)
         switchTunneling = findViewById(R.id.switch_tunneling)
+        itemHdAudioIec = findViewById(R.id.item_hd_audio_iec)
+        switchHdAudioIec = findViewById(R.id.switch_hd_audio_iec)
         itemDv = findViewById(R.id.item_dv)
         textDvValue = findViewById(R.id.text_dv_value)
         itemAfr = findViewById(R.id.item_afr)
@@ -432,6 +436,11 @@ class GlobalSettingsActivity : AppCompatActivity() {
         // Tunneling
         itemTunneling.setOnClickListener {
             settingsViewModel.toggleTunneling(!switchTunneling.isChecked)
+        }
+
+        // HD-звук через IEC 61937
+        itemHdAudioIec.setOnClickListener {
+            settingsViewModel.toggleHdAudioIec(!switchHdAudioIec.isChecked)
         }
 
         // Dolby Vision
@@ -628,6 +637,7 @@ class GlobalSettingsActivity : AppCompatActivity() {
             textDecoderDesc.setText(settingsViewModel.getDecoderDescResId(mode))
         }
         settingsViewModel.isTunnelingEnabled.observe(this) { switchTunneling.isChecked = it }
+        settingsViewModel.isHdAudioIecEnabled.observe(this) { switchHdAudioIec.isChecked = it }
         settingsViewModel.dvMode.observe(this) { mode ->
             textDvValue.text = when (mode) {
                 SettingsRepository.DV_MODE_OFF -> getString(R.string.dv_mode_off)
