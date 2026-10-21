@@ -106,6 +106,8 @@ class PlayerManager(
     var onPlayerCreated: ((ExoPlayer) -> Unit)? = null
     var onVideoFormatChanged: ((Format) -> Unit)? = null
     var onAudioOutputFormatChanged: ((String) -> Unit)? = null
+    // Туннельный режим реально включился (декодеры и аудиовыход его поддержали)
+    var onTunnelingChanged: ((Boolean) -> Unit)? = null
 
     private val resolvedMediaTypes = ConcurrentHashMap<String, String>()
 
@@ -499,10 +501,9 @@ class PlayerManager(
                 // Если это AC3, DTS и т.д., значит работает Passthrough.
                 val encodingName = MediaFormatHelper.getAudioCodecName(config.encoding)
                 val channelStr = MediaFormatHelper.getChannelConfigString(config.channelConfig)
-                val passthrough = if (config.tunneling) " ↳" else ""
-                val info = "$encodingName $channelStr$passthrough"
-
-                onAudioOutputFormatChanged?.invoke(info)
+                onAudioOutputFormatChanged?.invoke("$encodingName $channelStr")
+                // Туннелирование касается видео (кадры идут прямо в аппаратный вывод), показывается у видео
+                onTunnelingChanged?.invoke(config.tunneling)
             }
         })
 
@@ -841,6 +842,7 @@ class PlayerManager(
             onPlayerCreated = null
             onVideoFormatChanged = null
             onAudioOutputFormatChanged = null
+            onTunnelingChanged = null
         }
     }
 

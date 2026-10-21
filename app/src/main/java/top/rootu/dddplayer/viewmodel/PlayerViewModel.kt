@@ -180,6 +180,8 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     // Quality & Info
     private val _videoResolution = MutableLiveData<String>()
     val videoResolution: LiveData<String> = _videoResolution
+    private val _tunnelingActive = MutableLiveData(false)
+    val tunnelingActive: LiveData<Boolean> = _tunnelingActive
     // Соотношение сторон для отображения: принудительное (если выбрано) или из видео
     private val _videoAspectRatio = MutableLiveData(1.777f)
     val videoAspectRatio: LiveData<Float> = _videoAspectRatio
@@ -453,6 +455,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         playerManager.onAudioOutputFormatChanged = { info ->
             _audioOutputInfo.postValue(info)
         }
+        playerManager.onTunnelingChanged = { _tunnelingActive.postValue(it) }
 
         // Инициализируем плеер сразу
         playerManager.initializePlayer()

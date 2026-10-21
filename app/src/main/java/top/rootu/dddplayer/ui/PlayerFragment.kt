@@ -1127,7 +1127,8 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
             ui.buttonSubs.isVisible = counts.subtitles > 0
         }
 
-        viewModel.videoResolution.observe(viewLifecycleOwner) { ui.badgeResolution.text = it }
+        viewModel.videoResolution.observe(viewLifecycleOwner) { updateVideoBadge() }
+        viewModel.tunnelingActive.observe(viewLifecycleOwner) { updateVideoBadge() }
         viewModel.videoAspectRatio.observe(viewLifecycleOwner) { ui.setAspectRatio(it) }
         viewModel.audioOutputInfo.observe(viewLifecycleOwner) { updateAudioBadge() }
         viewModel.currentAudioTrack.observe(viewLifecycleOwner) { trackOption ->
@@ -1492,6 +1493,12 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
         // список опций
         val optionsData = viewModel.getOptionsForSetting(type, context)
         ui.updateSettingsOptions(optionsData)
+    }
+
+    // "↳" - туннельный режим: видео выводится напрямую аппаратным декодером
+    private fun updateVideoBadge() {
+        val info = viewModel.videoResolution.value.orEmpty()
+        ui.badgeResolution.text = if (viewModel.tunnelingActive.value == true) "$info ↳" else info
     }
 
     private fun updateStereoBadge() {

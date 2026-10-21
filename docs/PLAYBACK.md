@@ -10,7 +10,9 @@
     селектор видит только MIME-тип, поэтому при подмене видеорендерер заменяется на `DolbyVisionVideoRenderer`:
     для профилей без совместимого слоя HEVC (5, 9, 10, см. `DolbyVisionLogic`) он берет обычный выбор декодера;
   - `DefaultTrackSelector`: туннелирование, предпочтительные языки аудио и субтитров (`""` — по умолчанию,
-    `device` — языки системы), `exceedRendererCapabilitiesIfNecessary`;
+    `device` — языки системы), `exceedRendererCapabilitiesIfNecessary`. Включилось ли туннелирование на деле,
+    видно по `AudioTrackConfig.tunneling` (`onAudioTrackInitialized`): тогда у бейджа видео в инфопанели стоит `↳`.
+    Бейдж аудио показывает дорожку и формат вывода (`AC3 5.1 > AC3 5.1` — проброс, `> PCM` — декодирует плеер);
   - `DefaultRenderersFactory`: приоритет декодеров-расширений (`decoder_priority`, ffmpeg и AV1 из AAR),
     `enableDecoderFallback`. При `stereo_downmix` подключается свой `DefaultAudioSink` с
     `ChannelMixingAudioProcessor` (матрицы из `AudioMixerLogic`) и аудиобуфером не больше 256 КБ,
