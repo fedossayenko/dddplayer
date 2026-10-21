@@ -429,4 +429,28 @@
         <item>ГБ</item>
         <item>ТБ</item>
     </string-array>
+    <!-- Диагностика устройства -->
+    <string name="pref_diagnostics">Діагностика пристрою</string>
+    <string name="pref_diagnostics_desc">Екран, HDR, аудіовихід і декодери. Звіт можна скопіювати для повідомлення про помилку</string>
+    <string name="diag_copy">Копіювати</string>
+    <string name="diag_copied">Звіт скопійовано</string>
+    <string name="diag_sec_device">Пристрій</string>
+    <string name="diag_sec_display">Екран</string>
+    <string name="diag_sec_audio_out">Аудіовихід</string>
+    <string name="diag_sec_video_dec">Відеодекодери</string>
+    <string name="diag_sec_audio_dec">Аудіодекодери</string>
+    <string name="diag_model">Модель</string>
+    <string name="diag_app_version">Версія плеєра</string>
+    <string name="diag_abi">Архітектура</string>
+    <string name="diag_heap">Пам\'ять застосунку</string>
+    <string name="diag_mode">Поточний режим</string>
+    <string name="diag_modes">Доступні режими</string>
+    <string name="diag_hdr">HDR</string>
+    <string name="diag_wide_gamut">Широке колірне охоплення</string>
+    <string name="diag_passthrough">Прокидання (Media3)</string>
+    <string name="diag_max_channels">Макс. каналів</string>
+    <string name="diag_none">немає</string>
+    <string name="diag_yes">так</string>
+    <string name="diag_no">ні</string>
+    <string name="diag_builtin">вбудований</string>
 </resources>

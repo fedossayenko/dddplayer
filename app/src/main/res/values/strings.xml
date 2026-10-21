@@ -461,4 +461,28 @@
         <item>GB</item>
         <item>TB</item>
     </string-array>
+    <!-- Диагностика устройства -->
+    <string name="pref_diagnostics">Device diagnostics</string>
+    <string name="pref_diagnostics_desc">Display, HDR, audio output and decoders. The report can be copied for a bug report</string>
+    <string name="diag_copy">Copy</string>
+    <string name="diag_copied">Report copied</string>
+    <string name="diag_sec_device">Device</string>
+    <string name="diag_sec_display">Display</string>
+    <string name="diag_sec_audio_out">Audio output</string>
+    <string name="diag_sec_video_dec">Video decoders</string>
+    <string name="diag_sec_audio_dec">Audio decoders</string>
+    <string name="diag_model">Model</string>
+    <string name="diag_app_version">Player version</string>
+    <string name="diag_abi">Architecture</string>
+    <string name="diag_heap">App memory</string>
+    <string name="diag_mode">Current mode</string>
+    <string name="diag_modes">Supported modes</string>
+    <string name="diag_hdr">HDR</string>
+    <string name="diag_wide_gamut">Wide color gamut</string>
+    <string name="diag_passthrough">Passthrough (Media3)</string>
+    <string name="diag_max_channels">Max channels</string>
+    <string name="diag_none">none</string>
+    <string name="diag_yes">yes</string>
+    <string name="diag_no">no</string>
+    <string name="diag_builtin">built-in</string>
 </resources>

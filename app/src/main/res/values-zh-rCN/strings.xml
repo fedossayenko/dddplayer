@@ -444,4 +444,28 @@
         <item>GB</item>
         <item>TB</item>
     </string-array>
+    <!-- Диагностика устройства -->
+    <string name="pref_diagnostics">设备诊断</string>
+    <string name="pref_diagnostics_desc">显示屏、HDR、音频输出和解码器。可复制报告用于反馈问题</string>
+    <string name="diag_copy">复制</string>
+    <string name="diag_copied">报告已复制</string>
+    <string name="diag_sec_device">设备</string>
+    <string name="diag_sec_display">显示屏</string>
+    <string name="diag_sec_audio_out">音频输出</string>
+    <string name="diag_sec_video_dec">视频解码器</string>
+    <string name="diag_sec_audio_dec">音频解码器</string>
+    <string name="diag_model">型号</string>
+    <string name="diag_app_version">播放器版本</string>
+    <string name="diag_abi">架构</string>
+    <string name="diag_heap">应用内存</string>
+    <string name="diag_mode">当前模式</string>
+    <string name="diag_modes">支持的模式</string>
+    <string name="diag_hdr">HDR</string>
+    <string name="diag_wide_gamut">广色域</string>
+    <string name="diag_passthrough">直通 (Media3)</string>
+    <string name="diag_max_channels">最大声道数</string>
+    <string name="diag_none">无</string>
+    <string name="diag_yes">是</string>
+    <string name="diag_no">否</string>
+    <string name="diag_builtin">内置</string>
 </resources>

@@ -406,6 +406,9 @@ class GlobalSettingsActivity : AppCompatActivity() {
         btnClose.setOnClickListener { finish() }
         itemExit.setOnClickListener { finish() }
 
+        findViewById<View>(R.id.item_diagnostics).setOnClickListener {
+            startActivity(Intent(this, DeviceInfoActivity::class.java))
+        }
         itemSubtitleStyle.setOnClickListener {
             startActivity(Intent(this, SubtitleStyleActivity::class.java))
         }

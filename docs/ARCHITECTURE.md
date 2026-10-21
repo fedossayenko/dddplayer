@@ -62,6 +62,12 @@ SurfaceView (2D/HDR)  или  StereoGLSurfaceView ─► StereoRenderer (GLSL)
   передаются в `video_list.subtitles`. В истории источник — ссылка на папку без учетных данных.
 - **`VrConfigActivity`** принимает ссылки Cardboard (QR-коды профилей линз) и сохраняет параметры дисторсии.
 - **`CrashHandler` / `CrashActivity`** перехватывают необработанные исключения и показывают лог.
+- **`DeviceInfoActivity`** (Настройки → Приложение → Диагностика устройства) — отчет для разбора жалоб:
+  модель и Android, режимы экрана и HDR (`Display`), аудиовыходы с форматами из EDID (`AudioDeviceInfo`) и
+  проброс по мнению Media3 (`AudioCapabilities`), видео- и аудиодекодеры (`MediaCodecList`: HW/SW, размер,
+  10-bit/HDR10/HDR10+, профили Dolby Vision) плюс встроенные dav1d и FFmpeg. Данные собирает
+  `DeviceInfoCollector` (каждый раздел отдельно, ошибка одного не ломает остальные), подписи профилей —
+  `DeviceInfoLogic`. Кнопка «Копировать» кладет отчет текстом в буфер обмена.
 
 ## Модель данных
 

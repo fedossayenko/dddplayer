@@ -54,18 +54,20 @@ app/src/main/java/top/rootu/dddplayer/
 ├── player/                     PlayerManager (ExoPlayer, OkHttp, источники, M3U-проба),
 │                               NetworkBufferLoadControl, PrefetchingDataSource, ParsingDataSource
 ├── logic/                      Чистая логика: M3uParser, TrackLogic, AnaglyphLogic, AudioMixerLogic,
-│                               Matroska/Mp4/UnifiedMetadataReader, SettingsMutator, StereoFormatLogic, UpdateManager
+│                               Matroska/Mp4/UnifiedMetadataReader, SettingsMutator, StereoFormatLogic, DeviceInfoLogic,
+│                               UpdateManager
 ├── renderer/                   StereoGLSurfaceView, StereoRenderer, ShaderSource (GLSL ES 2.0/3.0)
 ├── viewmodel/                  PlayerViewModel (центр всего), AnaglyphDelegate, SettingsViewModel,
 │                               GlobalSettingsViewModel, UpdateViewModel
 ├── ui/                         PlayerActivity (Intent, PiP, результат), PlayerFragment (экран плеера),
-│                               GlobalSettingsActivity, FileBrowserActivity (файлы), VrConfigActivity, CrashActivity
+│                               GlobalSettingsActivity, FileBrowserActivity (файлы), DeviceInfoActivity (диагностика),
+│                               VrConfigActivity, CrashActivity
 │   ├── controller/             PlayerUiController (вьюхи), PlayerInputHandler (пульт),
 │   │                           PlayerTouchHandler (жесты), PlayerTimerController (таймеры, часы)
 │   ├── adapter/                RecyclerView адаптеры меню/плейлиста
 │   └── wiget/                  OutlineTextView (часы с обводкой), CenterLayoutManager
 └── utils/                      IntentUtils (разбор Intent), MediaFormatHelper, StereoTypeDetector,
-                                DuboisMath, CardboardParamsParser, CrashHandler, LocaleUtils, afr/*
+                                DuboisMath, CardboardParamsParser, CrashHandler, LocaleUtils, DeviceInfoCollector, afr/*
 ```
 
 Самые большие файлы: `PlayerViewModel.kt`, `PlayerFragment.kt`, `PlayerUiController.kt`,
