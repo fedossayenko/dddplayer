@@ -91,6 +91,12 @@ class SettingsRepository private constructor(context: Context) {
         const val DV_MODE_ALWAYS = 2 // Всегда HEVC
         const val DV_MODE_CONVERT = 3 // Profile 7 -> 8.1 (libdovi), иначе как Авто
         const val RENDER_API_AUTO = 0
+
+        // Не настройки, а данные пользователя: сброс настроек их сохраняет
+        val USER_DATA_KEYS = setOf(
+            "watch_history", "saved_playlists", "smb_servers", "startup_playlist_uri", "last_channel_uri",
+            "last_update_check", "last_update_info_json"
+        )
         const val RENDER_API_GLES2 = 1
 
         @Volatile
@@ -134,6 +140,14 @@ class SettingsRepository private constructor(context: Context) {
     // Custom Video Zoom Scale
     fun getZoomScalePercent(): Int = prefs.getInt("video_zoom_scale", 115)
     fun setZoomScalePercent(percent: Int) = prefs.edit { putInt("video_zoom_scale", percent) }
+
+    // Скорость, с которой начинается воспроизведение (прямой эфир всегда идет на 1.00x)
+    fun getDefaultPlaybackSpeed(): Float = prefs.getFloat("default_playback_speed", 1.0f)
+    fun setDefaultPlaybackSpeed(speed: Float) = prefs.edit { putFloat("default_playback_speed", speed) }
+
+    // Своя скорость (пункт меню скорости с ползунком)
+    fun getCustomPlaybackSpeed(): Float = prefs.getFloat("custom_playback_speed", 1.10f)
+    fun setCustomPlaybackSpeed(speed: Float) = prefs.edit { putFloat("custom_playback_speed", speed) }
 
     // --- Playlist Settings ---
     // Плейлист, который открывается при запуске из лаунчера
@@ -323,6 +337,10 @@ class SettingsRepository private constructor(context: Context) {
     fun setAudioDecoderPriority(mode: Int) = prefs.edit { putInt("audio_decoder_priority", mode) }
 
     fun isTunnelingEnabled(): Boolean = prefs.getBoolean("tunneling_enabled", false)
+
+    // Динамические метаданные HDR10+: выключено - вырезаем их, видео играет как HDR10
+    fun isHdr10PlusEnabled(): Boolean = prefs.getBoolean("hdr10plus_enabled", true)
+    fun setHdr10PlusEnabled(enabled: Boolean) = prefs.edit { putBoolean("hdr10plus_enabled", enabled) }
     fun setTunnelingEnabled(enabled: Boolean) = prefs.edit { putBoolean("tunneling_enabled", enabled) }
 
     // DTS-HD MA и TrueHD через несущую IEC 61937 (как Kodi). По умолчанию выкл, чтобы не менять поведение
@@ -500,7 +518,8 @@ class SettingsRepository private constructor(context: Context) {
     fun setExternalPositionMode(mode: Int) = prefs.edit { putInt("external_position_mode", mode) }
 
     // Действие кнопки "Вверх" (UP_ACTION_*). По умолчанию - боковое меню
-    fun getUpButtonAction(): Int = prefs.getInt("up_button_action", UP_ACTION_MENU)
+    // По умолчанию "Инфопанель, затем боковое меню"; кто выбирал действие сам, сохраняет свой выбор
+    fun getUpButtonAction(): Int = prefs.getInt("up_button_action", UP_ACTION_INFO)
     fun setUpButtonAction(action: Int) = prefs.edit { putInt("up_button_action", action) }
 
     // Подтверждение выхода из плеера повторным нажатием "Назад"
@@ -563,6 +582,31 @@ class SettingsRepository private constructor(context: Context) {
             listOf("vr_k1", "vr_k2", "vr_scale", "global_screen_separation_pct").forEach { remove(it) }
         }
         bumpCalibrationVersion()
+    }
+
+    /**
+     * Сброс всех настроек к значениям по умолчанию. Пользовательские данные ([USER_DATA_KEYS]: история,
+     * плейлисты, SMB-серверы и т.п.) и настройки отдельных видео (Room) не трогаем.
+     */
+    fun resetAllSettings() {
+        val keep = prefs.all.filterKeys { it in USER_DATA_KEYS }
+        // Новая версия калибровки: плеер перечитает VR и анаглиф уже без сохраненных значений
+        val calibrationVersion = getCalibrationVersion() + 1
+        prefs.edit(commit = true) {
+            clear()
+            keep.forEach { (key, value) ->
+                @Suppress("UNCHECKED_CAST")
+                when (value) {
+                    is String -> putString(key, value)
+                    is Set<*> -> putStringSet(key, value as Set<String>)
+                    is Int -> putInt(key, value)
+                    is Long -> putLong(key, value)
+                    is Float -> putFloat(key, value)
+                    is Boolean -> putBoolean(key, value)
+                }
+            }
+            putInt("calibration_version", calibrationVersion)
+        }
     }
 
     // Счетчик сохранений калибровки: плеер перечитывает параметры VR и анаглифа, если он изменился
@@ -628,7 +672,7 @@ class SettingsRepository private constructor(context: Context) {
 
     // Сигнатура настроек, требующих полного перезапуска плеера
     fun getHardSettingsSignature(): String {
-        val videoParams = "${getVideoDecoderPriority()}_${getAudioDecoderPriority()}_${isTunnelingEnabled()}_${getDvMode()}_${isHdAudioIecEnabled()}"
+        val videoParams = "${getVideoDecoderPriority()}_${getAudioDecoderPriority()}_${isTunnelingEnabled()}_${getDvMode()}_${isHdAudioIecEnabled()}_${isHdr10PlusEnabled()}"
         val audioDownmix = "${isStereoDownmixEnabled()}_${getMixPreset()}_${getMixFront()}_${getMixCenter()}_${getMixRear()}_${getMixMiddle()}_${getMixLfe()}"
         return "${videoParams}_${audioDownmix}_${getTargetBufferCorrectMB()}"
     }

@@ -16,6 +16,12 @@
 
     <!-- Кіраванне прайграваннем -->
     <string name="playback_speed">Хуткасць</string>
+    <string name="playback_speed_custom">Свая хуткасць</string>
+    <string name="playback_speed_custom_value">Свая: %s</string>
+    <string name="playback_speed_default_mark">Па змаўчанні</string>
+    <string name="playback_speed_default_set">Хуткасць па змаўчанні: %s</string>
+    <string name="pref_default_speed">Хуткасць па змаўчанні</string>
+    <string name="pref_default_speed_desc">З гэтай хуткасцю пачынаецца прайграванне, прамы эфір заўсёды ідзе на 1.00x. У плэеры: доўгі націск на пункт меню хуткасці</string>
     <string name="playback_zoom">Маштаб</string>
     <string name="aspect_ratio">Суадносіны бакоў</string>
     <string name="aspect_ratio_auto">Як у відэа</string>
@@ -128,6 +134,8 @@
     <string name="pref_downmix_rear">Тылы (Surround)</string>
     <string name="pref_downmix_middle">Бакавыя (7.1 Side)</string>
     <string name="pref_downmix_lfe">Сабвуфер (LFE)</string>
+    <string name="pref_hdr10plus">Метаданыя HDR10+</string>
+    <string name="pref_hdr10plus_desc">Дынамічныя метаданыя HDR10+. Выключыце, калі тэлевізар няправільна паказвае HDR10+: такія відэа будуць прайгравацца як HDR10 (MKV, MP4, TS)</string>
     <string name="pref_tunneling">Тунэльнае прайграванне</string>
     <string name="pref_tunneling_summary">Тунэляванне дазваляе відэа ісці ў абыход кода прыкладання і Android, што можа забяспечыць больш эфектыўны рэндэрынг 4K/HDR кантэнту, але можа не працаваць на ўсіх прыладах.\nУвага!!! Пры тунэльным прайграванні апрацоўкай і сінхранізацыяй відэа займаецца канчатковая прылада, таму з гэтай опцыяй частка функцыяналу плэера не будзе працаваць.</string>
     <string name="pref_hd_audio_iec">HD-гук без страт (IEC 61937)</string>
@@ -379,6 +387,15 @@
     <string name="wizard_ana_check_title">Праверка</string>
     <string name="pref_reset_calibration">Скінуць каліброўку</string>
     <string name="pref_reset_calibration_desc">Вярнуць значэнні праграмы для Cardboard VR і/або анагліф-акуляраў</string>
+    <string name="cancel">Адмена</string>
+    <string name="pref_reset_settings">Скінуць усе налады</string>
+    <string name="pref_reset_settings_desc">Вярнуць значэнні па змаўчанні. Гісторыя, плэйлісты, сеткавыя папкі і налады асобных відэа захаваюцца</string>
+    <string name="reset_settings_title">Скінуць усе налады на значэнні па змаўчанні?</string>
+    <string name="reset_settings_confirm">Скінуць</string>
+    <string name="reset_settings_done">Налады скінуты</string>
+    <string name="pref_licenses">Ліцэнзіі</string>
+    <string name="pref_licenses_desc">Адкрытыя кампаненты, якія выкарыстоўвае праграма</string>
+    <string name="link_no_browser">Няма праграмы, каб адкрыць спасылку: %s</string>
     <string name="reset_calibration_vr">Cardboard VR</string>
     <string name="reset_calibration_anaglyph">Анагліф-акуляры</string>
     <string name="reset_calibration_all">Усё</string>

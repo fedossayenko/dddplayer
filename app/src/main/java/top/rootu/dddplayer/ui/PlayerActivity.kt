@@ -16,6 +16,7 @@ import android.graphics.Rect
 import android.graphics.drawable.Icon
 import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import android.util.Rational
 import android.view.KeyEvent
 import android.view.View
@@ -36,15 +37,50 @@ import top.rootu.dddplayer.R
 import top.rootu.dddplayer.data.SettingsRepository
 import top.rootu.dddplayer.utils.IntentUtils
 import top.rootu.dddplayer.viewmodel.PlayerViewModel
+import java.lang.ref.WeakReference
 
 private const val ACTION_PIP_PLAY_PAUSE = "top.rootu.dddplayer.action.PIP_PLAY_PAUSE"
 
 @UnstableApi
 class PlayerActivity : AppCompatActivity() {
 
+    companion object {
+        // Лог жизненного цикла PiP (adb logcat -s PlayerPip): задачи, служебные запуски, кто закрывает плеер
+        private const val PIP_TAG = "PlayerPip"
+
+        // Пометка интента, которым разворачиваем окно PiP (не новое видео)
+        private const val EXTRA_RESTORE_PIP = "top.rootu.dddplayer.extra.RESTORE_PIP"
+
+        // Плеер в окне PiP. При входе в PiP система переносит его в отдельную задачу,
+        // поэтому новый запуск видео создает второй плеер, а открытие приложения не возвращает в видео
+        private var pipActivity: WeakReference<PlayerActivity>? = null
+
+        private fun activePipPlayer(): PlayerActivity? = pipActivity?.get()?.takeIf {
+            !it.isFinishing && Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && it.isInPictureInPictureMode
+        }
+
+        /**
+         * Разворачивает окно PiP на весь экран: повторный запуск активити в PiP система (SystemUI)
+         * обрабатывает как возврат из PiP. @return false - окна PiP нет
+         */
+        fun restorePictureInPicture(): Boolean {
+            val pip = activePipPlayer()
+            Log.i(PIP_TAG, "restore: pip=${pip?.hashCode()} task=${pip?.taskId}")
+            pip ?: return false
+            pip.startActivity(
+                Intent(pip, PlayerActivity::class.java)
+                    .addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
+                    .putExtra(EXTRA_RESTORE_PIP, true)
+            )
+            return true
+        }
+    }
+
     private var playerFragment: PlayerFragment? = null
     private val viewModel: PlayerViewModel by viewModels()
     private var shouldReturnResult = false
+    // Служебный запуск (иконка лаунчера, разворачивание PiP): сразу закрывается, плеер не создается
+    private var isTrampoline = false
     private var isCompleted = false
     // Сохраняем Intent, чтобы обработать его после получения разрешения
     private var pendingIntent: Intent? = null
@@ -122,6 +158,8 @@ class PlayerActivity : AppCompatActivity() {
     }
 
     private fun updatePictureInPictureParams() {
+        // У служебного запуска нет плеера: не создаем ради параметров PiP ViewModel (а с ней и плеер)
+        if (isTrampoline) return
         if (!supportsPictureInPicture || Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         if (isInPictureInPictureMode) {
             // В окне PiP обновляем только кнопки (параметры объединяются с прежними)
@@ -173,8 +211,18 @@ class PlayerActivity : AppCompatActivity() {
         updatePictureInPictureParams()
     }
 
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        // Размер окна при выходе из PiP (видео могло остаться маленьким)
+        Log.i(PIP_TAG, "configChanged ${describe()} screen=${newConfig.screenWidthDp}x${newConfig.screenHeightDp}dp")
+    }
+
     override fun onPictureInPictureModeChanged(inPip: Boolean, newConfig: Configuration) {
         super.onPictureInPictureModeChanged(inPip, newConfig)
+        Log.i(PIP_TAG, "pipModeChanged=$inPip ${describe()} screen=${newConfig.screenWidthDp}x${newConfig.screenHeightDp}dp")
+        if (isTrampoline) return
+        if (inPip) pipActivity = WeakReference(this)
+        else if (pipActivity?.get() === this) pipActivity = null
         playerFragment?.setPictureInPictureMode(inPip)
         if (!inPip) updatePictureInPictureParams()
     }
@@ -198,10 +246,20 @@ class PlayerActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        Log.i(PIP_TAG, "onCreate ${describe()} restored=${savedInstanceState != null} intent=$intent")
+
+        // Разворачивание PiP создало новый экземпляр вместо подъема прежнего: прежний плеер не трогаем
+        if (intent.getBooleanExtra(EXTRA_RESTORE_PIP, false)) {
+            isTrampoline = true
+            finish()
+            return
+        }
 
         // Запуск из лаунчера -> стартовый экран (история, плейлисты, хранилища, вход в настройки)
         if (isLaunchedFromLauncher(intent)) {
-            startActivity(Intent(this, FileBrowserActivity::class.java))
+            isTrampoline = true
+            // Видео в окне PiP: возвращаем его на весь экран вместо стартового экрана
+            if (!restorePictureInPicture()) startActivity(Intent(this, FileBrowserActivity::class.java))
             finish()
             return
         }
@@ -272,6 +330,8 @@ class PlayerActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
+        Log.i(PIP_TAG, "onDestroy ${describe()} finishing=$isFinishing")
+        if (pipActivity?.get() === this) pipActivity = null
         if (pipReceiverRegistered) {
             unregisterReceiver(pipControlReceiver)
             pipReceiverRegistered = false
@@ -295,6 +355,9 @@ class PlayerActivity : AppCompatActivity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
+        Log.i(PIP_TAG, "onNewIntent ${describe()} intent=$intent")
+        // Разворачивание окна PiP: видео то же, интент не меняем
+        if (intent.getBooleanExtra(EXTRA_RESTORE_PIP, false)) return
         setIntent(intent)
         // Также проверяем разрешения при новом интенте
         checkPermissionsAndHandleIntent(intent)
@@ -341,6 +404,9 @@ class PlayerActivity : AppCompatActivity() {
         viewModel.setHistorySource(IntentUtils.parseHistorySource(intent))
 
         if (playlist.isNotEmpty()) {
+            // Новое видео при открытом окне PiP: старый плеер закрываем, а не оставляем висеть вторым.
+            // Только когда видео действительно пришло: служебный запуск окно PiP не закрывает
+            activePipPlayer()?.takeIf { it !== this }?.closeFromPictureInPicture(taskId)
             viewModel.loadMedia(playlist, startIndex, forceM3uProbe = IntentUtils.isForceM3u(intent))
         }
     }
@@ -380,6 +446,35 @@ class PlayerActivity : AppCompatActivity() {
     }
 
     override fun finish() {
+        // Стек показывает, кто закрыл плеер
+        Log.i(PIP_TAG, "finish ${describe()}", Throwable("finish caller"))
+        // У служебного запуска нет плеера: не создаем ViewModel ради сохранения
+        if (!isTrampoline) prepareFinish()
+        super.finish()
+    }
+
+    /**
+     * Закрывает плеер в окне PiP вместе с его задачей (иначе в "Недавних" остается пустая).
+     * @param newPlayerTaskId задача нового плеера: если она та же, закрываем только старый плеер
+     */
+    private fun closeFromPictureInPicture(newPlayerTaskId: Int) {
+        if (isFinishing) return
+        Log.i(PIP_TAG, "closeFromPictureInPicture ${describe()} newTask=$newPlayerTaskId", Throwable("close caller"))
+        if (newPlayerTaskId == taskId) {
+            finish()
+        } else {
+            prepareFinish()
+            finishAndRemoveTask()
+        }
+    }
+
+    private fun describe(): String {
+        val inPip = Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && isInPictureInPictureMode
+        return "act=${hashCode()} task=$taskId pip=$inPip trampoline=$isTrampoline"
+    }
+
+    /** Сохраняет настройки видео и готовит результат для вызвавшего приложения. */
+    private fun prepareFinish() {
         viewModel.saveCurrentSettings()
         if (shouldReturnResult) {
             val resultIntent = Intent("top.rootu.dddplayer.intent.result.VIEW")
@@ -398,6 +493,5 @@ class PlayerActivity : AppCompatActivity() {
 
             setResult(RESULT_OK, resultIntent)
         }
-        super.finish()
     }
 }

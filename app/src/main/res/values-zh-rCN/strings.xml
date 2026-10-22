@@ -17,6 +17,12 @@
 
     <!-- 播放控制 -->
     <string name="playback_speed">播放速度</string>
+    <string name="playback_speed_custom">自定义速度</string>
+    <string name="playback_speed_custom_value">自定义：%s</string>
+    <string name="playback_speed_default_mark">默认</string>
+    <string name="playback_speed_default_set">默认速度：%s</string>
+    <string name="pref_default_speed">默认速度</string>
+    <string name="pref_default_speed_desc">播放以此速度开始，直播始终为 1.00x。播放器中：在速度菜单中长按某项</string>
     <string name="playback_zoom">缩放</string>
     <string name="aspect_ratio">宽高比</string>
     <string name="aspect_ratio_auto">原始</string>
@@ -131,6 +137,8 @@
     <string name="pref_downmix_rear">后置（环绕）</string>
     <string name="pref_downmix_middle">侧置 (7.1)</string>
     <string name="pref_downmix_lfe">低音炮 (LFE)</string>
+    <string name="pref_hdr10plus">HDR10+ 元数据</string>
+    <string name="pref_hdr10plus_desc">HDR10+ 动态元数据。如果电视显示 HDR10+ 不正确请关闭：此类视频将按 HDR10 播放（MKV、MP4、TS）</string>
     <string name="pref_tunneling">隧道播放</string>
     <string name="pref_tunneling_summary">隧道播放允许视频绕过应用程序和 Android 框架代码，从而可以更有效地渲染 4K/HDR 内容，但可能并非在所有设备上都能使用。\n注意！！！在隧道播放模式下，视频的处理和同步由终端设备负责，因此部分播放器功能将无法使用。</string>
     <string name="pref_hd_audio_iec">无损 HD 音频（IEC 61937）</string>
@@ -393,6 +401,15 @@
     <string name="wizard_ana_check_title">检查</string>
     <string name="pref_reset_calibration">重置校准</string>
     <string name="pref_reset_calibration_desc">恢复 Cardboard VR 和/或红蓝眼镜的应用默认值</string>
+    <string name="cancel">取消</string>
+    <string name="pref_reset_settings">重置所有设置</string>
+    <string name="pref_reset_settings_desc">恢复默认值。历史记录、播放列表、网络文件夹和单个视频的设置将保留</string>
+    <string name="reset_settings_title">将所有设置重置为默认值？</string>
+    <string name="reset_settings_confirm">重置</string>
+    <string name="reset_settings_done">设置已重置</string>
+    <string name="pref_licenses">许可证</string>
+    <string name="pref_licenses_desc">应用使用的开源组件</string>
+    <string name="link_no_browser">没有可打开链接的应用：%s</string>
     <string name="reset_calibration_vr">Cardboard VR</string>
     <string name="reset_calibration_anaglyph">红蓝眼镜</string>
     <string name="reset_calibration_all">全部</string>

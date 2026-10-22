@@ -201,7 +201,8 @@ class SettingsRepositoryTest {
     fun `defaults keep the previous behaviour`() {
         val repo = repo()
         assertEquals(SettingsRepository.CLOCK_OFF, repo.getClockTransparency())
-        assertEquals(SettingsRepository.UP_ACTION_MENU, repo.getUpButtonAction())
+        // Кнопка "Вверх": первое нажатие - инфопанель, второе - боковое меню
+        assertEquals(SettingsRepository.UP_ACTION_INFO, repo.getUpButtonAction())
         assertEquals(SettingsRepository.AUDIO_MEMORY_OFF, repo.getAudioTrackMemoryMode())
         assertEquals(SettingsRepository.EXTERNAL_POSITION_APPLY, repo.getExternalPositionMode())
         assertEquals(SettingsRepository.BUFFER_SIZE_AUTO, repo.getTargetBufferMB())
@@ -287,5 +288,36 @@ class SettingsRepositoryTest {
         assertEquals(setOf(SettingsRepository.BUTTON_SPEED, SettingsRepository.BUTTON_RESIZE), repo.getHiddenControlButtons())
         repo.setHiddenControlButtons(emptySet())
         assertTrue(repo.getHiddenControlButtons().isEmpty())
+    }
+
+    @Test
+    fun `hdr10plus is enabled by default and restarts the player`() {
+        val repo = repo()
+        assertTrue(repo.isHdr10PlusEnabled())
+        val before = repo.getHardSettingsSignature()
+        repo.setHdr10PlusEnabled(false)
+        assertFalse(repo.isHdr10PlusEnabled())
+        assertTrue(before != repo.getHardSettingsSignature())
+    }
+
+    @Test
+    fun `reset all settings keeps user data`() {
+        val repo = repo()
+        repo.putSavedPlaylist(SavedPlaylist("1", "TV", "http://a/tv.m3u"))
+        repo.setConfirmExitEnabled(false)
+        repo.setAppLanguage("ru")
+        repo.setDefaultPlaybackSpeed(1.5f)
+        repo.setHiddenControlButtons(setOf(SettingsRepository.BUTTON_SPEED))
+        val calibrationVersion = repo.getCalibrationVersion()
+
+        repo.resetAllSettings()
+
+        assertTrue(repo.isConfirmExitEnabled())
+        assertEquals(SettingsRepository.LANG_SYSTEM_DEFAULT, repo.getAppLanguage())
+        assertEquals(1.0f, repo.getDefaultPlaybackSpeed())
+        assertTrue(repo.getHiddenControlButtons().isEmpty())
+        assertEquals(listOf("TV"), repo.getSavedPlaylists().map { it.name })
+        // Плеер перечитает калибровку
+        assertTrue(repo.getCalibrationVersion() > calibrationVersion)
     }
 }

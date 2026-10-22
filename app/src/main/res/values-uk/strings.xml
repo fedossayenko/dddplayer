@@ -16,6 +16,12 @@
 
     <!-- Керування відтворенням -->
     <string name="playback_speed">Швидкість</string>
+    <string name="playback_speed_custom">Своя швидкість</string>
+    <string name="playback_speed_custom_value">Своя: %s</string>
+    <string name="playback_speed_default_mark">Типово</string>
+    <string name="playback_speed_default_set">Типова швидкість: %s</string>
+    <string name="pref_default_speed">Типова швидкість</string>
+    <string name="pref_default_speed_desc">З цією швидкістю починається відтворення, прямий ефір завжди йде на 1.00x. У плеєрі: довге натискання на пункт меню швидкості</string>
     <string name="playback_zoom">Масштаб</string>
     <string name="aspect_ratio">Співвідношення сторін</string>
     <string name="aspect_ratio_auto">Як у відео</string>
@@ -128,6 +134,8 @@
     <string name="pref_downmix_rear">Тили (Surround)</string>
     <string name="pref_downmix_middle">Бічні (7.1 Side)</string>
     <string name="pref_downmix_lfe">Сабвуфер (LFE)</string>
+    <string name="pref_hdr10plus">Метадані HDR10+</string>
+    <string name="pref_hdr10plus_desc">Динамічні метадані HDR10+. Вимкніть, якщо телевізор неправильно показує HDR10+: такі відео відтворюватимуться як HDR10 (MKV, MP4, TS)</string>
     <string name="pref_tunneling">Тунельне відтворення</string>
     <string name="pref_tunneling_summary">Туннелювання дозволяє відео йти в обхід коду додатку та Android, що може забезпечити більш ефективний рендеринг 4K/HDR контенту, але може не працювати на всіх пристроях.\nУвага!!! При туннельному відтворенні обробкою та синхронізацією відео займається кінцевий пристрій, тому з цією опцією не працюватиме частина функціоналу плеєра.</string>
     <string name="pref_hd_audio_iec">HD-звук без втрат (IEC 61937)</string>
@@ -379,6 +387,15 @@
     <string name="wizard_ana_check_title">Перевірка</string>
     <string name="pref_reset_calibration">Скинути калібрування</string>
     <string name="pref_reset_calibration_desc">Повернути значення застосунку для Cardboard VR та/або анагліф-окулярів</string>
+    <string name="cancel">Скасувати</string>
+    <string name="pref_reset_settings">Скинути всі налаштування</string>
+    <string name="pref_reset_settings_desc">Повернути типові значення. Історія, плейлисти, мережеві папки та налаштування окремих відео збережуться</string>
+    <string name="reset_settings_title">Скинути всі налаштування до типових?</string>
+    <string name="reset_settings_confirm">Скинути</string>
+    <string name="reset_settings_done">Налаштування скинуто</string>
+    <string name="pref_licenses">Ліцензії</string>
+    <string name="pref_licenses_desc">Відкриті компоненти, які використовує застосунок</string>
+    <string name="link_no_browser">Немає застосунку, щоб відкрити посилання: %s</string>
     <string name="reset_calibration_vr">Cardboard VR</string>
     <string name="reset_calibration_anaglyph">Анагліф-окуляри</string>
     <string name="reset_calibration_all">Усе</string>

@@ -9,6 +9,7 @@ import coil.disk.DiskCache
 import coil.memory.MemoryCache
 import okhttp3.OkHttpClient
 import top.rootu.dddplayer.data.SettingsRepository
+import top.rootu.dddplayer.ui.PipReturnCallbacks
 import top.rootu.dddplayer.utils.CrashHandler
 import java.util.concurrent.TimeUnit
 
@@ -24,6 +25,7 @@ class App : Application(), ImageLoaderFactory {
         CrashHandler.init(this)
         applyAppLanguage()
         super.onCreate()
+        registerActivityLifecycleCallbacks(PipReturnCallbacks())
     }
 
     private fun applyAppLanguage() {

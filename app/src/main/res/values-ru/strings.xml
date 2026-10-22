@@ -67,6 +67,12 @@
 
     <!-- Управление воспроизведением -->
     <string name="playback_speed">Скорость</string>
+    <string name="playback_speed_custom">Своя скорость</string>
+    <string name="playback_speed_custom_value">Своя: %s</string>
+    <string name="playback_speed_default_mark">По умолчанию</string>
+    <string name="playback_speed_default_set">Скорость по умолчанию: %s</string>
+    <string name="pref_default_speed">Скорость по умолчанию</string>
+    <string name="pref_default_speed_desc">С этой скоростью начинается воспроизведение, прямой эфир всегда идет на 1.00x. В плеере: долгое нажатие на пункт меню скорости</string>
     <string name="playback_zoom">Масштабирование</string>
     <string name="aspect_ratio">Соотношение сторон</string>
     <string name="aspect_ratio_auto">Как в видео</string>
@@ -138,6 +144,8 @@
     <string name="pref_downmix_rear">Тылы (Surround)</string>
     <string name="pref_downmix_middle">Боковые (7.1 Side)</string>
     <string name="pref_downmix_lfe">Сабвуфер (LFE)</string>
+    <string name="pref_hdr10plus">Метаданные HDR10+</string>
+    <string name="pref_hdr10plus_desc">Динамические метаданные HDR10+. Выключите, если телевизор неправильно показывает HDR10+: такие видео будут играть как HDR10 (MKV, MP4, TS)</string>
     <string name="pref_tunneling">Туннельное воспроизведение</string>
     <string name="pref_tunneling_summary">Туннелирование позволяет видео идти в обход кода приложения и Android, что может обеспечить более эффективный рендеринг 4K/HDR контента, но может работать не на всех устройствах.\nВнимание!!! При туннельном воспроизведении обработкой и синхронизацией видео занимается конечное устройство, поэтому с данной опцией не будет работать часть функционала плеера.</string>
     <string name="pref_hd_audio_iec">HD-звук без потерь (IEC 61937)</string>
@@ -407,6 +415,15 @@
     <string name="wizard_ana_check_title">Проверка</string>
     <string name="pref_reset_calibration">Сбросить калибровку</string>
     <string name="pref_reset_calibration_desc">Вернуть значения приложения для Cardboard VR и/или анаглиф-очков</string>
+    <string name="cancel">Отмена</string>
+    <string name="pref_reset_settings">Сбросить все настройки</string>
+    <string name="pref_reset_settings_desc">Вернуть значения по умолчанию. История, плейлисты, сетевые папки и настройки отдельных видео сохранятся</string>
+    <string name="reset_settings_title">Сбросить все настройки на значения по умолчанию?</string>
+    <string name="reset_settings_confirm">Сбросить</string>
+    <string name="reset_settings_done">Настройки сброшены</string>
+    <string name="pref_licenses">Лицензии</string>
+    <string name="pref_licenses_desc">Открытые компоненты, которые использует приложение</string>
+    <string name="link_no_browser">Нет приложения, чтобы открыть ссылку: %s</string>
     <string name="reset_calibration_vr">Cardboard VR</string>
     <string name="reset_calibration_anaglyph">Анаглиф-очки</string>
     <string name="reset_calibration_all">Все</string>

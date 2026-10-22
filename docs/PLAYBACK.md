@@ -16,6 +16,11 @@
     собирается отдельным модулем `dovi` в `app/libs/lib-dovi-release.aar` (`./gradlew -Pdovi=true
     :dovi:assembleRelease`, см. `app/libs/README.md`). Без AAR `DoviBridge.isAvailable()` = false: пункт
     скрыт в настройках, а сохраненный `dv_mode` = 3 работает как «авто»;
+  - `hdr10plus_enabled` = false (#10, как в Kodi): MKV/MP4/fMP4/TS оборачиваются в `Hdr10PlusExtractorWrapper`,
+    видеодорожки идут через `Hdr10PlusStrippingTrackOutput`. `Hdr10PlusStripper` убирает ITU-T T.35 HDR10+
+    (страна 0xB5, провайдер 0x003C, приложение 4): в HEVC — сообщения prefix SEI (смешанный SEI собирается
+    заново), в AV1 — metadata OBU; у VP9 из MKV отбрасываются дополнительные данные сэмпла. Сканируется только
+    начало кадра до первого слайса. T.35 Dolby Vision не трогаем. HLS и DASH не обрабатываются;
   - `DefaultTrackSelector`: туннелирование, предпочтительные языки аудио и субтитров (`""` — по умолчанию,
     `device` — языки системы), `exceedRendererCapabilitiesIfNecessary`. Включилось ли туннелирование на деле,
     видно по `AudioTrackConfig.tunneling` (`onAudioTrackInitialized`): тогда у бейджа видео в инфопанели стоит `↳`.
@@ -59,8 +64,12 @@
 - Application-interceptor записывает MIME-тип HLS, DASH или SmoothStreaming по Content-Type и финальному URL
   в `resolvedMediaTypes`. Так после редиректа выбирается правильная фабрика при повторной загрузке.
 - HTTP-заголовки элемента (`MediaItem.headers` из Intent `headers` или из M3U `#EXTVLCOPT`/`#EXTHTTP`)
-  применяются через `baseHttpFactory.setDefaultRequestProperties` при переходе на элемент
-  (`applyHeadersForIndex`). User-Agent по умолчанию — `App.USER_AGENT`.
+  привязаны к самому элементу: `buildMediaSources` берет их по `mediaId` (`headersByMediaId`), и фабрика
+  источников этого элемента (`createParsingDataSourceFactory(headers)`, `ResolvingDataSource`) добавляет их
+  в каждый запрос: плейлист HLS, сегменты, субтитры, чтение метаданных. Глобально по `onMediaItemTransition`
+  их не переключаем: следующий элемент плеер начинает грузить раньше. User-Agent по умолчанию —
+  `App.USER_AGENT`, только если источник не задал свой (`requestHeaders`). У `OkHttpDataSource.Factory`
+  `setUserAgent` не вызываем: он добавляет User-Agent вторым заголовком поверх заданного, и сервер отвечает 403.
 
 ### Цепочка DataSource
 

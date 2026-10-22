@@ -22,6 +22,12 @@
 
     <!-- Playback Controls -->
     <string name="playback_speed">Speed</string>
+    <string name="playback_speed_custom">Custom speed</string>
+    <string name="playback_speed_custom_value">Custom: %s</string>
+    <string name="playback_speed_default_mark">Default</string>
+    <string name="playback_speed_default_set">Default speed: %s</string>
+    <string name="pref_default_speed">Default speed</string>
+    <string name="pref_default_speed_desc">Playback starts at this speed; live streams always play at 1.00x. In the player: long press an item in the speed menu</string>
     <string name="playback_zoom">Zoom</string>
     <string name="aspect_ratio">Aspect ratio</string>
     <string name="aspect_ratio_auto">Original</string>
@@ -143,6 +149,8 @@
     <string name="pref_downmix_rear">Rear (Surround)</string>
     <string name="pref_downmix_middle">Side (7.1)</string>
     <string name="pref_downmix_lfe">Subwoofer (LFE)</string>
+    <string name="pref_hdr10plus">HDR10+ metadata</string>
+    <string name="pref_hdr10plus_desc">Dynamic HDR10+ metadata. Turn off if the TV shows HDR10+ wrong: such videos then play as HDR10 (MKV, MP4, TS)</string>
     <string name="pref_tunneling">Tunneled Playback</string>
     <string name="pref_tunneling_summary">Tunneling allows video to bypass the app and Android framework code, which can provide more efficient rendering of 4K/HDR content, but may not work on all devices.\nWarning!!! With tunneled playback, video processing and synchronization are handled by the end device, so some player features will not work with this option.</string>
     <string name="pref_hd_audio_iec">Lossless HD audio (IEC 61937)</string>
@@ -410,6 +418,15 @@
     <string name="wizard_ana_check_title">Check</string>
     <string name="pref_reset_calibration">Reset calibration</string>
     <string name="pref_reset_calibration_desc">Restore the app defaults for Cardboard VR and/or anaglyph glasses</string>
+    <string name="cancel">Cancel</string>
+    <string name="pref_reset_settings">Reset all settings</string>
+    <string name="pref_reset_settings_desc">Restore default values. History, playlists, network folders and per-video settings are kept</string>
+    <string name="reset_settings_title">Reset all settings to defaults?</string>
+    <string name="reset_settings_confirm">Reset</string>
+    <string name="reset_settings_done">Settings have been reset</string>
+    <string name="pref_licenses">Licenses</string>
+    <string name="pref_licenses_desc">Open source components used by the app</string>
+    <string name="link_no_browser">No app to open the link: %s</string>
     <string name="reset_calibration_vr">Cardboard VR</string>
     <string name="reset_calibration_anaglyph">Anaglyph glasses</string>
     <string name="reset_calibration_all">Everything</string>

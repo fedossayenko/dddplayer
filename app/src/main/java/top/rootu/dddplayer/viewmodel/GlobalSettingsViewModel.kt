@@ -30,6 +30,9 @@ class GlobalSettingsViewModel(application: Application) : AndroidViewModel(appli
 
     private val _isTunnelingEnabled = MutableLiveData(repository.isTunnelingEnabled())
     val isTunnelingEnabled: LiveData<Boolean> = _isTunnelingEnabled
+
+    private val _isHdr10PlusEnabled = MutableLiveData(repository.isHdr10PlusEnabled())
+    val isHdr10PlusEnabled: LiveData<Boolean> = _isHdr10PlusEnabled
     private val _isHdAudioIecEnabled = MutableLiveData(repository.isHdAudioIecEnabled())
     val isHdAudioIecEnabled: LiveData<Boolean> = _isHdAudioIecEnabled
 
@@ -111,6 +114,9 @@ class GlobalSettingsViewModel(application: Application) : AndroidViewModel(appli
 
     private val _okButtonAction = MutableLiveData(repository.getOkButtonAction())
     val okButtonAction: LiveData<Int> = _okButtonAction
+
+    private val _defaultPlaybackSpeed = MutableLiveData(repository.getDefaultPlaybackSpeed())
+    val defaultPlaybackSpeed: LiveData<Float> = _defaultPlaybackSpeed
 
     private val _horizontalSwipeAction = MutableLiveData(repository.getHorizontalSwipeAction())
     val horizontalSwipeAction: LiveData<Int> = _horizontalSwipeAction
@@ -251,6 +257,11 @@ class GlobalSettingsViewModel(application: Application) : AndroidViewModel(appli
         _audioDecoderPriority.value = next
     }
 
+    fun toggleHdr10Plus(enabled: Boolean) {
+        repository.setHdr10PlusEnabled(enabled)
+        _isHdr10PlusEnabled.value = enabled
+    }
+
     fun toggleTunneling(enabled: Boolean) {
         repository.setTunnelingEnabled(enabled)
         _isTunnelingEnabled.value = enabled
@@ -366,6 +377,13 @@ class GlobalSettingsViewModel(application: Application) : AndroidViewModel(appli
         repository.setVolumeBrightnessGesturesEnabled(enabled)
         _isVolumeBrightnessGestures.value = enabled
     }
+
+    fun setDefaultPlaybackSpeed(speed: Float) {
+        repository.setDefaultPlaybackSpeed(speed)
+        _defaultPlaybackSpeed.value = speed
+    }
+
+    fun getCustomPlaybackSpeed(): Float = repository.getCustomPlaybackSpeed()
 
     fun setHorizontalSwipeAction(action: Int) {
         repository.setHorizontalSwipeAction(action)

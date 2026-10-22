@@ -40,7 +40,7 @@ To experience the 3D effect, you will need **anaglyph glasses** (e.g., Red-Cyan)
     *   **VR / Cardboard**: Lens distortion correction for VR headsets, profile import from Cardboard QR codes.
     *   **Mono**: Watch 3D content in 2D (Left or Right eye only).
 *   **Rendering**: OpenGL ES 3.0 shaders with linear-light anaglyph blending and automatic fallback to OpenGL ES 2.0 (can be forced in settings).
-*   **HDR Support**: Direct rendering via SurfaceView for native HDR / Dolby Vision playback on supported displays (when in 2D mode). Optional Dolby Vision → HEVC compatibility mode.
+*   **HDR Support**: Direct rendering via SurfaceView for native HDR / Dolby Vision playback on supported displays (when in 2D mode). Optional Dolby Vision → HEVC compatibility mode and an option to ignore HDR10+ dynamic metadata (play as HDR10).
 *   **Audio**: AC3/DTS 5.1 passthrough to receivers via HDMI/Optical, built-in FFmpeg audio decoders, stereo downmix with an adjustable mixer, loudness boost, skip silence.
 *   **Advanced Subtitles**: Correctly renders subtitles in 3D modes; external subtitles via Intent, from files next to a local video (`movie.srt`, `movie.en.srt`) or loaded from a file in the subtitles menu; customizable style (font, size, colors, background, outline, position) with live preview.
 *   **Playlists & IPTV**:

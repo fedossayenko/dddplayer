@@ -1,6 +1,7 @@
 package top.rootu.dddplayer.ui
 
 import android.app.Dialog
+import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.os.Bundle
 import android.view.KeyEvent
@@ -24,14 +25,21 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.appcompat.widget.SwitchCompat
 import androidx.core.os.LocaleListCompat
+import androidx.core.net.toUri
 import androidx.core.view.children
 import androidx.core.view.isVisible
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import top.rootu.dddplayer.BuildConfig
 import top.rootu.dddplayer.R
 import top.rootu.dddplayer.data.SettingsRepository
 import top.rootu.dddplayer.logic.AudioMixerLogic
+import top.rootu.dddplayer.logic.OpenSourceLicenses
 import top.rootu.dddplayer.logic.UpdateInfo
+import top.rootu.dddplayer.model.MenuItem
+import top.rootu.dddplayer.model.PlaybackSpeed
 import top.rootu.dddplayer.player.DoviBridge
+import top.rootu.dddplayer.ui.adapter.SideMenuAdapter
 import top.rootu.dddplayer.ui.calibration.CalibrationWizardActivity
 import top.rootu.dddplayer.utils.LocaleUtils
 import top.rootu.dddplayer.model.StereoOutputMode
@@ -74,6 +82,8 @@ class GlobalSettingsActivity : AppCompatActivity() {
     private lateinit var switchAutoPip: SwitchCompat
     private lateinit var textDecoderDesc: TextView
     private lateinit var textDecoderValue: TextView
+    private lateinit var itemHdr10Plus: LinearLayout
+    private lateinit var switchHdr10Plus: SwitchCompat
     private lateinit var itemTunneling: LinearLayout
     private lateinit var switchTunneling: SwitchCompat
     private lateinit var itemHdAudioIec: LinearLayout
@@ -117,6 +127,8 @@ class GlobalSettingsActivity : AppCompatActivity() {
     private lateinit var textUpActionValue: TextView
     private lateinit var itemOkAction: LinearLayout
     private lateinit var textOkActionValue: TextView
+    private lateinit var itemDefaultSpeed: LinearLayout
+    private lateinit var textDefaultSpeedValue: TextView
     private lateinit var itemResumeAction: LinearLayout
     private lateinit var textResumeActionValue: TextView
     private lateinit var itemExternalPosition: LinearLayout
@@ -331,6 +343,8 @@ class GlobalSettingsActivity : AppCompatActivity() {
         switchAutoPip = findViewById(R.id.switch_auto_pip)
         textDecoderDesc = findViewById(R.id.text_decoder_desc)
         textDecoderValue = findViewById(R.id.text_decoder_value)
+        itemHdr10Plus = findViewById(R.id.item_hdr10plus)
+        switchHdr10Plus = findViewById(R.id.switch_hdr10plus)
         itemTunneling = findViewById(R.id.item_tunneling)
         switchTunneling = findViewById(R.id.switch_tunneling)
         itemHdAudioIec = findViewById(R.id.item_hd_audio_iec)
@@ -374,6 +388,8 @@ class GlobalSettingsActivity : AppCompatActivity() {
         textUpActionValue = findViewById(R.id.text_up_action_value)
         itemOkAction = findViewById(R.id.item_ok_action)
         textOkActionValue = findViewById(R.id.text_ok_action_value)
+        itemDefaultSpeed = findViewById(R.id.item_default_speed)
+        textDefaultSpeedValue = findViewById(R.id.text_default_speed_value)
         itemResumeAction = findViewById(R.id.item_resume_mode)
         textResumeActionValue = findViewById(R.id.text_resume_mode_value)
         itemExternalPosition = findViewById(R.id.item_external_position)
@@ -419,6 +435,8 @@ class GlobalSettingsActivity : AppCompatActivity() {
         btnClose.setOnClickListener { finish() }
         itemExit.setOnClickListener { finish() }
 
+        findViewById<View>(R.id.item_reset_settings).setOnClickListener { showResetSettingsDialog() }
+        findViewById<View>(R.id.item_licenses).setOnClickListener { showLicensesDialog() }
         findViewById<View>(R.id.item_diagnostics).setOnClickListener {
             startActivity(Intent(this, DeviceInfoActivity::class.java))
         }
@@ -440,6 +458,10 @@ class GlobalSettingsActivity : AppCompatActivity() {
         itemDownmixConfig.setOnClickListener {
             settingsViewModel.refreshCustomMixParams()
             showAudioMixDialog()
+        }
+
+        itemHdr10Plus.setOnClickListener {
+            settingsViewModel.toggleHdr10Plus(!switchHdr10Plus.isChecked)
         }
 
         // Tunneling
@@ -530,6 +552,20 @@ class GlobalSettingsActivity : AppCompatActivity() {
         }
 
         itemShowClock.setOnClickListener { settingsViewModel.cycleClockTransparency() }
+        itemDefaultSpeed.setOnClickListener {
+            // Список скоростей и своя скорость из меню плеера
+            val custom = settingsViewModel.getCustomPlaybackSpeed()
+            val speeds = PlaybackSpeed.entries.map { it.value } + custom
+            val options = PlaybackSpeed.entries.map { it.label } +
+                getString(R.string.playback_speed_custom_value, PlaybackSpeed.label(custom))
+            val current = settingsViewModel.defaultPlaybackSpeed.value ?: 1.0f
+            val currentIndex = PlaybackSpeed.preset(current)?.ordinal
+                ?: options.lastIndex.takeIf { kotlin.math.abs(custom - current) < 0.001f } ?: -1
+            showSingleChoiceDialog(getString(R.string.pref_default_speed), options, currentIndex) {
+                settingsViewModel.setDefaultPlaybackSpeed(speeds[it])
+            }
+        }
+
         itemResumeAction.setOnClickListener {
             val options = listOf(getString(R.string.resume_mode_ask), getString(R.string.resume_mode_always), getString(R.string.resume_mode_never))
             showSingleChoiceDialog(getString(R.string.pref_resume_mode), options, settingsViewModel.resumeModeAction.value ?: 0) {
@@ -544,7 +580,7 @@ class GlobalSettingsActivity : AppCompatActivity() {
         }
         itemUpAction.setOnClickListener {
             val options = listOf(getString(R.string.pref_up_action_none), getString(R.string.pref_up_action_osd), getString(R.string.pref_up_action_menu), getString(R.string.pref_up_action_info))
-            showSingleChoiceDialog(getString(R.string.pref_up_action), options, settingsViewModel.upButtonAction.value ?: SettingsRepository.UP_ACTION_MENU) {
+            showSingleChoiceDialog(getString(R.string.pref_up_action), options, settingsViewModel.upButtonAction.value ?: SettingsRepository.UP_ACTION_INFO) {
                 settingsViewModel.setUpButtonAction(it)
             }
         }
@@ -666,6 +702,7 @@ class GlobalSettingsActivity : AppCompatActivity() {
             findViewById<TextView>(R.id.text_audio_decoder_desc).setText(settingsViewModel.getDecoderDescResId(mode, video = false))
         }
         settingsViewModel.isTunnelingEnabled.observe(this) { switchTunneling.isChecked = it }
+        settingsViewModel.isHdr10PlusEnabled.observe(this) { switchHdr10Plus.isChecked = it }
         settingsViewModel.isHdAudioIecEnabled.observe(this) { switchHdAudioIec.isChecked = it }
         settingsViewModel.dvMode.observe(this) { mode ->
             textDvValue.text = when (mode) {
@@ -730,6 +767,7 @@ class GlobalSettingsActivity : AppCompatActivity() {
         }
 
         // UI
+        settingsViewModel.defaultPlaybackSpeed.observe(this) { textDefaultSpeedValue.text = PlaybackSpeed.label(it) }
         settingsViewModel.resumeModeAction.observe(this) { action ->
             textResumeActionValue.text = when (action) {
                 SettingsRepository.RESUME_NEVER -> getString(R.string.resume_mode_never)
@@ -860,6 +898,50 @@ class GlobalSettingsActivity : AppCompatActivity() {
 
     private fun startCalibration(mode: String) {
         startActivity(Intent(this, CalibrationWizardActivity::class.java).putExtra(CalibrationWizardActivity.EXTRA_MODE, mode))
+    }
+
+    /** Открытые компоненты и их лицензии. Пункт открывает страницу проекта (если есть браузер). */
+    private fun showLicensesDialog() {
+        val dialog = Dialog(this, R.style.Theme_App_Dialog)
+        dialog.setContentView(R.layout.dialog_list_choice)
+        dialog.findViewById<TextView>(R.id.dialog_title).text = getString(R.string.pref_licenses)
+        val recycler = dialog.findViewById<RecyclerView>(R.id.dialog_recycler_view)
+        recycler.layoutManager = LinearLayoutManager(this)
+        val adapter = SideMenuAdapter { item -> openLink(item.data as String) }
+        recycler.adapter = adapter
+        dialog.show()
+        adapter.submitList(OpenSourceLicenses.components.mapIndexed { i, c ->
+            // Что используется (если не весь компонент), затем лицензия и ссылка
+            val license = "${c.license} · ${c.url}"
+            MenuItem(id = i.toString(), title = c.name, description = c.parts?.let { "$it\n$license" } ?: license, data = c.url)
+        }) {
+            recycler.post { recycler.findViewHolderForAdapterPosition(0)?.itemView?.requestFocus() }
+        }
+    }
+
+    private fun openLink(url: String) {
+        try {
+            startActivity(Intent(Intent.ACTION_VIEW, url.toUri()))
+        } catch (_: ActivityNotFoundException) {
+            // На ТВ браузера часто нет: ссылка и так видна в описании пункта
+            Toast.makeText(this, getString(R.string.link_no_browser, url), Toast.LENGTH_LONG).show()
+        }
+    }
+
+    /** Сброс всех настроек. Фокус в подтверждении стоит на "Отмена" (первый пункт). */
+    private fun showResetSettingsDialog() {
+        val options = listOf(getString(R.string.cancel), getString(R.string.reset_settings_confirm))
+        showSingleChoiceDialog(getString(R.string.reset_settings_title), options, -1) { index ->
+            if (index != 1) return@showSingleChoiceDialog
+            val repository = SettingsRepository.getInstance(this)
+            val customLanguage = repository.getAppLanguage() != SettingsRepository.LANG_SYSTEM_DEFAULT
+            repository.resetAllSettings()
+            Toast.makeText(this, R.string.reset_settings_done, Toast.LENGTH_SHORT).show()
+            // Открываем экран заново: пункты и ViewModel читают уже сброшенные значения
+            startActivity(Intent(this, GlobalSettingsActivity::class.java).putExtra("FOCUS_ITEM_ID", R.id.item_reset_settings))
+            finish()
+            if (customLanguage) applyAppLocale(SettingsRepository.LANG_SYSTEM_DEFAULT)
+        }
     }
 
     // Сброс калибровки к значениям приложения: VR, анаглиф или все

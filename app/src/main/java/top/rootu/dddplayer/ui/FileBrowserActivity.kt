@@ -122,6 +122,11 @@ class FileBrowserActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Иконка приложения при видео в окне PiP: возвращаем видео на весь экран, стартовый экран не показываем
+        if (savedInstanceState == null && intent?.action == Intent.ACTION_MAIN && PlayerActivity.restorePictureInPicture()) {
+            finish()
+            return
+        }
         setContentView(R.layout.activity_file_browser)
         repository = SettingsRepository.getInstance(this)
         dlnaClient = DlnaClient(this)

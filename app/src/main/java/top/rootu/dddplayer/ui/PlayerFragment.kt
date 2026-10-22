@@ -68,6 +68,7 @@ import top.rootu.dddplayer.utils.afr.DisplayHolder
 import top.rootu.dddplayer.utils.afr.DisplaySyncHelper
 import top.rootu.dddplayer.utils.afr.TvQuickActions
 import top.rootu.dddplayer.viewmodel.PlayerViewModel
+import top.rootu.dddplayer.viewmodel.SPEED_MENU_CUSTOM
 import top.rootu.dddplayer.viewmodel.SUBTITLE_MENU_LOAD_FILE
 import top.rootu.dddplayer.viewmodel.PlaylistUiState
 import top.rootu.dddplayer.viewmodel.SettingType
@@ -660,7 +661,7 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
                 if (fromUser) {
                     val duration = seekBar?.max?.toLong() ?: 0L
                     val isLive = viewModel.isLive.value ?: false
-                    val speed = viewModel.playbackSpeed.value?.value ?: 1.0f
+                    val speed = viewModel.playbackSpeed.value ?: 1.0f
 
                     val liveOffset = if (isLive) (duration - progress.toLong()).coerceAtLeast(0) else 0L
 
@@ -765,20 +766,51 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
         }
     }
 
-    private fun showPlaybackSpeedMenu() {
-        val menuItems = viewModel.getPlaybackSpeedMenuItems()
+    private fun showPlaybackSpeedMenu(initialFocusId: String? = null) {
+        val menuItems = viewModel.getPlaybackSpeedMenuItems(requireContext())
 
-        showSideMenu(getString(R.string.playback_speed), menuItems) { selected ->
-            if (selected == null) {
-                showMainMenu("speed")
-            } else {
-                val speedValue = selected.id.toFloatOrNull()
-                if (speedValue != null) {
-                    viewModel.setPlaybackSpeed(PlaybackSpeed.fromValue(speedValue))
+        showSideMenu(
+            getString(R.string.playback_speed), menuItems, initialFocusId,
+            onItemLongClick = { item -> setDefaultSpeedFromMenu(item) }
+        ) { selected ->
+            when {
+                selected == null -> showMainMenu("speed")
+                selected.id == SPEED_MENU_CUSTOM -> {
+                    // Своя скорость: применяем сохраненную и открываем ползунок
+                    viewModel.setPlaybackSpeed(selected.data as? Float ?: viewModel.getCustomPlaybackSpeed())
+                    showCustomSpeedDialog()
                 }
-                sideMenuDialog?.dismiss()
+                else -> {
+                    selected.id.toFloatOrNull()?.let { viewModel.setPlaybackSpeed(it) }
+                    sideMenuDialog?.dismiss()
+                }
             }
         }
+    }
+
+    /** Долгое нажатие в меню скорости: пункт становится скоростью по умолчанию. */
+    private fun setDefaultSpeedFromMenu(item: MenuItem) {
+        val speed = if (item.id == SPEED_MENU_CUSTOM) item.data as? Float else item.id.toFloatOrNull()
+        if (speed == null) return
+        viewModel.setDefaultPlaybackSpeed(speed)
+        Toast.makeText(
+            requireContext(), getString(R.string.playback_speed_default_set, PlaybackSpeed.label(speed)), Toast.LENGTH_SHORT
+        ).show()
+        updateSideMenuItems(viewModel.getPlaybackSpeedMenuItems(requireContext()))
+    }
+
+    private fun showCustomSpeedDialog() {
+        val steps = ((PlaybackSpeed.CUSTOM_MAX - PlaybackSpeed.CUSTOM_MIN) / PlaybackSpeed.CUSTOM_STEP).roundToInt()
+        fun speedAt(progress: Int) = PlaybackSpeed.normalize(PlaybackSpeed.CUSTOM_MIN + progress * PlaybackSpeed.CUSTOM_STEP)
+        val current = PlaybackSpeed.normalize(viewModel.playbackSpeed.value ?: 1.0f)
+        showLevelDialog(
+            max = steps,
+            progress = ((current - PlaybackSpeed.CUSTOM_MIN) / PlaybackSpeed.CUSTOM_STEP).roundToInt(),
+            title = { getString(R.string.playback_speed_custom_value, PlaybackSpeed.label(speedAt(it))) },
+            onChange = { viewModel.setCustomPlaybackSpeed(speedAt(it)) },
+            // После закрытия возвращаемся в меню скорости (sideMenuDialog все еще открыт)
+            onDismiss = { showPlaybackSpeedMenu(SPEED_MENU_CUSTOM) }
+        )
     }
 
     private fun showAspectRatioMenu() {
@@ -824,29 +856,46 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
 
     private fun showZoomLevelDialog() {
         val currentZoom = viewModel.zoomScale.value ?: 115
-        val context = requireContext()
+        showLevelDialog(
+            max = 100, // 100% до 200% (100 шагов)
+            progress = currentZoom - 100,
+            title = { getString(R.string.playback_zoom_percent, it + 100) },
+            onChange = { viewModel.setZoomScale(it + 100) },
+            // После закрытия диалога возвращаемся в меню масштабирования
+            // (sideMenuDialog все еще открыт)
+            onDismiss = { showResizeMenu() }
+        )
+    }
 
+    /**
+     * Диалог с ползунком (зум, своя скорость): шаг 1 с пульта, OK закрывает.
+     * @param title заголовок для положения ползунка
+     * @param onChange новое положение, выбранное пользователем
+     */
+    private fun showLevelDialog(
+        max: Int,
+        progress: Int,
+        title: (Int) -> String,
+        onChange: (Int) -> Unit,
+        onDismiss: () -> Unit
+    ) {
         zoomDialog?.dismiss()
-        zoomDialog = Dialog(context, R.style.Theme_App_Dialog)
+        zoomDialog = Dialog(requireContext(), R.style.Theme_App_Dialog)
         zoomDialog?.setContentView(R.layout.dialog_zoom_level)
 
-        val title = zoomDialog?.findViewById<TextView>(R.id.dialog_title)
+        val titleView = zoomDialog?.findViewById<TextView>(R.id.dialog_title)
         val seekBar = zoomDialog?.findViewById<android.widget.SeekBar>(R.id.seek_zoom)
         var isDpadChange = false
 
-        title?.text = getString(R.string.playback_zoom_percent, currentZoom)
-        seekBar?.max = 100 // 100% до 200% (100 шагов)
-        seekBar?.progress = currentZoom - 100
+        seekBar?.max = max
+        seekBar?.progress = progress.coerceIn(0, max)
+        titleView?.text = title(seekBar?.progress ?: progress)
 
         seekBar?.setOnSeekBarChangeListener(object : android.widget.SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(sb: android.widget.SeekBar?, progress: Int, fromUser: Boolean) {
-                val newZoom = progress + 100
                 // Обновляем заголовок при изменении
-                title?.text = getString(R.string.playback_zoom_percent, newZoom)
-
-                if (fromUser || isDpadChange) {
-                    viewModel.setZoomScale(newZoom)
-                }
+                titleView?.text = title(progress)
+                if (fromUser || isDpadChange) onChange(progress)
             }
             override fun onStartTrackingTouch(sb: android.widget.SeekBar?) {}
             override fun onStopTrackingTouch(sb: android.widget.SeekBar?) {}
@@ -856,17 +905,10 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
         seekBar?.setOnKeyListener { _, keyCode, event ->
             if (event.action == KeyEvent.ACTION_DOWN) {
                 when (keyCode) {
-                    KeyEvent.KEYCODE_DPAD_LEFT -> {
-                        val newProgress = (seekBar.progress - 1).coerceAtLeast(0)
+                    KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                        val delta = if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT) -1 else 1
                         isDpadChange = true
-                        seekBar.progress = newProgress
-                        isDpadChange = false
-                        return@setOnKeyListener true
-                    }
-                    KeyEvent.KEYCODE_DPAD_RIGHT -> {
-                        val newProgress = (seekBar.progress + 1).coerceAtMost(seekBar.max)
-                        isDpadChange = true
-                        seekBar.progress = newProgress
+                        seekBar.progress = (seekBar.progress + delta).coerceIn(0, seekBar.max)
                         isDpadChange = false
                         return@setOnKeyListener true
                     }
@@ -880,12 +922,7 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
             false // Передаем дальше
         }
 
-        zoomDialog?.setOnDismissListener {
-            // После закрытия диалога возвращаемся в меню масштабирования
-            // (sideMenuDialog все еще открыт)
-            showResizeMenu()
-        }
-
+        zoomDialog?.setOnDismissListener { onDismiss() }
         zoomDialog?.show()
         seekBar?.requestFocus()
     }
@@ -907,6 +944,7 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
         title: String,
         items: List<MenuItem>,
         initialFocusId: String? = null,
+        onItemLongClick: ((MenuItem) -> Unit)? = null,
         onItemSelected: (MenuItem?) -> Unit
     ) {
         viewModel.stopZap()
@@ -954,6 +992,10 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
             recycler?.adapter = sideMenuAdapter
         } else {
             sideMenuAdapter?.onItemClick = onItemClick
+        }
+        // Долгое нажатие - только в меню, которые его поддерживают (скорость)
+        sideMenuAdapter?.onItemLongClick = onItemLongClick?.let { handler ->
+            { item: MenuItem -> if (sideMenuItems.any { it === item }) handler(item) }
         }
 
         sideMenuItems = items
@@ -1145,7 +1187,7 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
             updateSettingsText()
         }
         viewModel.playbackSpeed.observe(viewLifecycleOwner) { speed ->
-            ui.buttonSpeed.text = speed.label
+            ui.buttonSpeed.text = PlaybackSpeed.label(speed)
             val pos = viewModel.currentPosition.value ?: 0L
             updateTimeLabelsUI(pos)
         }
@@ -1371,7 +1413,7 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
     private fun updateTimeLabelsUI(currentPos: Long) {
         val player = viewModel.player ?: return
         val duration = viewModel.duration.value ?: 0L
-        val speed = viewModel.playbackSpeed.value?.value ?: 1.0f
+        val speed = viewModel.playbackSpeed.value ?: 1.0f
         val isLive = viewModel.isLive.value ?: false
         val liveOffset = player.currentLiveOffset
 
