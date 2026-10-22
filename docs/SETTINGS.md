@@ -65,10 +65,13 @@
 
 `GlobalSettingsActivity`: слева список категорий (`categories`, пункты `item_settings_category`), справа
 прокручиваемые настройки выбранной категории (контейнеры `section_*`, видим только один).
+Категории по порядку: Воспроизведение (`section_playback`), Интерфейс (`section_ui`), Видео, Звук, Субтитры, 3D,
+Управление (`section_control`), Приложение (`section_app`). У каждой своя иконка `ic_settings_*`.
 
 Управление с пульта: фокус на категории сразу показывает ее настройки; Вправо — в настройки (на последний
 выбранный в категории пункт); Влево или Назад — обратно к категориям; CH+/CH- и PgUp/PgDn — соседняя категория
-из любой колонки; Назад в списке категорий закрывает экран. Выбор из списка значений — `ChoiceDialog`.
+из любой колонки; Назад в списке категорий закрывает экран. Выбор из списка значений — `ChoiceDialog.show`,
+несколько флажков (например, кнопки панели управления) — `ChoiceDialog.showMulti`.
 
 ## Перезапуск плеера
 
@@ -91,11 +94,10 @@
    **должно сохранять текущее поведение.**
 2. Если старый ключ поменял смысл, напишите миграцию (пример — `getClockTransparency`).
 3. `GlobalSettingsViewModel`: добавьте `MutableLiveData` с начальным значением из репозитория и метод изменения.
-4. `activity_global_settings.xml`: добавьте пункт в контейнер нужной категории (`section_playback`, `section_screen`,
-   `section_video`, `section_audio`, `section_subtitles`, `section_control`, `section_3d`, `section_app`) по образцу
+4. `activity_global_settings.xml`: добавьте пункт в контейнер нужной категории (`section_playback`, `section_ui`,
+   `section_video`, `section_audio`, `section_subtitles`, `section_3d`, `section_control`, `section_app`) по образцу
    соседних. Пункты фокусируемые: навигация идет с пульта. Новая категория — это новый контейнер `section_*`
    плюс запись в `GlobalSettingsActivity.categories`.
-   потому что навигация идет с пульта).
 5. `GlobalSettingsActivity`: `lateinit` поля, `bindViews`, обработчик в `setupListeners` и подписка
    в `observeViewModel`. Для выбора из списка используйте `showSingleChoiceDialog`.
 6. Строки (`title` и `summary`/значения) добавьте во все 5 локалей.

@@ -60,7 +60,7 @@ Rust через [rustup](https://rustup.rs), `git`, `bash` (Linux, macOS или 
 `cargo rustc --crate-type staticlib --features capi` (`dovi/build_libdovi.sh`, Rust-таргеты добавляются через
 `rustup target add`), собирает мост через CMake и копирует результат в `app/libs/lib-dovi-release.aar`.
 AAR нужно закоммитить. По умолчанию ABI `arm64-v8a,armeabi-v7a`; для эмулятора добавьте x86:
-`-PdoviAbis=arm64-v8a,armeabi-v7a,x86_64`.
+`-PdoviAbis=arm64-v8a,armeabi-v7a,x86_64,x86`.
 
 При обновлении libdovi поменяйте тег в `dovi/build.gradle.kts` и перегенерируйте
 `dovi/src/main/cpp/include/libdovi/rpu_parser.h` для этого тега (`cargo install cargo-c`, затем
