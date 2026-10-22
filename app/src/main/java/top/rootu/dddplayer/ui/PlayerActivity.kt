@@ -73,6 +73,8 @@ class PlayerActivity : AppCompatActivity() {
     private var playerFragment: PlayerFragment? = null
     private val viewModel: PlayerViewModel by viewModels()
     private var shouldReturnResult = false
+    // Служебный запуск (иконка лаунчера, разворачивание PiP): сразу закрывается, плеер не создается
+    private var isTrampoline = false
     private var isCompleted = false
     // Сохраняем Intent, чтобы обработать его после получения разрешения
     private var pendingIntent: Intent? = null
@@ -229,8 +231,16 @@ class PlayerActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        // Разворачивание PiP создало новый экземпляр вместо подъема прежнего: прежний плеер не трогаем
+        if (intent.getBooleanExtra(EXTRA_RESTORE_PIP, false)) {
+            isTrampoline = true
+            finish()
+            return
+        }
+
         // Запуск из лаунчера -> стартовый экран (история, плейлисты, хранилища, вход в настройки)
         if (isLaunchedFromLauncher(intent)) {
+            isTrampoline = true
             // Видео в окне PiP: возвращаем его на весь экран вместо стартового экрана
             if (!restorePictureInPicture()) startActivity(Intent(this, FileBrowserActivity::class.java))
             finish()
@@ -269,8 +279,6 @@ class PlayerActivity : AppCompatActivity() {
         }
 
         if (savedInstanceState == null) {
-            // Новое видео при открытом окне PiP: старый плеер закрываем, а не оставляем висеть вторым
-            activePipPlayer()?.takeIf { it !== this }?.closeFromPictureInPicture()
             checkPermissionsAndHandleIntent(intent)
 
             val fragment = PlayerFragment.newInstance()
@@ -377,6 +385,9 @@ class PlayerActivity : AppCompatActivity() {
         viewModel.setHistorySource(IntentUtils.parseHistorySource(intent))
 
         if (playlist.isNotEmpty()) {
+            // Новое видео при открытом окне PiP: старый плеер закрываем, а не оставляем висеть вторым.
+            // Только когда видео действительно пришло: служебный запуск окно PiP не закрывает
+            activePipPlayer()?.takeIf { it !== this }?.closeFromPictureInPicture()
             viewModel.loadMedia(playlist, startIndex, forceM3uProbe = IntentUtils.isForceM3u(intent))
         }
     }
@@ -416,7 +427,8 @@ class PlayerActivity : AppCompatActivity() {
     }
 
     override fun finish() {
-        prepareFinish()
+        // У служебного запуска нет плеера: не создаем ViewModel ради сохранения
+        if (!isTrampoline) prepareFinish()
         super.finish()
     }
 
