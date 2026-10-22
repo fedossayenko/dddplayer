@@ -322,7 +322,7 @@
     <string name="audio_priority_up">上移</string>
     <string name="audio_priority_down">下移</string>
     <string name="audio_priority_remove">删除</string>
-    <string name="settings_cat_screen">屏幕</string>
+    <string name="settings_cat_ui">界面</string>
     <string name="settings_cat_video">视频</string>
     <string name="settings_cat_audio">音频</string>
     <string name="settings_cat_subtitles">字幕</string>

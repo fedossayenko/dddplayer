@@ -1420,19 +1420,19 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                 "aspect",
                 context.getString(R.string.aspect_ratio),
                 getAspectRatioLabel(context, _aspectRatioMode.value ?: AspectRatioMode.AUTO),
-                R.drawable.ic_fit_screen
+                R.drawable.ic_aspect_ratio
             ),
             MenuItem(
                 "quick_settings",
                 context.getString(R.string.menu_quick_settings_title),
                 context.getString(R.string.menu_quick_settings_desc),
-                R.drawable.ic_settings_3d
+                R.drawable.ic_3d_settings_bar
             ),
             MenuItem(
                 "global_settings",
                 context.getString(R.string.menu_global_settings_title),
                 context.getString(R.string.menu_global_settings_desc),
-                R.drawable.ic_build
+                R.drawable.ic_global_settings
             )
         )
     }

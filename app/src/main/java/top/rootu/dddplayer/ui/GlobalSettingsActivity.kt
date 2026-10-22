@@ -44,14 +44,14 @@ class GlobalSettingsActivity : AppCompatActivity() {
     private data class SettingsCategory(val sectionId: Int, val titleRes: Int, val iconRes: Int)
 
     private val categories = listOf(
-        SettingsCategory(R.id.section_playback, R.string.pref_general_header, R.drawable.ic_play_arrow),
-        SettingsCategory(R.id.section_screen, R.string.settings_cat_screen, R.drawable.ic_fullscreen),
-        SettingsCategory(R.id.section_video, R.string.settings_cat_video, R.drawable.ic_fit_screen),
-        SettingsCategory(R.id.section_audio, R.string.settings_cat_audio, R.drawable.ic_volume_up),
-        SettingsCategory(R.id.section_subtitles, R.string.settings_cat_subtitles, R.drawable.ic_subtitles),
-        SettingsCategory(R.id.section_control, R.string.settings_cat_control, R.drawable.ic_settings_remote),
+        SettingsCategory(R.id.section_playback, R.string.pref_general_header, R.drawable.ic_settings_play),
+        SettingsCategory(R.id.section_ui, R.string.settings_cat_ui, R.drawable.ic_settings_ui),
+        SettingsCategory(R.id.section_video, R.string.settings_cat_video, R.drawable.ic_settings_video),
+        SettingsCategory(R.id.section_audio, R.string.settings_cat_audio, R.drawable.ic_settings_audio),
+        SettingsCategory(R.id.section_subtitles, R.string.settings_cat_subtitles, R.drawable.ic_settings_subtitles),
         SettingsCategory(R.id.section_3d, R.string.settings_cat_3d, R.drawable.ic_settings_3d),
-        SettingsCategory(R.id.section_app, R.string.pref_sec_app, R.drawable.ic_settings)
+        SettingsCategory(R.id.section_control, R.string.settings_cat_control, R.drawable.ic_settings_remote),
+        SettingsCategory(R.id.section_app, R.string.pref_sec_app, R.drawable.ic_settings_info)
     )
     private val categoryViews = mutableListOf<View>()
     private var selectedCategory = -1

@@ -336,7 +336,7 @@
     <string name="audio_priority_up">Выше</string>
     <string name="audio_priority_down">Ниже</string>
     <string name="audio_priority_remove">Удалить</string>
-    <string name="settings_cat_screen">Экран</string>
+    <string name="settings_cat_ui">Интерфейс</string>
     <string name="settings_cat_video">Видео</string>
     <string name="settings_cat_audio">Звук</string>
     <string name="settings_cat_subtitles">Субтитры</string>

@@ -308,7 +308,7 @@
     <string name="audio_priority_up">Вышэй</string>
     <string name="audio_priority_down">Ніжэй</string>
     <string name="audio_priority_remove">Выдаліць</string>
-    <string name="settings_cat_screen">Экран</string>
+    <string name="settings_cat_ui">Інтэрфейс</string>
     <string name="settings_cat_video">Відэа</string>
     <string name="settings_cat_audio">Гук</string>
     <string name="settings_cat_subtitles">Субтытры</string>

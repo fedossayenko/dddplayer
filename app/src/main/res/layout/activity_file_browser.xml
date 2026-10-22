@@ -61,7 +61,7 @@
         android:contentDescription="@string/menu_global_settings_title"
         android:focusable="true"
         android:padding="12dp"
-        android:src="@drawable/ic_build"
+        android:src="@drawable/ic_global_settings"
         app:layout_constraintBottom_toBottomOf="@id/files_header"
         app:layout_constraintEnd_toStartOf="@id/btn_files_close"
         app:layout_constraintTop_toTopOf="@id/files_header"

@@ -339,7 +339,7 @@
     <string name="audio_priority_up">Move up</string>
     <string name="audio_priority_down">Move down</string>
     <string name="audio_priority_remove">Remove</string>
-    <string name="settings_cat_screen">Screen</string>
+    <string name="settings_cat_ui">Interface</string>
     <string name="settings_cat_video">Video</string>
     <string name="settings_cat_audio">Audio</string>
     <string name="settings_cat_subtitles">Subtitles</string>
