@@ -22,7 +22,8 @@ SurfaceView (2D/HDR)  или  StereoGLSurfaceView ─► StereoRenderer (GLSL)
   (MAIN/LAUNCHER) по-прежнему переводятся на стартовый экран. В PiP система переносит плеер
   в отдельную задачу, поэтому он запоминается в `PlayerActivity.pipActivity`: новое видео закрывает старое окно
   PiP (`closeFromPictureInPicture`), а открытие приложения снаружи (лаунчер, «Недавние», `PipReturnCallbacks`)
-  разворачивает его повторным запуском той же активити (`restorePictureInPicture`, SystemUI считает это
+  разворачивает его повторным запуском той же активити (стартовый экран, открытый иконкой, при этом сразу
+  закрывается и не показывается) (`restorePictureInPicture`, SystemUI считает это
   возвратом из PiP). В `finish()` (`prepareFinish`) формируется результат для вызывающего приложения (`return_result`). Нажатия клавиш передаются в
   `PlayerFragment.handleKeyEvent` через `dispatchKeyEvent`.
 - **`PlayerFragment`** — экран плеера. Создает GL-поверхность (выбор ES 2/3), подписывается на LiveData
