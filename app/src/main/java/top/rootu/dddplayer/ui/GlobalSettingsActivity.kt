@@ -136,6 +136,10 @@ class GlobalSettingsActivity : AppCompatActivity() {
     private lateinit var switchShowIndex: SwitchCompat
     private lateinit var itemConfirmExit: LinearLayout
     private lateinit var switchConfirmExit: SwitchCompat
+    private lateinit var itemBackButton: LinearLayout
+    private lateinit var switchBackButton: SwitchCompat
+    private lateinit var itemControlButtons: LinearLayout
+    private lateinit var textControlButtonsValue: TextView
     private lateinit var itemShowClock: LinearLayout
     private lateinit var textShowClockValue: TextView
     private lateinit var itemPauseDim: LinearLayout
@@ -389,6 +393,10 @@ class GlobalSettingsActivity : AppCompatActivity() {
         switchShowIndex = findViewById(R.id.switch_show_index)
         itemConfirmExit = findViewById(R.id.item_confirm_exit)
         switchConfirmExit = findViewById(R.id.switch_confirm_exit)
+        itemBackButton = findViewById(R.id.item_back_button)
+        switchBackButton = findViewById(R.id.switch_back_button)
+        itemControlButtons = findViewById(R.id.item_control_buttons)
+        textControlButtonsValue = findViewById(R.id.text_control_buttons_value)
         itemShowClock = findViewById(R.id.item_show_clock)
         textShowClockValue = findViewById(R.id.text_show_clock_value)
         itemPauseDim = findViewById(R.id.item_pause_dim)
@@ -551,9 +559,25 @@ class GlobalSettingsActivity : AppCompatActivity() {
         }
 
         itemSwipeAction.setOnClickListener {
-            val options = listOf(getString(R.string.swipe_action_none), getString(R.string.swipe_action_seek), getString(R.string.swipe_action_playlist))
-            showSingleChoiceDialog(getString(R.string.pref_swipe_horizontal), options, settingsViewModel.horizontalSwipeAction.value ?: 2) {
+            val options = listOf(
+                getString(R.string.swipe_action_none),
+                getString(R.string.swipe_action_seek),
+                getString(R.string.swipe_action_playlist),
+                getString(R.string.swipe_action_exit_next)
+            )
+            showSingleChoiceDialog(getString(R.string.pref_swipe_horizontal), options, settingsViewModel.horizontalSwipeAction.value ?: SettingsRepository.SWIPE_PLAYLIST) {
                 settingsViewModel.setHorizontalSwipeAction(it)
+            }
+        }
+        itemBackButton.setOnClickListener {
+            settingsViewModel.toggleBackButton(!switchBackButton.isChecked)
+        }
+        itemControlButtons.setOnClickListener {
+            val keys = SettingsRepository.HIDEABLE_BUTTONS
+            val hidden = settingsViewModel.hiddenControlButtons.value ?: emptySet()
+            val checked = BooleanArray(keys.size) { keys[it] !in hidden }
+            ChoiceDialog.showMulti(this, getString(R.string.pref_control_buttons), keys.map { getControlButtonLabel(it) }, checked) { visible ->
+                settingsViewModel.setHiddenControlButtons(keys.filterIndexed { i, _ -> !visible[i] }.toSet())
             }
         }
 
@@ -739,10 +763,17 @@ class GlobalSettingsActivity : AppCompatActivity() {
         settingsViewModel.isVolumeBrightnessGestures.observe(this) { switchGestureVolume.isChecked = it }
         settingsViewModel.horizontalSwipeAction.observe(this) { action ->
             textSwipeActionValue.text = when (action) {
-                1 -> getString(R.string.swipe_action_seek)
-                2 -> getString(R.string.swipe_action_playlist)
+                SettingsRepository.SWIPE_SEEK -> getString(R.string.swipe_action_seek)
+                SettingsRepository.SWIPE_PLAYLIST -> getString(R.string.swipe_action_playlist)
+                SettingsRepository.SWIPE_EXIT_NEXT -> getString(R.string.swipe_action_exit_next)
                 else -> getString(R.string.swipe_action_none)
             }
+        }
+        settingsViewModel.isBackButtonEnabled.observe(this) { switchBackButton.isChecked = it }
+        settingsViewModel.hiddenControlButtons.observe(this) { hidden ->
+            val total = SettingsRepository.HIDEABLE_BUTTONS.size
+            val visible = SettingsRepository.HIDEABLE_BUTTONS.count { it !in hidden }
+            textControlButtonsValue.text = getString(R.string.pref_control_buttons_value, visible, total)
         }
 
         settingsViewModel.isRememberZoomEnabled.observe(this) { switchRememberZoom.isChecked = it }
@@ -861,6 +892,16 @@ class GlobalSettingsActivity : AppCompatActivity() {
             StereoOutputMode.RIGHT_ONLY -> R.string.default_3d_right
         }
     )
+
+    private fun getControlButtonLabel(key: String): String = when (key) {
+        SettingsRepository.BUTTON_SPEED -> getString(R.string.playback_speed)
+        SettingsRepository.BUTTON_RESIZE -> getString(R.string.playback_zoom)
+        SettingsRepository.BUTTON_PIP -> getString(R.string.picture_in_picture)
+        SettingsRepository.BUTTON_QUALITY -> getString(R.string.button_label_quality)
+        SettingsRepository.BUTTON_AUDIO -> getString(R.string.button_label_audio)
+        SettingsRepository.BUTTON_SUBTITLES -> getString(R.string.button_label_subtitles)
+        else -> key
+    }
 
     private fun showSingleChoiceDialog(title: String, items: List<String>, currentIndex: Int, onSelected: (Int) -> Unit) {
         ChoiceDialog.show(this, title, items, currentIndex, onSelected)

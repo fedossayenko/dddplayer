@@ -50,6 +50,21 @@ class SettingsRepository private constructor(context: Context) {
         const val OK_ACTION_PAUSE_PANEL = 1
         const val OK_ACTION_PANEL = 2
 
+        // Горизонтальный свайп
+        const val SWIPE_NONE = 0
+        const val SWIPE_SEEK = 1
+        const val SWIPE_PLAYLIST = 2 // Пред/След, выход на краях плейлиста
+        const val SWIPE_EXIT_NEXT = 3 // Вправо - выход, влево - следующее видео
+
+        // Кнопки нижней панели, которые можно скрыть
+        const val BUTTON_SPEED = "speed"
+        const val BUTTON_RESIZE = "resize"
+        const val BUTTON_PIP = "pip"
+        const val BUTTON_QUALITY = "quality"
+        const val BUTTON_AUDIO = "audio"
+        const val BUTTON_SUBTITLES = "subtitles"
+        val HIDEABLE_BUTTONS = listOf(BUTTON_SPEED, BUTTON_RESIZE, BUTTON_PIP, BUTTON_QUALITY, BUTTON_AUDIO, BUTTON_SUBTITLES)
+
         // Прозрачность часов: -1 = часы выключены, 0..80 = прозрачность в %
         const val CLOCK_OFF = -1
 
@@ -584,8 +599,17 @@ class SettingsRepository private constructor(context: Context) {
     fun isVolumeBrightnessGesturesEnabled(): Boolean = prefs.getBoolean("gesture_volume_brightness", true)
     fun setVolumeBrightnessGesturesEnabled(enabled: Boolean) = prefs.edit { putBoolean("gesture_volume_brightness", enabled) }
 
-    fun getHorizontalSwipeAction(): Int = prefs.getInt("horizontal_swipe_action", 2)
+    fun getHorizontalSwipeAction(): Int = prefs.getInt("horizontal_swipe_action", SWIPE_PLAYLIST)
     fun setHorizontalSwipeAction(action: Int) = prefs.edit { putInt("horizontal_swipe_action", action) }
+
+    // Кнопка выхода (стрелка) в инфопанели для сенсорных экранов
+    fun isBackButtonEnabled(): Boolean = prefs.getBoolean("show_back_button", false)
+    fun setBackButtonEnabled(enabled: Boolean) = prefs.edit { putBoolean("show_back_button", enabled) }
+
+    // Скрытые пользователем кнопки нижней панели. Храним скрытые, чтобы новые кнопки по умолчанию были видны
+    fun getHiddenControlButtons(): Set<String> =
+        prefs.getStringSet("hidden_control_buttons", null)?.toSet() ?: emptySet()
+    fun setHiddenControlButtons(buttons: Set<String>) = prefs.edit { putStringSet("hidden_control_buttons", buttons) }
 
     // Прозрачность часов (CLOCK_OFF или 0..80 %).
     // Миграция со старого переключателя "show_clock": выкл -> часы выключены, вкл -> без прозрачности.

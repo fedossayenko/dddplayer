@@ -263,6 +263,15 @@
                     <androidx.appcompat.widget.SwitchCompat android:id="@+id/switch_track_change_info" android:layout_width="wrap_content" android:layout_height="wrap_content" android:clickable="false" android:focusable="false" />
                 </LinearLayout>
 
+                <!-- Видимые кнопки нижней панели -->
+                <LinearLayout android:id="@+id/item_control_buttons" style="@style/SettingsItemContainer">
+                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:duplicateParentState="true">
+                        <TextView style="@style/SettingsItemTitle" android:text="@string/pref_control_buttons" />
+                        <TextView style="@style/SettingsItemDesc" android:text="@string/pref_control_buttons_desc" />
+                    </LinearLayout>
+                    <TextView android:id="@+id/text_control_buttons_value" style="@style/SettingsItemValue" tools:text="6/6" />
+                </LinearLayout>
+
                 <!-- Show Playlist Index -->
                 <LinearLayout
                     android:id="@+id/item_show_index"
@@ -1013,6 +1022,15 @@
                         <TextView style="@style/SettingsItemDesc" android:text="@string/pref_gesture_volume_desc" />
                     </LinearLayout>
                     <androidx.appcompat.widget.SwitchCompat android:id="@+id/switch_gesture_volume" android:layout_width="wrap_content" android:layout_height="wrap_content" android:clickable="false" android:focusable="false" />
+                </LinearLayout>
+
+                <!-- Кнопка выхода в инфопанели (сенсорные экраны) -->
+                <LinearLayout android:id="@+id/item_back_button" style="@style/SettingsItemContainer">
+                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:duplicateParentState="true">
+                        <TextView style="@style/SettingsItemTitle" android:text="@string/pref_back_button" />
+                        <TextView style="@style/SettingsItemDesc" android:text="@string/pref_back_button_desc" />
+                    </LinearLayout>
+                    <androidx.appcompat.widget.SwitchCompat android:id="@+id/switch_back_button" android:layout_width="wrap_content" android:layout_height="wrap_content" android:clickable="false" android:focusable="false" />
                 </LinearLayout>
             </LinearLayout>
 

@@ -84,6 +84,7 @@ class PlayerUiController(private val rootView: View) {
     val badgeResolution: TextView = topInfoPanel.findViewById(R.id.badge_resolution)
     val badgeAudio: TextView = topInfoPanel.findViewById(R.id.badge_audio)
     val badgeSubtitle: TextView = topInfoPanel.findViewById(R.id.badge_subtitle)
+    val buttonBack: ImageButton = topInfoPanel.findViewById(R.id.button_back)
 
     // Controls
     val playPauseButton: ImageButton = controlsView.findViewById(R.id.button_play_pause)

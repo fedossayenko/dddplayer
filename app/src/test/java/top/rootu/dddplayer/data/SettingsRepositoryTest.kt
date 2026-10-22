@@ -275,4 +275,17 @@ class SettingsRepositoryTest {
         repo.removeSmbServer("1")
         assertTrue(repo.getSmbServers().isEmpty())
     }
+
+    @Test
+    fun `control bar defaults keep all buttons and no back arrow`() {
+        val repo = repo()
+        assertTrue(repo.getHiddenControlButtons().isEmpty())
+        assertFalse(repo.isBackButtonEnabled())
+        assertEquals(SettingsRepository.SWIPE_PLAYLIST, repo.getHorizontalSwipeAction())
+
+        repo.setHiddenControlButtons(setOf(SettingsRepository.BUTTON_SPEED, SettingsRepository.BUTTON_RESIZE))
+        assertEquals(setOf(SettingsRepository.BUTTON_SPEED, SettingsRepository.BUTTON_RESIZE), repo.getHiddenControlButtons())
+        repo.setHiddenControlButtons(emptySet())
+        assertTrue(repo.getHiddenControlButtons().isEmpty())
+    }
 }

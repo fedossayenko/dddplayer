@@ -218,6 +218,15 @@
     <string name="swipe_action_none">None</string>
     <string name="swipe_action_seek">Seek</string>
     <string name="swipe_action_playlist">Exit or Prev/Next</string>
+    <string name="swipe_action_exit_next">Exit or Next</string>
+    <string name="pref_back_button">Back button on screen</string>
+    <string name="pref_back_button_desc">Arrow in the info panel to close the player (for touch screens)</string>
+    <string name="pref_control_buttons">Control bar buttons</string>
+    <string name="pref_control_buttons_desc">Hide buttons you do not use. Audio, subtitles, speed and zoom stay in the side menu</string>
+    <string name="pref_control_buttons_value">%1$d of %2$d</string>
+    <string name="button_label_quality">Video quality</string>
+    <string name="button_label_audio">Audio track</string>
+    <string name="button_label_subtitles">Subtitles</string>
     <string name="next_video">Next: %s</string>
     <string name="prev_video">Prev: %s</string>
     <string name="release_to_switch">Release to switch</string>

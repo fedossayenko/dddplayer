@@ -115,6 +115,12 @@ class GlobalSettingsViewModel(application: Application) : AndroidViewModel(appli
     private val _horizontalSwipeAction = MutableLiveData(repository.getHorizontalSwipeAction())
     val horizontalSwipeAction: LiveData<Int> = _horizontalSwipeAction
 
+    private val _isBackButtonEnabled = MutableLiveData(repository.isBackButtonEnabled())
+    val isBackButtonEnabled: LiveData<Boolean> = _isBackButtonEnabled
+
+    private val _hiddenControlButtons = MutableLiveData(repository.getHiddenControlButtons())
+    val hiddenControlButtons: LiveData<Set<String>> = _hiddenControlButtons
+
     // --- Playlist Settings ---
     private val _isLiveModeEnabled = MutableLiveData(repository.isLiveModeEnabled())
     val isLiveModeEnabled: LiveData<Boolean> = _isLiveModeEnabled
@@ -364,6 +370,16 @@ class GlobalSettingsViewModel(application: Application) : AndroidViewModel(appli
     fun setHorizontalSwipeAction(action: Int) {
         repository.setHorizontalSwipeAction(action)
         _horizontalSwipeAction.value = action
+    }
+
+    fun toggleBackButton(enabled: Boolean) {
+        repository.setBackButtonEnabled(enabled)
+        _isBackButtonEnabled.value = enabled
+    }
+
+    fun setHiddenControlButtons(buttons: Set<String>) {
+        repository.setHiddenControlButtons(buttons)
+        _hiddenControlButtons.value = buttons
     }
 
     // --- Downmix Logic ---

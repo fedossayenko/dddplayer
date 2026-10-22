@@ -193,6 +193,15 @@
     <string name="swipe_action_none">Нічога</string>
     <string name="swipe_action_seek">Перамотка</string>
     <string name="swipe_action_playlist">Выхад ці Папяр./Наст.</string>
+    <string name="swipe_action_exit_next">Выхад ці Наст.</string>
+    <string name="pref_back_button">Кнопка «Назад» на экране</string>
+    <string name="pref_back_button_desc">Стрэлка ў інфапанэлі для выхаду з плэера (для сэнсарных экранаў)</string>
+    <string name="pref_control_buttons">Кнопкі панэлі кіравання</string>
+    <string name="pref_control_buttons_desc">Схавайце кнопкі, якімі не карыстаецеся. Аўдыя, субтытры, хуткасць і маштаб застануцца ў бакавым меню</string>
+    <string name="pref_control_buttons_value">%1$d з %2$d</string>
+    <string name="button_label_quality">Якасць відэа</string>
+    <string name="button_label_audio">Аўдыядарожка</string>
+    <string name="button_label_subtitles">Субтытры</string>
     <string name="next_video">Наступнае: %s</string>
     <string name="prev_video">Папярэдняе: %s</string>
     <string name="release_to_switch">Адпусціце для пераключэння</string>

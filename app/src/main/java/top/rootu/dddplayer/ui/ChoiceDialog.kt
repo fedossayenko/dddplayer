@@ -7,13 +7,14 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import top.rootu.dddplayer.R
 import top.rootu.dddplayer.ui.adapter.ChoiceAdapter
+import top.rootu.dddplayer.ui.adapter.MultiChoiceAdapter
 
 /**
- * Диалог выбора одного значения из списка (экраны настроек).
- * @param currentIndex отмеченный пункт, -1 - без отметки (фокус на первом пункте)
+ * Диалоги выбора из списка (экраны настроек): одно значение или несколько флажков.
  */
 object ChoiceDialog {
 
+    /** @param currentIndex отмеченный пункт, -1 - без отметки (фокус на первом пункте) */
     fun show(context: Context, title: String, items: List<String>, currentIndex: Int, onSelected: (Int) -> Unit): Dialog {
         val dialog = Dialog(context, R.style.Theme_App_Dialog)
         dialog.setContentView(R.layout.dialog_list_choice)
@@ -31,6 +32,23 @@ object ChoiceDialog {
         recycler.post {
             (recycler.layoutManager as? LinearLayoutManager)?.scrollToPositionWithOffset(focusIndex, 0)
             recycler.postDelayed({ recycler.findViewHolderForAdapterPosition(focusIndex)?.itemView?.requestFocus() }, 50)
+        }
+        return dialog
+    }
+
+    /** Флажки применяются сразу при переключении, диалог закрывается кнопкой "Назад". */
+    fun showMulti(context: Context, title: String, items: List<String>, checked: BooleanArray, onChanged: (BooleanArray) -> Unit): Dialog {
+        val dialog = Dialog(context, R.style.Theme_App_Dialog)
+        dialog.setContentView(R.layout.dialog_list_choice)
+        dialog.findViewById<TextView>(R.id.dialog_title).text = title
+
+        val recycler = dialog.findViewById<RecyclerView>(R.id.dialog_recycler_view)
+        recycler.layoutManager = LinearLayoutManager(context)
+        recycler.adapter = MultiChoiceAdapter(items, checked.copyOf(), onChanged)
+
+        dialog.show()
+        recycler.post {
+            recycler.postDelayed({ recycler.findViewHolderForAdapterPosition(0)?.itemView?.requestFocus() }, 50)
         }
         return dialog
     }

@@ -120,8 +120,9 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
     private var volumeAccumulator = 0f
 
     // Переменные для горизонтального свайпа
-    private var swipeAction = 0 // 0=None, 1=Seek, 2=Playlist
+    private var swipeAction = SettingsRepository.SWIPE_NONE
     private var verticalGesturesEnabled = true // Жесты громкости и яркости
+    private var hiddenControlButtons: Set<String> = emptySet() // Кнопки, скрытые в настройках
 
     // Масштабирование двумя пальцами (только 2D)
     private lateinit var scaleDetector: ScaleGestureDetector
@@ -181,6 +182,8 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
 
         swipeAction = settingsRepo.getHorizontalSwipeAction()
         verticalGesturesEnabled = settingsRepo.isVolumeBrightnessGesturesEnabled()
+        hiddenControlButtons = settingsRepo.getHiddenControlButtons()
+        ui.buttonBack.isVisible = settingsRepo.isBackButtonEnabled()
 
         // === ИНИЦИАЛИЗАЦИЯ ЖЕСТОВ ===
         val displayMetrics = resources.displayMetrics
@@ -412,9 +415,9 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
     }
 
     private fun handleHorizontalSwipe(deltaX: Float, screenWidth: Int) {
-        if (swipeAction == 0) return // None
+        if (swipeAction == SettingsRepository.SWIPE_NONE) return
 
-        if (swipeAction == 1) {
+        if (swipeAction == SettingsRepository.SWIPE_SEEK) {
             // === SEEK MODE (Перемотка) ===
             val duration = viewModel.duration.value ?: 0L
             if (duration <= 0) return
@@ -442,8 +445,8 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
             ui.seekBar.progress = swipeSeekCurrentPosition.toInt()
             updateTimeLabelsUI(swipeSeekCurrentPosition)
         }
-        else if (swipeAction == 2) {
-            // === PLAYLIST MODE ===
+        else if (swipeAction == SettingsRepository.SWIPE_PLAYLIST || swipeAction == SettingsRepository.SWIPE_EXIT_NEXT) {
+            // === PLAYLIST MODE (в режиме "Выход или След" вправо - всегда выход) ===
             swipePlaylistAccumulator += deltaX
             isPlaylistSwipeActive = true
 
@@ -467,8 +470,9 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
             } else {
                 // Тянем ВПРАВО -> PREV
                 currentSwipeTargetIsNext = false
-                val targetItem = if (isLiveMode) viewModel.getRelativePlaylistItem(-1) else null
-                val prevTitle = targetItem?.title ?: viewModel.getPrevTrackTitle()
+                val exitOnly = swipeAction == SettingsRepository.SWIPE_EXIT_NEXT
+                val targetItem = if (isLiveMode && !exitOnly) viewModel.getRelativePlaylistItem(-1) else null
+                val prevTitle = if (exitOnly) null else targetItem?.title ?: viewModel.getPrevTrackTitle()
 
                 if (prevTitle != null) {
                     currentSwipeIsExit = false
@@ -486,7 +490,7 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
         val screenWidth = resources.displayMetrics.widthPixels
 
         // 1. Завершение перемотки
-        if (swipeAction == 1 && isSwipeSeeking) {
+        if (swipeAction == SettingsRepository.SWIPE_SEEK && isSwipeSeeking) {
             viewModel.seekTo(swipeSeekCurrentPosition)
             ui.hideSeekOverlay()
             isSwipeSeeking = false
@@ -500,7 +504,7 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
         }
 
         // 2. Завершение свайпа плейлиста
-        if (swipeAction == 2 && isPlaylistSwipeActive) {
+        if (isPlaylistSwipeActive) {
             val threshold = screenWidth / 2 // Половина экрана
             val draggedDistance = abs(swipePlaylistAccumulator)
 
@@ -543,7 +547,8 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
             Toast.makeText(requireContext(), R.string.error_copied, Toast.LENGTH_SHORT).show()
             true
         }
-        ui.buttonPip.isVisible = (activity as? PlayerActivity)?.supportsPictureInPicture == true
+        updateControlButtonsVisibility()
+        ui.buttonBack.setOnClickListener { requireActivity().finish() }
         ui.buttonPip.setOnClickListener {
             (activity as? PlayerActivity)?.enterPlayerPictureInPicture(showError = true)
         }
@@ -1121,11 +1126,7 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
         viewModel.currentQualityName.observe(viewLifecycleOwner) { ui.buttonQuality.text = it }
         // Выбор качества и аудио - только если есть из чего выбирать, субтитры - если они есть
         // (загрузка субтитров из файла остается в боковом меню)
-        viewModel.trackCounts.observe(viewLifecycleOwner) { counts ->
-            ui.buttonQuality.isVisible = counts.video > 1
-            ui.buttonAudio.isVisible = counts.audio > 1
-            ui.buttonSubs.isVisible = counts.subtitles > 0
-        }
+        viewModel.trackCounts.observe(viewLifecycleOwner) { updateControlButtonsVisibility() }
 
         viewModel.videoResolution.observe(viewLifecycleOwner) { updateVideoBadge() }
         viewModel.tunnelingActive.observe(viewLifecycleOwner) { updateVideoBadge() }
@@ -1625,6 +1626,20 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
         popup.show()
     }
 
+    /** Видимость кнопок нижней панели: доступность функции и выбор пользователя в настройках. */
+    private fun updateControlButtonsVisibility() {
+        fun shown(key: String) = key !in hiddenControlButtons
+        // До подсчета дорожек кнопки выбора остаются видимыми, как в разметке
+        val counts = viewModel.trackCounts.value
+        ui.buttonSpeed.isVisible = shown(SettingsRepository.BUTTON_SPEED)
+        ui.buttonResize.isVisible = shown(SettingsRepository.BUTTON_RESIZE)
+        ui.buttonPip.isVisible = shown(SettingsRepository.BUTTON_PIP) &&
+            (activity as? PlayerActivity)?.supportsPictureInPicture == true
+        ui.buttonQuality.isVisible = shown(SettingsRepository.BUTTON_QUALITY) && (counts == null || counts.video > 1)
+        ui.buttonAudio.isVisible = shown(SettingsRepository.BUTTON_AUDIO) && (counts == null || counts.audio > 1)
+        ui.buttonSubs.isVisible = shown(SettingsRepository.BUTTON_SUBTITLES) && (counts == null || counts.subtitles > 0)
+    }
+
     private fun shouldAskExitConfirmation(): Boolean {
         val settingsRepo = SettingsRepository.getInstance(requireContext().applicationContext)
         if (!settingsRepo.isConfirmExitEnabled()) return false
@@ -1666,6 +1681,9 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
         val settingsRepo = SettingsRepository.getInstance(requireContext().applicationContext)
         swipeAction = settingsRepo.getHorizontalSwipeAction()
         verticalGesturesEnabled = settingsRepo.isVolumeBrightnessGesturesEnabled()
+        hiddenControlButtons = settingsRepo.getHiddenControlButtons()
+        ui.buttonBack.isVisible = settingsRepo.isBackButtonEnabled()
+        updateControlButtonsVisibility()
 
         // Обновляем видимость часов и стиль субтитров (на случай, если изменили в настройках)
         ui.updateClockTransparency(settingsRepo.getClockTransparency())
