@@ -911,7 +911,9 @@ class GlobalSettingsActivity : AppCompatActivity() {
         recycler.adapter = adapter
         dialog.show()
         adapter.submitList(OpenSourceLicenses.components.mapIndexed { i, c ->
-            MenuItem(id = i.toString(), title = c.name, description = "${c.license} · ${c.url}", data = c.url)
+            // Что используется (если не весь компонент), затем лицензия и ссылка
+            val license = "${c.license} · ${c.url}"
+            MenuItem(id = i.toString(), title = c.name, description = c.parts?.let { "$it\n$license" } ?: license, data = c.url)
         }) {
             recycler.post { recycler.findViewHolderForAdapterPosition(0)?.itemView?.requestFocus() }
         }
