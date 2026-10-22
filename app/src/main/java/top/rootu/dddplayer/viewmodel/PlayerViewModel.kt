@@ -34,6 +34,7 @@ import top.rootu.dddplayer.data.VideoSettings
 import top.rootu.dddplayer.logic.AnaglyphLogic
 import top.rootu.dddplayer.logic.SettingsMutator
 import top.rootu.dddplayer.logic.StereoFormatLogic
+import top.rootu.dddplayer.logic.StreamTypeLogic
 import top.rootu.dddplayer.logic.TrackLogic
 import top.rootu.dddplayer.model.AspectRatioMode
 import top.rootu.dddplayer.model.HistoryEntry
@@ -112,6 +113,8 @@ const val SPEED_MENU_CUSTOM = "custom_speed"
 class PlayerViewModel(application: Application) : AndroidViewModel(application) {
 
     private var ioRetryCount = 0
+    // Элементы (mediaId), которые уже пробовали открыть как HLS после ошибки контейнера
+    private val hlsFallbackTried = mutableSetOf<String>()
     private val MAX_IO_RETRIES = 3
 
     // true, пока плейлист перезагружается для восстановления после ошибки.
@@ -549,7 +552,12 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             val originalUri = currentItem?.localConfiguration?.uri
 
             if (originalUri != null) {
+                // Тип от сервера (Content-Type, расширение после редиректов). Если сервер его не сообщил,
+                // а файл не похож на обычное видео, один раз пробуем HLS (ссылки балансеров без .m3u8)
                 val resolvedMimeType = playerManager.getResolvedMimeType(originalUri)
+                    ?: MimeTypes.APPLICATION_M3U8.takeIf {
+                        StreamTypeLogic.shouldTryHls(originalUri.path) && hlsFallbackTried.add(currentItem.mediaId)
+                    }
 
                 if (resolvedMimeType != null && currentItem.localConfiguration?.mimeType != resolvedMimeType) {
 
@@ -1105,6 +1113,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
     fun loadPlaylist(items: List<MediaItem>, startIndex: Int, isM3u: Boolean = false) {
         val indexedItems = items.mapIndexed { index, item -> item.copy(absoluteIndex = index) }
+        hlsFallbackTried.clear()
         _currentPlaylist.value = indexedItems
         _isM3uPlaylist.value = isM3u
         _isSessionLive.value = false
