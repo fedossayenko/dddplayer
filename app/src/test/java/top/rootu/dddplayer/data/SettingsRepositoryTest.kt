@@ -201,7 +201,8 @@ class SettingsRepositoryTest {
     fun `defaults keep the previous behaviour`() {
         val repo = repo()
         assertEquals(SettingsRepository.CLOCK_OFF, repo.getClockTransparency())
-        assertEquals(SettingsRepository.UP_ACTION_MENU, repo.getUpButtonAction())
+        // Кнопка "Вверх": первое нажатие - инфопанель, второе - боковое меню
+        assertEquals(SettingsRepository.UP_ACTION_INFO, repo.getUpButtonAction())
         assertEquals(SettingsRepository.AUDIO_MEMORY_OFF, repo.getAudioTrackMemoryMode())
         assertEquals(SettingsRepository.EXTERNAL_POSITION_APPLY, repo.getExternalPositionMode())
         assertEquals(SettingsRepository.BUFFER_SIZE_AUTO, repo.getTargetBufferMB())

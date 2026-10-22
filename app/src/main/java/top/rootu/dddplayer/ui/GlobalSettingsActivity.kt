@@ -580,7 +580,7 @@ class GlobalSettingsActivity : AppCompatActivity() {
         }
         itemUpAction.setOnClickListener {
             val options = listOf(getString(R.string.pref_up_action_none), getString(R.string.pref_up_action_osd), getString(R.string.pref_up_action_menu), getString(R.string.pref_up_action_info))
-            showSingleChoiceDialog(getString(R.string.pref_up_action), options, settingsViewModel.upButtonAction.value ?: SettingsRepository.UP_ACTION_MENU) {
+            showSingleChoiceDialog(getString(R.string.pref_up_action), options, settingsViewModel.upButtonAction.value ?: SettingsRepository.UP_ACTION_INFO) {
                 settingsViewModel.setUpButtonAction(it)
             }
         }

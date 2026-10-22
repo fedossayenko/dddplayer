@@ -518,7 +518,8 @@ class SettingsRepository private constructor(context: Context) {
     fun setExternalPositionMode(mode: Int) = prefs.edit { putInt("external_position_mode", mode) }
 
     // Действие кнопки "Вверх" (UP_ACTION_*). По умолчанию - боковое меню
-    fun getUpButtonAction(): Int = prefs.getInt("up_button_action", UP_ACTION_MENU)
+    // По умолчанию "Инфопанель, затем боковое меню"; кто выбирал действие сам, сохраняет свой выбор
+    fun getUpButtonAction(): Int = prefs.getInt("up_button_action", UP_ACTION_INFO)
     fun setUpButtonAction(action: Int) = prefs.edit { putInt("up_button_action", action) }
 
     // Подтверждение выхода из плеера повторным нажатием "Назад"
