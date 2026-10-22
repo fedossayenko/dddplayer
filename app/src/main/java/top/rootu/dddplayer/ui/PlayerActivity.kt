@@ -158,6 +158,8 @@ class PlayerActivity : AppCompatActivity() {
     }
 
     private fun updatePictureInPictureParams() {
+        // У служебного запуска нет плеера: не создаем ради параметров PiP ViewModel (а с ней и плеер)
+        if (isTrampoline) return
         if (!supportsPictureInPicture || Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         if (isInPictureInPictureMode) {
             // В окне PiP обновляем только кнопки (параметры объединяются с прежними)
@@ -218,6 +220,7 @@ class PlayerActivity : AppCompatActivity() {
     override fun onPictureInPictureModeChanged(inPip: Boolean, newConfig: Configuration) {
         super.onPictureInPictureModeChanged(inPip, newConfig)
         Log.i(PIP_TAG, "pipModeChanged=$inPip ${describe()} screen=${newConfig.screenWidthDp}x${newConfig.screenHeightDp}dp")
+        if (isTrampoline) return
         if (inPip) pipActivity = WeakReference(this)
         else if (pipActivity?.get() === this) pipActivity = null
         playerFragment?.setPictureInPictureMode(inPip)
@@ -403,7 +406,7 @@ class PlayerActivity : AppCompatActivity() {
         if (playlist.isNotEmpty()) {
             // Новое видео при открытом окне PiP: старый плеер закрываем, а не оставляем висеть вторым.
             // Только когда видео действительно пришло: служебный запуск окно PiP не закрывает
-            activePipPlayer()?.takeIf { it !== this }?.closeFromPictureInPicture()
+            activePipPlayer()?.takeIf { it !== this }?.closeFromPictureInPicture(taskId)
             viewModel.loadMedia(playlist, startIndex, forceM3uProbe = IntentUtils.isForceM3u(intent))
         }
     }
@@ -450,12 +453,19 @@ class PlayerActivity : AppCompatActivity() {
         super.finish()
     }
 
-    /** Закрывает плеер в окне PiP вместе с его задачей (иначе в "Недавних" остается пустая). */
-    private fun closeFromPictureInPicture() {
+    /**
+     * Закрывает плеер в окне PiP вместе с его задачей (иначе в "Недавних" остается пустая).
+     * @param newPlayerTaskId задача нового плеера: если она та же, закрываем только старый плеер
+     */
+    private fun closeFromPictureInPicture(newPlayerTaskId: Int) {
         if (isFinishing) return
-        Log.i(PIP_TAG, "closeFromPictureInPicture ${describe()}", Throwable("close caller"))
-        prepareFinish()
-        finishAndRemoveTask()
+        Log.i(PIP_TAG, "closeFromPictureInPicture ${describe()} newTask=$newPlayerTaskId", Throwable("close caller"))
+        if (newPlayerTaskId == taskId) {
+            finish()
+        } else {
+            prepareFinish()
+            finishAndRemoveTask()
+        }
     }
 
     private fun describe(): String {

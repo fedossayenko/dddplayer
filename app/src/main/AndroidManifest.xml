@@ -43,28 +43,16 @@
         android:requestLegacyExternalStorage="true"
         android:theme="@style/AppTheme">
 
+        <!-- Своя привязка задачи: окно PiP плеера живет в отдельной задаче, и иконка приложения
+             (стартовый экран) не открывается внутри нее поверх плеера -->
         <activity
             android:name=".ui.PlayerActivity"
             android:exported="true"
-            android:icon="@mipmap/ic_launcher"
-            android:logo="@mipmap/ic_launcher"
-            android:banner="@drawable/tv_banner"
+            android:taskAffinity="top.rootu.dddplayer.player"
             android:screenOrientation="landscape"
             android:supportsPictureInPicture="true"
             android:resizeableActivity="true"
             android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboardHidden|keyboard|navigation">
-
-            <!-- Точка входа для Android TV -->
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
-            </intent-filter>
-
-            <!-- Точка входа для Телефонов/Планшетов -->
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
 
             <!-- Фильтры для открытия видео -->
 
@@ -386,10 +374,26 @@
             android:theme="@style/Theme.AppCompat.NoActionBar" />
         <activity
             android:name=".ui.FileBrowserActivity"
-            android:exported="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher"
+            android:logo="@mipmap/ic_launcher"
+            android:banner="@drawable/tv_banner"
             android:screenOrientation="landscape"
             android:windowSoftInputMode="adjustNothing"
-            android:theme="@style/Theme.AppCompat.NoActionBar" />
+            android:theme="@style/Theme.AppCompat.NoActionBar">
+
+            <!-- Точка входа для Android TV: стартовый экран -->
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+            </intent-filter>
+
+            <!-- Точка входа для телефонов и планшетов -->
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
         <activity
             android:name=".ui.DeviceInfoActivity"
             android:exported="false"

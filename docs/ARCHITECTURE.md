@@ -15,8 +15,11 @@ SurfaceView (2D/HDR)  или  StereoGLSurfaceView ─► StereoRenderer (GLSL)
 ```
 
 - **`PlayerActivity`** — единственная точка входа для видео. Здесь проверяются разрешения на файлы,
-  разбирается Intent (`IntentUtils`), запуск из лаунчера переводится на стартовый экран и работает PiP (действие
-  play/pause через `RemoteAction` и `BroadcastReceiver`, авто-PiP по настройке). В PiP система переносит плеер
+  разбирается Intent (`IntentUtils`) и работает PiP (действие
+  play/pause через `RemoteAction` и `BroadcastReceiver`, авто-PiP по настройке). Точка входа лаунчера —
+  `FileBrowserActivity`, у `PlayerActivity` своя `taskAffinity`: иначе Android TV считает окно PiP и иконку
+  приложения одной задачей и открывает стартовый экран внутри задачи плеера. Старые ярлыки на `PlayerActivity`
+  (MAIN/LAUNCHER) по-прежнему переводятся на стартовый экран. В PiP система переносит плеер
   в отдельную задачу, поэтому он запоминается в `PlayerActivity.pipActivity`: новое видео закрывает старое окно
   PiP (`closeFromPictureInPicture`), а открытие приложения снаружи (лаунчер, «Недавние», `PipReturnCallbacks`)
   разворачивает его повторным запуском той же активити (`restorePictureInPicture`, SystemUI считает это
