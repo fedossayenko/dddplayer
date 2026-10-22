@@ -421,6 +421,9 @@
     <string name="reset_settings_title">Сбросить все настройки на значения по умолчанию?</string>
     <string name="reset_settings_confirm">Сбросить</string>
     <string name="reset_settings_done">Настройки сброшены</string>
+    <string name="pref_licenses">Лицензии</string>
+    <string name="pref_licenses_desc">Открытые компоненты, которые использует приложение</string>
+    <string name="link_no_browser">Нет приложения, чтобы открыть ссылку: %s</string>
     <string name="reset_calibration_vr">Cardboard VR</string>
     <string name="reset_calibration_anaglyph">Анаглиф-очки</string>
     <string name="reset_calibration_all">Все</string>

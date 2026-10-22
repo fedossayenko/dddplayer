@@ -393,6 +393,9 @@
     <string name="reset_settings_title">Скінуць усе налады на значэнні па змаўчанні?</string>
     <string name="reset_settings_confirm">Скінуць</string>
     <string name="reset_settings_done">Налады скінуты</string>
+    <string name="pref_licenses">Ліцэнзіі</string>
+    <string name="pref_licenses_desc">Адкрытыя кампаненты, якія выкарыстоўвае праграма</string>
+    <string name="link_no_browser">Няма праграмы, каб адкрыць спасылку: %s</string>
     <string name="reset_calibration_vr">Cardboard VR</string>
     <string name="reset_calibration_anaglyph">Анагліф-акуляры</string>
     <string name="reset_calibration_all">Усё</string>

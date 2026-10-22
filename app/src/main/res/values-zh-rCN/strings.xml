@@ -407,6 +407,9 @@
     <string name="reset_settings_title">将所有设置重置为默认值？</string>
     <string name="reset_settings_confirm">重置</string>
     <string name="reset_settings_done">设置已重置</string>
+    <string name="pref_licenses">许可证</string>
+    <string name="pref_licenses_desc">应用使用的开源组件</string>
+    <string name="link_no_browser">没有可打开链接的应用：%s</string>
     <string name="reset_calibration_vr">Cardboard VR</string>
     <string name="reset_calibration_anaglyph">红蓝眼镜</string>
     <string name="reset_calibration_all">全部</string>

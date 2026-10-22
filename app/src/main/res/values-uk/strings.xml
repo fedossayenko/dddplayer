@@ -393,6 +393,9 @@
     <string name="reset_settings_title">Скинути всі налаштування до типових?</string>
     <string name="reset_settings_confirm">Скинути</string>
     <string name="reset_settings_done">Налаштування скинуто</string>
+    <string name="pref_licenses">Ліцензії</string>
+    <string name="pref_licenses_desc">Відкриті компоненти, які використовує застосунок</string>
+    <string name="link_no_browser">Немає застосунку, щоб відкрити посилання: %s</string>
     <string name="reset_calibration_vr">Cardboard VR</string>
     <string name="reset_calibration_anaglyph">Анагліф-окуляри</string>
     <string name="reset_calibration_all">Усе</string>

@@ -1,6 +1,7 @@
 package top.rootu.dddplayer.ui
 
 import android.app.Dialog
+import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.os.Bundle
 import android.view.KeyEvent
@@ -24,15 +25,21 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.appcompat.widget.SwitchCompat
 import androidx.core.os.LocaleListCompat
+import androidx.core.net.toUri
 import androidx.core.view.children
 import androidx.core.view.isVisible
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import top.rootu.dddplayer.BuildConfig
 import top.rootu.dddplayer.R
 import top.rootu.dddplayer.data.SettingsRepository
 import top.rootu.dddplayer.logic.AudioMixerLogic
+import top.rootu.dddplayer.logic.OpenSourceLicenses
 import top.rootu.dddplayer.logic.UpdateInfo
+import top.rootu.dddplayer.model.MenuItem
 import top.rootu.dddplayer.model.PlaybackSpeed
 import top.rootu.dddplayer.player.DoviBridge
+import top.rootu.dddplayer.ui.adapter.SideMenuAdapter
 import top.rootu.dddplayer.ui.calibration.CalibrationWizardActivity
 import top.rootu.dddplayer.utils.LocaleUtils
 import top.rootu.dddplayer.model.StereoOutputMode
@@ -429,6 +436,7 @@ class GlobalSettingsActivity : AppCompatActivity() {
         itemExit.setOnClickListener { finish() }
 
         findViewById<View>(R.id.item_reset_settings).setOnClickListener { showResetSettingsDialog() }
+        findViewById<View>(R.id.item_licenses).setOnClickListener { showLicensesDialog() }
         findViewById<View>(R.id.item_diagnostics).setOnClickListener {
             startActivity(Intent(this, DeviceInfoActivity::class.java))
         }
@@ -890,6 +898,32 @@ class GlobalSettingsActivity : AppCompatActivity() {
 
     private fun startCalibration(mode: String) {
         startActivity(Intent(this, CalibrationWizardActivity::class.java).putExtra(CalibrationWizardActivity.EXTRA_MODE, mode))
+    }
+
+    /** Открытые компоненты и их лицензии. Пункт открывает страницу проекта (если есть браузер). */
+    private fun showLicensesDialog() {
+        val dialog = Dialog(this, R.style.Theme_App_Dialog)
+        dialog.setContentView(R.layout.dialog_list_choice)
+        dialog.findViewById<TextView>(R.id.dialog_title).text = getString(R.string.pref_licenses)
+        val recycler = dialog.findViewById<RecyclerView>(R.id.dialog_recycler_view)
+        recycler.layoutManager = LinearLayoutManager(this)
+        val adapter = SideMenuAdapter { item -> openLink(item.data as String) }
+        recycler.adapter = adapter
+        dialog.show()
+        adapter.submitList(OpenSourceLicenses.components.mapIndexed { i, c ->
+            MenuItem(id = i.toString(), title = c.name, description = "${c.license} · ${c.url}", data = c.url)
+        }) {
+            recycler.post { recycler.findViewHolderForAdapterPosition(0)?.itemView?.requestFocus() }
+        }
+    }
+
+    private fun openLink(url: String) {
+        try {
+            startActivity(Intent(Intent.ACTION_VIEW, url.toUri()))
+        } catch (_: ActivityNotFoundException) {
+            // На ТВ браузера часто нет: ссылка и так видна в описании пункта
+            Toast.makeText(this, getString(R.string.link_no_browser, url), Toast.LENGTH_LONG).show()
+        }
     }
 
     /** Сброс всех настроек. Фокус в подтверждении стоит на "Отмена" (первый пункт). */
