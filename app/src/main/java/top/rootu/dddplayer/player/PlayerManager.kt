@@ -66,6 +66,7 @@ import java.io.InputStream
 import java.security.SecureRandom
 import java.security.cert.X509Certificate
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.TimeUnit
 import javax.net.ssl.SSLContext
 import javax.net.ssl.SSLSocketFactory
@@ -74,6 +75,9 @@ import javax.net.ssl.X509TrustManager
 import androidx.media3.common.MediaItem as Media3MediaItem
 
 private const val MAX_PROBE_BYTES = 32 * 1024 * 1024 // Ограничение размера проверяемого плейлиста
+
+// Счетчик для уникальных ID MediaSession (общий для всех экземпляров PlayerManager в процессе)
+private val sessionCounter = AtomicInteger()
 
 class PlayerManager(
     context: Context,
@@ -541,7 +545,11 @@ class PlayerManager(
         // --- MediaSession ---
         if (player.canAdvertiseSession()) {
             try {
-                mediaSession = MediaSession.Builder(appContext, player).build()
+                // ID уникален в процессе: при открытии файла из другого приложения новый экран плеера создает
+                // сессию раньше, чем старый освободит свою, и одинаковый ID ("") дал бы IllegalStateException
+                mediaSession = MediaSession.Builder(appContext, player)
+                    .setId("dddplayer-${sessionCounter.incrementAndGet()}")
+                    .build()
             } catch (e: Exception) {
                 e.printStackTrace()
             }
