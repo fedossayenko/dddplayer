@@ -251,12 +251,16 @@ class PlayerManager(
     @Volatile
     private var dvConversionMode = DvConversionMode.DISABLED
 
+    // Опция "HDR10+" выключена: вырезаем динамические метаданные HDR10+ из видео (играет как HDR10)
+    @Volatile
+    private var stripHdr10Plus = false
+
     private val extractorsFactory = object : ExtractorsFactory {
         override fun createExtractors(): Array<Extractor> =
-            wrapDovi(defaultExtractorsFactory.createExtractors())
+            wrapHdr10Plus(wrapDovi(defaultExtractorsFactory.createExtractors()))
 
         override fun createExtractors(uri: android.net.Uri, responseHeaders: Map<String, List<String>>): Array<Extractor> =
-            wrapDovi(defaultExtractorsFactory.createExtractors(uri, responseHeaders))
+            wrapHdr10Plus(wrapDovi(defaultExtractorsFactory.createExtractors(uri, responseHeaders)))
 
         // Настройки субтитров и GOP передаем в исходную фабрику, иначе DefaultMediaSourceFactory их потеряет
         override fun experimentalSetTextTrackTranscodingEnabled(enabled: Boolean): ExtractorsFactory =
@@ -280,6 +284,17 @@ class PlayerManager(
         }
     }
 
+    private fun wrapHdr10Plus(extractors: Array<Extractor>): Array<Extractor> {
+        if (!stripHdr10Plus) return extractors
+        return Array(extractors.size) { i ->
+            when (extractors[i].underlyingImplementation) {
+                is MatroskaExtractor, is Mp4Extractor, is FragmentedMp4Extractor, is TsExtractor ->
+                    Hdr10PlusExtractorWrapper(extractors[i])
+                else -> extractors[i]
+            }
+        }
+    }
+
     private val loadErrorHandlingPolicy = object : DefaultLoadErrorHandlingPolicy() {
         override fun getMinimumLoadableRetryCount(dataType: Int): Int = 5
     }
@@ -296,6 +311,7 @@ class PlayerManager(
         val dvConvert = dvMode == SettingsRepository.DV_MODE_CONVERT && dvSupported && DoviBridge.isAvailable()
         dvConversionMode = if (dvConvert) DvConversionMode.DV81 else DvConversionMode.DISABLED
         Log.i("PlayerManager", "DV mode=$dvMode, P7->8.1 conversion=$dvConvert")
+        stripHdr10Plus = !settingsRepo.isHdr10PlusEnabled()
         val mapDvToHevc = when (dvMode) {
             SettingsRepository.DV_MODE_ALWAYS -> true
             SettingsRepository.DV_MODE_AUTO, SettingsRepository.DV_MODE_CONVERT -> !dvSupported

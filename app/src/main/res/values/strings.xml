@@ -143,6 +143,8 @@
     <string name="pref_downmix_rear">Rear (Surround)</string>
     <string name="pref_downmix_middle">Side (7.1)</string>
     <string name="pref_downmix_lfe">Subwoofer (LFE)</string>
+    <string name="pref_hdr10plus">HDR10+ metadata</string>
+    <string name="pref_hdr10plus_desc">Dynamic HDR10+ metadata. Turn off if the TV shows HDR10+ wrong: such videos then play as HDR10 (MKV, MP4, TS)</string>
     <string name="pref_tunneling">Tunneled Playback</string>
     <string name="pref_tunneling_summary">Tunneling allows video to bypass the app and Android framework code, which can provide more efficient rendering of 4K/HDR content, but may not work on all devices.\nWarning!!! With tunneled playback, video processing and synchronization are handled by the end device, so some player features will not work with this option.</string>
     <string name="pref_hd_audio_iec">Lossless HD audio (IEC 61937)</string>

@@ -408,6 +408,15 @@
                         tools:text="Auto" />
                 </LinearLayout>
 
+                <!-- Динамические метаданные HDR10+ -->
+                <LinearLayout android:id="@+id/item_hdr10plus" style="@style/SettingsItemContainer">
+                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:duplicateParentState="true">
+                        <TextView style="@style/SettingsItemTitle" android:text="@string/pref_hdr10plus" />
+                        <TextView style="@style/SettingsItemDesc" android:text="@string/pref_hdr10plus_desc" />
+                    </LinearLayout>
+                    <androidx.appcompat.widget.SwitchCompat android:id="@+id/switch_hdr10plus" android:layout_width="wrap_content" android:layout_height="wrap_content" android:clickable="false" android:focusable="false" />
+                </LinearLayout>
+
                 <!-- Tunneling -->
                 <LinearLayout
                     android:id="@+id/item_tunneling"

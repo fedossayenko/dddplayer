@@ -323,6 +323,10 @@ class SettingsRepository private constructor(context: Context) {
     fun setAudioDecoderPriority(mode: Int) = prefs.edit { putInt("audio_decoder_priority", mode) }
 
     fun isTunnelingEnabled(): Boolean = prefs.getBoolean("tunneling_enabled", false)
+
+    // Динамические метаданные HDR10+: выключено - вырезаем их, видео играет как HDR10
+    fun isHdr10PlusEnabled(): Boolean = prefs.getBoolean("hdr10plus_enabled", true)
+    fun setHdr10PlusEnabled(enabled: Boolean) = prefs.edit { putBoolean("hdr10plus_enabled", enabled) }
     fun setTunnelingEnabled(enabled: Boolean) = prefs.edit { putBoolean("tunneling_enabled", enabled) }
 
     // DTS-HD MA и TrueHD через несущую IEC 61937 (как Kodi). По умолчанию выкл, чтобы не менять поведение
@@ -628,7 +632,7 @@ class SettingsRepository private constructor(context: Context) {
 
     // Сигнатура настроек, требующих полного перезапуска плеера
     fun getHardSettingsSignature(): String {
-        val videoParams = "${getVideoDecoderPriority()}_${getAudioDecoderPriority()}_${isTunnelingEnabled()}_${getDvMode()}_${isHdAudioIecEnabled()}"
+        val videoParams = "${getVideoDecoderPriority()}_${getAudioDecoderPriority()}_${isTunnelingEnabled()}_${getDvMode()}_${isHdAudioIecEnabled()}_${isHdr10PlusEnabled()}"
         val audioDownmix = "${isStereoDownmixEnabled()}_${getMixPreset()}_${getMixFront()}_${getMixCenter()}_${getMixRear()}_${getMixMiddle()}_${getMixLfe()}"
         return "${videoParams}_${audioDownmix}_${getTargetBufferCorrectMB()}"
     }

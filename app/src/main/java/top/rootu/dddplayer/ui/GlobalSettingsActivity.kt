@@ -74,6 +74,8 @@ class GlobalSettingsActivity : AppCompatActivity() {
     private lateinit var switchAutoPip: SwitchCompat
     private lateinit var textDecoderDesc: TextView
     private lateinit var textDecoderValue: TextView
+    private lateinit var itemHdr10Plus: LinearLayout
+    private lateinit var switchHdr10Plus: SwitchCompat
     private lateinit var itemTunneling: LinearLayout
     private lateinit var switchTunneling: SwitchCompat
     private lateinit var itemHdAudioIec: LinearLayout
@@ -331,6 +333,8 @@ class GlobalSettingsActivity : AppCompatActivity() {
         switchAutoPip = findViewById(R.id.switch_auto_pip)
         textDecoderDesc = findViewById(R.id.text_decoder_desc)
         textDecoderValue = findViewById(R.id.text_decoder_value)
+        itemHdr10Plus = findViewById(R.id.item_hdr10plus)
+        switchHdr10Plus = findViewById(R.id.switch_hdr10plus)
         itemTunneling = findViewById(R.id.item_tunneling)
         switchTunneling = findViewById(R.id.switch_tunneling)
         itemHdAudioIec = findViewById(R.id.item_hd_audio_iec)
@@ -440,6 +444,10 @@ class GlobalSettingsActivity : AppCompatActivity() {
         itemDownmixConfig.setOnClickListener {
             settingsViewModel.refreshCustomMixParams()
             showAudioMixDialog()
+        }
+
+        itemHdr10Plus.setOnClickListener {
+            settingsViewModel.toggleHdr10Plus(!switchHdr10Plus.isChecked)
         }
 
         // Tunneling
@@ -666,6 +674,7 @@ class GlobalSettingsActivity : AppCompatActivity() {
             findViewById<TextView>(R.id.text_audio_decoder_desc).setText(settingsViewModel.getDecoderDescResId(mode, video = false))
         }
         settingsViewModel.isTunnelingEnabled.observe(this) { switchTunneling.isChecked = it }
+        settingsViewModel.isHdr10PlusEnabled.observe(this) { switchHdr10Plus.isChecked = it }
         settingsViewModel.isHdAudioIecEnabled.observe(this) { switchHdAudioIec.isChecked = it }
         settingsViewModel.dvMode.observe(this) { mode ->
             textDvValue.text = when (mode) {

@@ -288,4 +288,14 @@ class SettingsRepositoryTest {
         repo.setHiddenControlButtons(emptySet())
         assertTrue(repo.getHiddenControlButtons().isEmpty())
     }
+
+    @Test
+    fun `hdr10plus is enabled by default and restarts the player`() {
+        val repo = repo()
+        assertTrue(repo.isHdr10PlusEnabled())
+        val before = repo.getHardSettingsSignature()
+        repo.setHdr10PlusEnabled(false)
+        assertFalse(repo.isHdr10PlusEnabled())
+        assertTrue(before != repo.getHardSettingsSignature())
+    }
 }

@@ -128,6 +128,8 @@
     <string name="pref_downmix_rear">Тылы (Surround)</string>
     <string name="pref_downmix_middle">Бакавыя (7.1 Side)</string>
     <string name="pref_downmix_lfe">Сабвуфер (LFE)</string>
+    <string name="pref_hdr10plus">Метаданыя HDR10+</string>
+    <string name="pref_hdr10plus_desc">Дынамічныя метаданыя HDR10+. Выключыце, калі тэлевізар няправільна паказвае HDR10+: такія відэа будуць прайгравацца як HDR10 (MKV, MP4, TS)</string>
     <string name="pref_tunneling">Тунэльнае прайграванне</string>
     <string name="pref_tunneling_summary">Тунэляванне дазваляе відэа ісці ў абыход кода прыкладання і Android, што можа забяспечыць больш эфектыўны рэндэрынг 4K/HDR кантэнту, але можа не працаваць на ўсіх прыладах.\nУвага!!! Пры тунэльным прайграванні апрацоўкай і сінхранізацыяй відэа займаецца канчатковая прылада, таму з гэтай опцыяй частка функцыяналу плэера не будзе працаваць.</string>
     <string name="pref_hd_audio_iec">HD-гук без страт (IEC 61937)</string>

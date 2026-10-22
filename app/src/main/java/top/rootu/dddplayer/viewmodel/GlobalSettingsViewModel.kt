@@ -30,6 +30,9 @@ class GlobalSettingsViewModel(application: Application) : AndroidViewModel(appli
 
     private val _isTunnelingEnabled = MutableLiveData(repository.isTunnelingEnabled())
     val isTunnelingEnabled: LiveData<Boolean> = _isTunnelingEnabled
+
+    private val _isHdr10PlusEnabled = MutableLiveData(repository.isHdr10PlusEnabled())
+    val isHdr10PlusEnabled: LiveData<Boolean> = _isHdr10PlusEnabled
     private val _isHdAudioIecEnabled = MutableLiveData(repository.isHdAudioIecEnabled())
     val isHdAudioIecEnabled: LiveData<Boolean> = _isHdAudioIecEnabled
 
@@ -249,6 +252,11 @@ class GlobalSettingsViewModel(application: Application) : AndroidViewModel(appli
         val next = nextDecoderPriority(_audioDecoderPriority.value)
         repository.setAudioDecoderPriority(next)
         _audioDecoderPriority.value = next
+    }
+
+    fun toggleHdr10Plus(enabled: Boolean) {
+        repository.setHdr10PlusEnabled(enabled)
+        _isHdr10PlusEnabled.value = enabled
     }
 
     fun toggleTunneling(enabled: Boolean) {
