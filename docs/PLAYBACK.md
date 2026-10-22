@@ -20,10 +20,24 @@
     `device` — языки системы), `exceedRendererCapabilitiesIfNecessary`. Включилось ли туннелирование на деле,
     видно по `AudioTrackConfig.tunneling` (`onAudioTrackInitialized`): тогда у бейджа видео в инфопанели стоит `↳`.
     Бейдж аудио показывает дорожку и формат вывода (`AC3 5.1 > AC3 5.1` — проброс, `> PCM` — декодирует плеер);
-  - `DefaultRenderersFactory`: приоритет декодеров-расширений (`decoder_priority`, ffmpeg и AV1 из AAR),
+  - `DefaultRenderersFactory`: приоритет декодеров-расширений отдельно для видео (`video_decoder_priority`, AV1) и аудио
+    (`audio_decoder_priority`, ffmpeg) — передается в `buildVideoRenderers`/`buildAudioRenderers`,
     `enableDecoderFallback`. При `stereo_downmix` подключается свой `DefaultAudioSink` с
     `ChannelMixingAudioProcessor` (матрицы из `AudioMixerLogic`) и аудиобуфером не больше 256 КБ,
     чтобы не упасть по памяти. Без даунмикса используется стандартный sink, и passthrough работает;
+  - `hd_audio_iec`: выбранный sink оборачивается в `IecCarrierSink` (`IecCarrierOutput.wrap`). DTS-HD MA и
+    TrueHD упаковываются в IEC 61937 (`DtsHdIecPacker`, `TrueHdMatPacker`, порт из plezy, совпадает с FFmpeg
+    байт в байт) и идут отдельным `DefaultAudioSink` без процессоров с `AudioTrack` в `ENCODING_IEC61937`
+    192 кГц/7.1. Остальное идет как раньше. Зачем: Fire OS принимает сырой `ENCODING_DTS_HD`, но передает
+    только ядро DTS (а на части ресиверов тишину), сырой TrueHD передает не везде. Даунмикс на битстрим не
+    влияет, как и для AC3/DTS passthrough. Несущая не используется при туннелировании, скорости не 1.0x,
+    частотах семейства 44.1 кГц и если маршрут HDMI не принимает IEC 61937 192 кГц/7.1. Если маршрут несущую
+    принимает, но сейчас она недоступна, TrueHD и DTS-HD декодируются (сырой поток там молчит); без несущей на
+    маршруте (Android < 10, нет IEC 61937) — прежний путь, как с выключенной опцией. Трек с меткой A_DTS
+    (MKV) проверяется по первому блоку: без HD-части он уходит в обычный sink (несущую ему предлагаем, только
+    если обычный sink принимает DTS напрямую; ошибка такого перехода приходит как `InitializationException`).
+    Бейдж аудио при несущей показывает `TrueHD (IEC 61937)` / `DTS-HD (IEC 61937)` (`carrierCodecLabel`).
+    Защелка несовпадения потока сбрасывается в `loadPlaylist` и при `onMediaItemTransition`;
   - `NetworkBufferLoadControl` (см. ниже);
   - `LoudnessEnhancer` по `audioSessionId` (`loudness_boost`), `skipSilence`, шаг перемотки 15 с.
 - `loadPlaylist(items, startIndex, startPosMs)` превращает `MediaItem` в `Media3MediaItem`

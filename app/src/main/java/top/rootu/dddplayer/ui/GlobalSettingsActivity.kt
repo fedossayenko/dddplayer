@@ -44,14 +44,14 @@ class GlobalSettingsActivity : AppCompatActivity() {
     private data class SettingsCategory(val sectionId: Int, val titleRes: Int, val iconRes: Int)
 
     private val categories = listOf(
-        SettingsCategory(R.id.section_playback, R.string.pref_general_header, R.drawable.ic_play_arrow),
-        SettingsCategory(R.id.section_screen, R.string.settings_cat_screen, R.drawable.ic_fullscreen),
-        SettingsCategory(R.id.section_video, R.string.settings_cat_video, R.drawable.ic_fit_screen),
-        SettingsCategory(R.id.section_audio, R.string.settings_cat_audio, R.drawable.ic_volume_up),
-        SettingsCategory(R.id.section_subtitles, R.string.settings_cat_subtitles, R.drawable.ic_subtitles),
-        SettingsCategory(R.id.section_control, R.string.settings_cat_control, R.drawable.ic_settings_remote),
+        SettingsCategory(R.id.section_playback, R.string.pref_general_header, R.drawable.ic_settings_play),
+        SettingsCategory(R.id.section_ui, R.string.settings_cat_ui, R.drawable.ic_settings_ui),
+        SettingsCategory(R.id.section_video, R.string.settings_cat_video, R.drawable.ic_settings_video),
+        SettingsCategory(R.id.section_audio, R.string.settings_cat_audio, R.drawable.ic_settings_audio),
+        SettingsCategory(R.id.section_subtitles, R.string.settings_cat_subtitles, R.drawable.ic_settings_subtitles),
         SettingsCategory(R.id.section_3d, R.string.settings_cat_3d, R.drawable.ic_settings_3d),
-        SettingsCategory(R.id.section_app, R.string.pref_sec_app, R.drawable.ic_settings)
+        SettingsCategory(R.id.section_control, R.string.settings_cat_control, R.drawable.ic_settings_remote),
+        SettingsCategory(R.id.section_app, R.string.pref_sec_app, R.drawable.ic_settings_info)
     )
     private val categoryViews = mutableListOf<View>()
     private var selectedCategory = -1
@@ -76,6 +76,8 @@ class GlobalSettingsActivity : AppCompatActivity() {
     private lateinit var textDecoderValue: TextView
     private lateinit var itemTunneling: LinearLayout
     private lateinit var switchTunneling: SwitchCompat
+    private lateinit var itemHdAudioIec: LinearLayout
+    private lateinit var switchHdAudioIec: SwitchCompat
     private lateinit var itemDv: LinearLayout
     private lateinit var textDvValue: TextView
     private lateinit var itemAfr: LinearLayout
@@ -134,6 +136,10 @@ class GlobalSettingsActivity : AppCompatActivity() {
     private lateinit var switchShowIndex: SwitchCompat
     private lateinit var itemConfirmExit: LinearLayout
     private lateinit var switchConfirmExit: SwitchCompat
+    private lateinit var itemBackButton: LinearLayout
+    private lateinit var switchBackButton: SwitchCompat
+    private lateinit var itemControlButtons: LinearLayout
+    private lateinit var textControlButtonsValue: TextView
     private lateinit var itemShowClock: LinearLayout
     private lateinit var textShowClockValue: TextView
     private lateinit var itemPauseDim: LinearLayout
@@ -327,6 +333,8 @@ class GlobalSettingsActivity : AppCompatActivity() {
         textDecoderValue = findViewById(R.id.text_decoder_value)
         itemTunneling = findViewById(R.id.item_tunneling)
         switchTunneling = findViewById(R.id.switch_tunneling)
+        itemHdAudioIec = findViewById(R.id.item_hd_audio_iec)
+        switchHdAudioIec = findViewById(R.id.switch_hd_audio_iec)
         itemDv = findViewById(R.id.item_dv)
         textDvValue = findViewById(R.id.text_dv_value)
         itemAfr = findViewById(R.id.item_afr)
@@ -385,6 +393,10 @@ class GlobalSettingsActivity : AppCompatActivity() {
         switchShowIndex = findViewById(R.id.switch_show_index)
         itemConfirmExit = findViewById(R.id.item_confirm_exit)
         switchConfirmExit = findViewById(R.id.switch_confirm_exit)
+        itemBackButton = findViewById(R.id.item_back_button)
+        switchBackButton = findViewById(R.id.switch_back_button)
+        itemControlButtons = findViewById(R.id.item_control_buttons)
+        textControlButtonsValue = findViewById(R.id.text_control_buttons_value)
         itemShowClock = findViewById(R.id.item_show_clock)
         textShowClockValue = findViewById(R.id.text_show_clock_value)
         itemPauseDim = findViewById(R.id.item_pause_dim)
@@ -415,7 +427,8 @@ class GlobalSettingsActivity : AppCompatActivity() {
         }
 
         // Decoder
-        itemDecoder.setOnClickListener { settingsViewModel.toggleDecoderPriority() }
+        itemDecoder.setOnClickListener { settingsViewModel.toggleVideoDecoderPriority() }
+        findViewById<View>(R.id.item_audio_decoder).setOnClickListener { settingsViewModel.toggleAudioDecoderPriority() }
         itemAutoPip.setOnClickListener {
             settingsViewModel.toggleAutoPip(!switchAutoPip.isChecked)
         }
@@ -432,6 +445,11 @@ class GlobalSettingsActivity : AppCompatActivity() {
         // Tunneling
         itemTunneling.setOnClickListener {
             settingsViewModel.toggleTunneling(!switchTunneling.isChecked)
+        }
+
+        // HD-звук через IEC 61937
+        itemHdAudioIec.setOnClickListener {
+            settingsViewModel.toggleHdAudioIec(!switchHdAudioIec.isChecked)
         }
 
         // Dolby Vision
@@ -541,9 +559,25 @@ class GlobalSettingsActivity : AppCompatActivity() {
         }
 
         itemSwipeAction.setOnClickListener {
-            val options = listOf(getString(R.string.swipe_action_none), getString(R.string.swipe_action_seek), getString(R.string.swipe_action_playlist))
-            showSingleChoiceDialog(getString(R.string.pref_swipe_horizontal), options, settingsViewModel.horizontalSwipeAction.value ?: 2) {
+            val options = listOf(
+                getString(R.string.swipe_action_none),
+                getString(R.string.swipe_action_seek),
+                getString(R.string.swipe_action_playlist),
+                getString(R.string.swipe_action_exit_next)
+            )
+            showSingleChoiceDialog(getString(R.string.pref_swipe_horizontal), options, settingsViewModel.horizontalSwipeAction.value ?: SettingsRepository.SWIPE_PLAYLIST) {
                 settingsViewModel.setHorizontalSwipeAction(it)
+            }
+        }
+        itemBackButton.setOnClickListener {
+            settingsViewModel.toggleBackButton(!switchBackButton.isChecked)
+        }
+        itemControlButtons.setOnClickListener {
+            val keys = SettingsRepository.HIDEABLE_BUTTONS
+            val hidden = settingsViewModel.hiddenControlButtons.value ?: emptySet()
+            val checked = BooleanArray(keys.size) { keys[it] !in hidden }
+            ChoiceDialog.showMulti(this, getString(R.string.pref_control_buttons), keys.map { getControlButtonLabel(it) }, checked) { visible ->
+                settingsViewModel.setHiddenControlButtons(keys.filterIndexed { i, _ -> !visible[i] }.toSet())
             }
         }
 
@@ -623,11 +657,16 @@ class GlobalSettingsActivity : AppCompatActivity() {
     private fun observeViewModel() {
         // Playback
         settingsViewModel.isAutoPipEnabled.observe(this) { switchAutoPip.isChecked = it }
-        settingsViewModel.decoderPriority.observe(this) { mode ->
+        settingsViewModel.videoDecoderPriority.observe(this) { mode ->
             textDecoderValue.text = settingsViewModel.getDecoderValueString(mode)
-            textDecoderDesc.setText(settingsViewModel.getDecoderDescResId(mode))
+            textDecoderDesc.setText(settingsViewModel.getDecoderDescResId(mode, video = true))
+        }
+        settingsViewModel.audioDecoderPriority.observe(this) { mode ->
+            findViewById<TextView>(R.id.text_audio_decoder_value).text = settingsViewModel.getDecoderValueString(mode)
+            findViewById<TextView>(R.id.text_audio_decoder_desc).setText(settingsViewModel.getDecoderDescResId(mode, video = false))
         }
         settingsViewModel.isTunnelingEnabled.observe(this) { switchTunneling.isChecked = it }
+        settingsViewModel.isHdAudioIecEnabled.observe(this) { switchHdAudioIec.isChecked = it }
         settingsViewModel.dvMode.observe(this) { mode ->
             textDvValue.text = when (mode) {
                 SettingsRepository.DV_MODE_OFF -> getString(R.string.dv_mode_off)
@@ -724,10 +763,17 @@ class GlobalSettingsActivity : AppCompatActivity() {
         settingsViewModel.isVolumeBrightnessGestures.observe(this) { switchGestureVolume.isChecked = it }
         settingsViewModel.horizontalSwipeAction.observe(this) { action ->
             textSwipeActionValue.text = when (action) {
-                1 -> getString(R.string.swipe_action_seek)
-                2 -> getString(R.string.swipe_action_playlist)
+                SettingsRepository.SWIPE_SEEK -> getString(R.string.swipe_action_seek)
+                SettingsRepository.SWIPE_PLAYLIST -> getString(R.string.swipe_action_playlist)
+                SettingsRepository.SWIPE_EXIT_NEXT -> getString(R.string.swipe_action_exit_next)
                 else -> getString(R.string.swipe_action_none)
             }
+        }
+        settingsViewModel.isBackButtonEnabled.observe(this) { switchBackButton.isChecked = it }
+        settingsViewModel.hiddenControlButtons.observe(this) { hidden ->
+            val total = SettingsRepository.HIDEABLE_BUTTONS.size
+            val visible = SettingsRepository.HIDEABLE_BUTTONS.count { it !in hidden }
+            textControlButtonsValue.text = getString(R.string.pref_control_buttons_value, visible, total)
         }
 
         settingsViewModel.isRememberZoomEnabled.observe(this) { switchRememberZoom.isChecked = it }
@@ -846,6 +892,16 @@ class GlobalSettingsActivity : AppCompatActivity() {
             StereoOutputMode.RIGHT_ONLY -> R.string.default_3d_right
         }
     )
+
+    private fun getControlButtonLabel(key: String): String = when (key) {
+        SettingsRepository.BUTTON_SPEED -> getString(R.string.playback_speed)
+        SettingsRepository.BUTTON_RESIZE -> getString(R.string.playback_zoom)
+        SettingsRepository.BUTTON_PIP -> getString(R.string.picture_in_picture)
+        SettingsRepository.BUTTON_QUALITY -> getString(R.string.button_label_quality)
+        SettingsRepository.BUTTON_AUDIO -> getString(R.string.button_label_audio)
+        SettingsRepository.BUTTON_SUBTITLES -> getString(R.string.button_label_subtitles)
+        else -> key
+    }
 
     private fun showSingleChoiceDialog(title: String, items: List<String>, currentIndex: Int, onSelected: (Int) -> Unit) {
         ChoiceDialog.show(this, title, items, currentIndex, onSelected)

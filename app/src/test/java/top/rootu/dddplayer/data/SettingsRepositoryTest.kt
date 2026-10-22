@@ -2,6 +2,7 @@ package top.rootu.dddplayer.data
 
 import android.content.Context
 import androidx.core.content.edit
+import androidx.media3.exoplayer.DefaultRenderersFactory
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -119,6 +120,24 @@ class SettingsRepositoryTest {
     fun `explicit dolby vision mode is kept`() {
         prefs.edit { putInt("dv_mode", SettingsRepository.DV_MODE_OFF) }
         assertEquals(SettingsRepository.DV_MODE_OFF, repo().getDvMode())
+    }
+
+    @Test
+    fun `video and audio decoder priorities start from the old common setting`() {
+        prefs.edit { putInt("decoder_priority", DefaultRenderersFactory.EXTENSION_RENDERER_MODE_OFF) }
+        val repo = repo()
+        assertEquals(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_OFF, repo.getVideoDecoderPriority())
+        assertEquals(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_OFF, repo.getAudioDecoderPriority())
+        // Настройки независимы
+        repo.setAudioDecoderPriority(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
+        assertEquals(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_OFF, repo.getVideoDecoderPriority())
+        assertEquals(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER, repo.getAudioDecoderPriority())
+    }
+
+    @Test
+    fun `av1 prefers device decoders and ffmpeg prefers the app by default`() {
+        assertEquals(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON, repo().getVideoDecoderPriority())
+        assertEquals(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER, repo().getAudioDecoderPriority())
     }
 
     @Test
@@ -255,5 +274,18 @@ class SettingsRepositoryTest {
         assertEquals("HOME", saved.domain)
         repo.removeSmbServer("1")
         assertTrue(repo.getSmbServers().isEmpty())
+    }
+
+    @Test
+    fun `control bar defaults keep all buttons and no back arrow`() {
+        val repo = repo()
+        assertTrue(repo.getHiddenControlButtons().isEmpty())
+        assertFalse(repo.isBackButtonEnabled())
+        assertEquals(SettingsRepository.SWIPE_PLAYLIST, repo.getHorizontalSwipeAction())
+
+        repo.setHiddenControlButtons(setOf(SettingsRepository.BUTTON_SPEED, SettingsRepository.BUTTON_RESIZE))
+        assertEquals(setOf(SettingsRepository.BUTTON_SPEED, SettingsRepository.BUTTON_RESIZE), repo.getHiddenControlButtons())
+        repo.setHiddenControlButtons(emptySet())
+        assertTrue(repo.getHiddenControlButtons().isEmpty())
     }
 }

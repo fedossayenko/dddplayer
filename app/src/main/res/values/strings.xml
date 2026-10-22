@@ -124,11 +124,14 @@
     <string name="close_settings">Close settings</string>
     <string name="exit">Exit</string>
     <string name="pref_general_header">Playback</string>
-    <string name="pref_decoder_priority">Decoder Priority</string>
-    <string name="pref_decoder_priority_prefer_device">Prefer device decoders (default) HW+SW</string>
-    <string name="pref_decoder_priority_prefer_app" tools:ignore="Typos">Prefer app decoders (AV1 + Ffmpeg) SW+HW</string>
-    <string name="pref_decoder_priority_only_device">Device decoders only</string>
-    <string name="pref_decoder_sw_desc">¹ - SW includes AV1 and Ffmpeg decoders (built with audio codecs: vorbis, opus, flac, alac, pcm_mulaw, pcm_alaw, mp3, amrnb, amrwb, aac, ac3, eac3, dca(DTS), mlp, truehd)</string>
+    <string name="pref_video_decoder">Video decoder (AV1)</string>
+    <string name="pref_audio_decoder">Audio decoder (FFmpeg)</string>
+    <string name="decoder_video_prefer_device">Device decoders first, the built-in AV1 decoder (dav1d) as a fallback</string>
+    <string name="decoder_video_prefer_app">The built-in AV1 decoder (dav1d) first, then device decoders</string>
+    <string name="decoder_audio_prefer_device">Device decoders first, the built-in FFmpeg as a fallback</string>
+    <string name="decoder_audio_prefer_app">The built-in FFmpeg first, then device decoders</string>
+    <string name="decoder_only_device">Device decoders only</string>
+    <string name="pref_audio_decoder_sw_desc">FFmpeg codecs: vorbis, opus, flac, alac, pcm_mulaw, pcm_alaw, mp3, amrnb, amrwb, aac, ac3, eac3, dca (DTS), mlp, truehd</string>
     <string name="pref_auto_pip_desc">Automatically open a small video window when minimizing during playback.</string>
     <string name="pref_downmix">Downmix to Stereo</string>
     <string name="pref_downmix_desc">When using the SW decoder, this allows converting multi-channel audio into a properly¹ mixed stereo, which can solve the problem of missing voice/translation (usually present on the center channel).\n¹ - The downmix matrices are calculated similarly to RFC 7845 (Section 5.1.1.5).</string>
@@ -142,6 +145,8 @@
     <string name="pref_downmix_lfe">Subwoofer (LFE)</string>
     <string name="pref_tunneling">Tunneled Playback</string>
     <string name="pref_tunneling_summary">Tunneling allows video to bypass the app and Android framework code, which can provide more efficient rendering of 4K/HDR content, but may not work on all devices.\nWarning!!! With tunneled playback, video processing and synchronization are handled by the end device, so some player features will not work with this option.</string>
+    <string name="pref_hd_audio_iec">Lossless HD audio (IEC 61937)</string>
+    <string name="pref_hd_audio_iec_summary">Send DTS-HD MA and TrueHD/Atmos to the receiver unchanged over HDMI, the way Kodi does. Needed on Fire TV, which otherwise sends only the DTS core. Turn off if the receiver plays noise or silence.</string>
     <string name="pref_map_dv">Dolby Vision mode</string>
     <string name="pref_afr_sec">AFR</string>
     <string name="pref_framerate_matching">Auto Frame Rate Matching</string>
@@ -213,6 +218,15 @@
     <string name="swipe_action_none">None</string>
     <string name="swipe_action_seek">Seek</string>
     <string name="swipe_action_playlist">Exit or Prev/Next</string>
+    <string name="swipe_action_exit_next">Exit or Next</string>
+    <string name="pref_back_button">Back button on screen</string>
+    <string name="pref_back_button_desc">Arrow in the info panel to close the player (for touch screens)</string>
+    <string name="pref_control_buttons">Control bar buttons</string>
+    <string name="pref_control_buttons_desc">Hide buttons you do not use. Audio, subtitles, speed and zoom stay in the side menu</string>
+    <string name="pref_control_buttons_value">%1$d of %2$d</string>
+    <string name="button_label_quality">Video quality</string>
+    <string name="button_label_audio">Audio track</string>
+    <string name="button_label_subtitles">Subtitles</string>
     <string name="next_video">Next: %s</string>
     <string name="prev_video">Prev: %s</string>
     <string name="release_to_switch">Release to switch</string>
@@ -325,7 +339,7 @@
     <string name="audio_priority_up">Move up</string>
     <string name="audio_priority_down">Move down</string>
     <string name="audio_priority_remove">Remove</string>
-    <string name="settings_cat_screen">Screen</string>
+    <string name="settings_cat_ui">Interface</string>
     <string name="settings_cat_video">Video</string>
     <string name="settings_cat_audio">Audio</string>
     <string name="settings_cat_subtitles">Subtitles</string>

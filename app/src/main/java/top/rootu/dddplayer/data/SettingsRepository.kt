@@ -50,6 +50,21 @@ class SettingsRepository private constructor(context: Context) {
         const val OK_ACTION_PAUSE_PANEL = 1
         const val OK_ACTION_PANEL = 2
 
+        // Горизонтальный свайп
+        const val SWIPE_NONE = 0
+        const val SWIPE_SEEK = 1
+        const val SWIPE_PLAYLIST = 2 // Пред/След, выход на краях плейлиста
+        const val SWIPE_EXIT_NEXT = 3 // Вправо - выход, влево - следующее видео
+
+        // Кнопки нижней панели, которые можно скрыть
+        const val BUTTON_SPEED = "speed"
+        const val BUTTON_RESIZE = "resize"
+        const val BUTTON_PIP = "pip"
+        const val BUTTON_QUALITY = "quality"
+        const val BUTTON_AUDIO = "audio"
+        const val BUTTON_SUBTITLES = "subtitles"
+        val HIDEABLE_BUTTONS = listOf(BUTTON_SPEED, BUTTON_RESIZE, BUTTON_PIP, BUTTON_QUALITY, BUTTON_AUDIO, BUTTON_SUBTITLES)
+
         // Прозрачность часов: -1 = часы выключены, 0..80 = прозрачность в %
         const val CLOCK_OFF = -1
 
@@ -294,11 +309,25 @@ class SettingsRepository private constructor(context: Context) {
     fun isAutoPipEnabled(): Boolean = prefs.getBoolean("auto_pip", false)
     fun setAutoPipEnabled(enabled: Boolean) = prefs.edit { putBoolean("auto_pip", enabled) }
 
-    fun getDecoderPriority(): Int = prefs.getInt("decoder_priority", DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
-    fun setDecoderPriority(mode: Int) = prefs.edit { putInt("decoder_priority", mode) }
+    // Приоритет встроенных декодеров (EXTENSION_RENDERER_MODE_*) отдельно для видео (AV1) и аудио (FFmpeg).
+    // Пока не заданы, берут прежнюю общую настройку "decoder_priority", если ее меняли
+    private fun legacyDecoderPriority(default: Int): Int = prefs.getInt("decoder_priority", default)
+
+    // AV1 по умолчанию HW+: аппаратный декодер устройства, программный dav1d - запасной (он тяжел для 4K)
+    fun getVideoDecoderPriority(): Int =
+        prefs.getInt("video_decoder_priority", legacyDecoderPriority(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON))
+    fun setVideoDecoderPriority(mode: Int) = prefs.edit { putInt("video_decoder_priority", mode) }
+
+    fun getAudioDecoderPriority(): Int =
+        prefs.getInt("audio_decoder_priority", legacyDecoderPriority(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER))
+    fun setAudioDecoderPriority(mode: Int) = prefs.edit { putInt("audio_decoder_priority", mode) }
 
     fun isTunnelingEnabled(): Boolean = prefs.getBoolean("tunneling_enabled", false)
     fun setTunnelingEnabled(enabled: Boolean) = prefs.edit { putBoolean("tunneling_enabled", enabled) }
+
+    // DTS-HD MA и TrueHD через несущую IEC 61937 (как Kodi). По умолчанию выкл, чтобы не менять поведение
+    fun isHdAudioIecEnabled(): Boolean = prefs.getBoolean("hd_audio_iec", false)
+    fun setHdAudioIecEnabled(enabled: Boolean) = prefs.edit { putBoolean("hd_audio_iec", enabled) }
 
     // Принудительный Downmix в стерео
     fun isStereoDownmixEnabled(): Boolean = prefs.getBoolean("stereo_downmix", true)
@@ -570,8 +599,17 @@ class SettingsRepository private constructor(context: Context) {
     fun isVolumeBrightnessGesturesEnabled(): Boolean = prefs.getBoolean("gesture_volume_brightness", true)
     fun setVolumeBrightnessGesturesEnabled(enabled: Boolean) = prefs.edit { putBoolean("gesture_volume_brightness", enabled) }
 
-    fun getHorizontalSwipeAction(): Int = prefs.getInt("horizontal_swipe_action", 2)
+    fun getHorizontalSwipeAction(): Int = prefs.getInt("horizontal_swipe_action", SWIPE_PLAYLIST)
     fun setHorizontalSwipeAction(action: Int) = prefs.edit { putInt("horizontal_swipe_action", action) }
+
+    // Кнопка выхода (стрелка) в инфопанели для сенсорных экранов
+    fun isBackButtonEnabled(): Boolean = prefs.getBoolean("show_back_button", false)
+    fun setBackButtonEnabled(enabled: Boolean) = prefs.edit { putBoolean("show_back_button", enabled) }
+
+    // Скрытые пользователем кнопки нижней панели. Храним скрытые, чтобы новые кнопки по умолчанию были видны
+    fun getHiddenControlButtons(): Set<String> =
+        prefs.getStringSet("hidden_control_buttons", null)?.toSet() ?: emptySet()
+    fun setHiddenControlButtons(buttons: Set<String>) = prefs.edit { putStringSet("hidden_control_buttons", buttons) }
 
     // Прозрачность часов (CLOCK_OFF или 0..80 %).
     // Миграция со старого переключателя "show_clock": выкл -> часы выключены, вкл -> без прозрачности.
@@ -590,7 +628,7 @@ class SettingsRepository private constructor(context: Context) {
 
     // Сигнатура настроек, требующих полного перезапуска плеера
     fun getHardSettingsSignature(): String {
-        val videoParams = "${getDecoderPriority()}_${isTunnelingEnabled()}_${getDvMode()}"
+        val videoParams = "${getVideoDecoderPriority()}_${getAudioDecoderPriority()}_${isTunnelingEnabled()}_${getDvMode()}_${isHdAudioIecEnabled()}"
         val audioDownmix = "${isStereoDownmixEnabled()}_${getMixPreset()}_${getMixFront()}_${getMixCenter()}_${getMixRear()}_${getMixMiddle()}_${getMixLfe()}"
         return "${videoParams}_${audioDownmix}_${getTargetBufferCorrectMB()}"
     }

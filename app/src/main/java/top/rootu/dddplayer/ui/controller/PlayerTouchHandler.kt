@@ -38,6 +38,9 @@ class PlayerTouchHandler(
     // но достаточно маленьким, чтобы интерфейс был отзывчивым.
     private val scrollThreshold = 30f
 
+    // Полоса у левого и правого края: там системный жест "Назад", горизонтальный свайп оттуда не начинаем
+    private val edgeExclusionPx = EDGE_EXCLUSION_DP * context.resources.displayMetrics.density
+
     override fun onDown(e: MotionEvent): Boolean {
         scrollMode = ScrollMode.NONE
         multiTouch = false
@@ -77,8 +80,8 @@ class PlayerTouchHandler(
 
                 // Определяем доминирующее направление
                 scrollMode = if (abs(totalDx) > abs(totalDy)) {
-                    // Горизонтальный свайп
-                    ScrollMode.HORIZONTAL
+                    // Горизонтальный свайп, кроме начатого от края экрана (системный "Назад")
+                    if (isNearSideEdge(e1.x)) ScrollMode.IGNORED else ScrollMode.HORIZONTAL
                 } else {
                     // Вертикальный свайп
                     // Определяем сторону экрана (Лево/Право) по точке НАЧАЛА жеста (e1)
@@ -117,8 +120,18 @@ class PlayerTouchHandler(
         return true
     }
 
+    private fun isNearSideEdge(x: Float): Boolean {
+        val width = context.resources.displayMetrics.widthPixels
+        return x < edgeExclusionPx || x > width - edgeExclusionPx
+    }
+
     fun onActionUp() {
         if (isScrolling) onGestureEnd()
         scrollMode = ScrollMode.NONE
+    }
+
+    companion object {
+        // Ширина зоны системного жеста "Назад" (в Android по умолчанию 24dp) с запасом
+        private const val EDGE_EXCLUSION_DP = 32f
     }
 }

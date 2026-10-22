@@ -66,6 +66,7 @@ import java.io.InputStream
 import java.security.SecureRandom
 import java.security.cert.X509Certificate
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.TimeUnit
 import javax.net.ssl.SSLContext
 import javax.net.ssl.SSLSocketFactory
@@ -74,6 +75,9 @@ import javax.net.ssl.X509TrustManager
 import androidx.media3.common.MediaItem as Media3MediaItem
 
 private const val MAX_PROBE_BYTES = 32 * 1024 * 1024 // Ограничение размера проверяемого плейлиста
+
+// Счетчик для уникальных ID MediaSession (общий для всех экземпляров PlayerManager в процессе)
+private val sessionCounter = AtomicInteger()
 
 class PlayerManager(
     context: Context,
@@ -97,6 +101,7 @@ class PlayerManager(
     private var bufferAllocator: DefaultAllocator? = null
     private var networkBufferBytes: Int = C.LENGTH_UNSET
     private var loudnessEnhancer: LoudnessEnhancer? = null
+    private var iecSink: IecCarrierSink? = null
 
     // Состояние для восстановления
     private var currentWindowIndex = 0
@@ -374,8 +379,9 @@ class PlayerManager(
                 out: ArrayList<Renderer>
             ) {
                 val start = out.size
+                // Приоритет встроенного AV1 (dav1d) - своя настройка видео, общий режим фабрики не используется
                 super.buildVideoRenderers(
-                    context, extensionRendererMode, mediaCodecSelector, enableDecoderFallback,
+                    context, settingsRepo.getVideoDecoderPriority(), mediaCodecSelector, enableDecoderFallback,
                     eventHandler, eventListener, allowedVideoJoiningTimeMs, out
                 )
                 if (!mapDvToHevc) return
@@ -405,7 +411,7 @@ class PlayerManager(
                 out: ArrayList<Renderer>
             ) {
                 // Решаем, какой Sink использовать
-                val finalSink = if (settingsRepo.isStereoDownmixEnabled()) {
+                val baseSink = if (settingsRepo.isStereoDownmixEnabled()) {
                     // Если нужен Downmix -> создаем свой Sink с процессором
 
                     // Ограничиваем аудиобуффер, чтобы не упасть по памяти
@@ -452,10 +458,16 @@ class PlayerManager(
                     // Если Downmix не нужен -> используем стандартный (для Passthrough и т.д.)
                     audioSink
                 }
+                // DTS-HD MA и TrueHD через несущую IEC 61937 поверх любого из Sink: даунмикс касается только
+                // декодированного PCM, а битстрим и так идет мимо процессоров
+                val iec = if (settingsRepo.isHdAudioIecEnabled()) IecCarrierOutput.wrap(appContext, baseSink) else null
+                iecSink = iec
+                val finalSink = iec ?: baseSink
 
+                // Приоритет встроенного FFmpeg - своя настройка аудио
                 super.buildAudioRenderers(
                     context,
-                    extensionRendererMode,
+                    settingsRepo.getAudioDecoderPriority(),
                     mediaCodecSelector,
                     enableDecoderFallback,
                     finalSink,
@@ -465,7 +477,8 @@ class PlayerManager(
                 )
             }
         }.apply {
-            setExtensionRendererMode(settingsRepo.getDecoderPriority())
+            // Режим для остальных рендереров; видео и аудио берут свои настройки в build*Renderers
+            setExtensionRendererMode(settingsRepo.getVideoDecoderPriority())
             setEnableDecoderFallback(true) // Разрешаем софтовый декодер
         }
 
@@ -519,6 +532,8 @@ class PlayerManager(
             override fun onMediaItemTransition(mediaItem: Media3MediaItem?, reason: Int) {
                 // Заголовки (Referer, Cookie и т.п.) у каждого элемента плейлиста свои
                 applyHeadersForIndex(player.currentMediaItemIndex)
+                // Новое видео снова может идти через несущую, даже если прошлое не подошло
+                iecSink?.beginMediaItem()
             }
         })
         if (player.audioSessionId != C.AUDIO_SESSION_ID_UNSET) {
@@ -530,7 +545,11 @@ class PlayerManager(
         // --- MediaSession ---
         if (player.canAdvertiseSession()) {
             try {
-                mediaSession = MediaSession.Builder(appContext, player).build()
+                // ID уникален в процессе: при открытии файла из другого приложения новый экран плеера создает
+                // сессию раньше, чем старый освободит свою, и одинаковый ID ("") дал бы IllegalStateException
+                mediaSession = MediaSession.Builder(appContext, player)
+                    .setId("dddplayer-${sessionCounter.incrementAndGet()}")
+                    .build()
             } catch (e: Exception) {
                 e.printStackTrace()
             }
@@ -552,10 +571,17 @@ class PlayerManager(
                 // config.encoding говорит нам, в каком формате данные идут на железо.
                 // Если это PCM (16-bit, Float), значит плеер декодировал звук.
                 // Если это AC3, DTS и т.д., значит работает Passthrough.
-                isDirectAudioOutput = !Util.isEncodingLinearPcm(config.encoding)
-                val encodingName = MediaFormatHelper.getAudioCodecName(config.encoding)
-                val channelStr = MediaFormatHelper.getChannelConfigString(config.channelConfig)
-                onAudioOutputFormatChanged?.invoke("$encodingName $channelStr")
+                // Несущая IEC 61937 учитывается как PCM 16 бит, поэтому спрашиваем и ее
+                isDirectAudioOutput = !Util.isEncodingLinearPcm(config.encoding) || iecSink?.isCarrierActive == true
+                // На несущей AudioTrack видит PCM 16 бит 7.1, а на ресивер уходит TrueHD или DTS-HD как есть
+                val carrierCodec = iecSink?.carrierCodecLabel
+                if (carrierCodec != null) {
+                    onAudioOutputFormatChanged?.invoke("$carrierCodec (IEC 61937)")
+                } else {
+                    val encodingName = MediaFormatHelper.getAudioCodecName(config.encoding)
+                    val channelStr = MediaFormatHelper.getChannelConfigString(config.channelConfig)
+                    onAudioOutputFormatChanged?.invoke("$encodingName $channelStr")
+                }
                 // Туннелирование касается видео (кадры идут прямо в аппаратный вывод), показывается у видео
                 onTunnelingChanged?.invoke(config.tunneling)
             }
@@ -853,6 +879,8 @@ class PlayerManager(
         currentWindowIndex = safeStartIndex
         currentPosition = if (startPosMs <= 0L) C.TIME_UNSET else startPosMs
         playWhenReady = true
+        // Новый плейлист снова может идти через несущую, даже если прошлое видео не подошло
+        iecSink?.beginMediaItem()
 
         if (exoPlayer == null) {
             initializePlayer()

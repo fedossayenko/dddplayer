@@ -20,7 +20,9 @@
 | `external_position_mode` | `EXTERNAL_POSITION_APPLY` (0) | Позиция из Intent: 0 применять сразу, 1 спрашивать |
 | `up_button_action` | `UP_ACTION_MENU` (2) | 0 ничего, 1 OSD-настройки, 2 боковое меню, 3 инфопанель, повторное нажатие — боковое меню |
 | `ok_button_action` | `OK_ACTION_PAUSE_PANEL` (1) | 0 пауза, 1 пауза + панель, 2 панель |
-| `horizontal_swipe_action` | 2 | Действие горизонтального свайпа (телефон) |
+| `horizontal_swipe_action` | 2 | Горизонтальный свайп (телефон): 0 — нет, 1 — перемотка, 2 — выход или Пред/След, 3 — вправо выход, влево След. Свайп от края экрана (32dp) не начинается: там системный «Назад» |
+| `show_back_button` | false | Стрелка выхода в инфопанели (сенсорные экраны, без фокуса с пульта) |
+| `hidden_control_buttons` | пусто | Скрытые кнопки нижней панели (`speed`, `resize`, `pip`, `quality`, `audio`, `subtitles`). Хранятся скрытые, чтобы новые кнопки были видны |
 | `sub_font`, `sub_size`, `sub_text_color`, `sub_bg_color`, `sub_edge_type`, `sub_edge_color`, `sub_bottom`, `sub_embedded` | как у стандартного `SubtitleView` | Стиль субтитров (`SubtitleStyle`, экран `SubtitleStyleActivity`, применение `SubtitleStyleOptions.apply`) |
 | `gesture_volume_brightness` | true | Вертикальные свайпы: громкость справа, яркость слева |
 | `confirm_exit` | true | Выход по второму нажатию «Назад» в течение 2 с |
@@ -38,10 +40,13 @@
 | `render_api_mode` | `RENDER_API_AUTO` (0) | 0 авто (ES 3.0 если есть), 1 принудительно GLES 2.0 |
 | `pause_dim_level` | 60 | Затемнение на паузе, % |
 | `global_resize_mode`, `video_zoom_scale`, `remember_zoom` | 0 (FIT), 115, false | Масштаб |
-| `decoder_priority` | `EXTENSION_RENDERER_MODE_PREFER` | Приоритет декодеров ffmpeg и AV1 |
+| `video_decoder_priority` | как `decoder_priority`, если его меняли, иначе `EXTENSION_RENDERER_MODE_ON` (HW+) | Приоритет встроенного AV1 (dav1d) перед декодерами устройства, раздел «Видео» |
+| `audio_decoder_priority` | как `decoder_priority`, если его меняли, иначе `EXTENSION_RENDERER_MODE_PREFER` (SW) | Приоритет встроенного FFmpeg перед декодерами устройства, раздел «Аудио» |
+| `decoder_priority` | — | Прежняя общая настройка; только значение по умолчанию для двух новых |
 | `tunneling_enabled` | false | Туннелирование |
 | `dv_mode` | `DV_MODE_AUTO` (1) | «Режим Dolby Vision»: 0 «Dolby Vision» (DV декодер), 1 «Авто» (HEVC, если экран или декодер не поддерживают DV), 2 «HDR10/HLG» (всегда HEVC), 3 «Dolby Vision (P7 → P8.1)» — конвертация Profile 7 → 8.1 (libdovi; без DV экрана или декодера ведет себя как «авто»). Мигрирует из старого `map_dv_to_hevc` (выкл → 0); прежнее значение по умолчанию 2 один раз переводится в 1 (флаг `dv_mode_auto_default`) |
 | `stereo_downmix`, `mix_*` | true, пресет 0 | Даунмикс многоканального звука в стерео и коэффициенты микшера |
+| `hd_audio_iec` | false | DTS-HD MA и TrueHD/Atmos битстримом через несущую IEC 61937 192 кГц/7.1, как у Kodi. Перезапускает плеер (`getHardSettingsSignature`) |
 | `skip_silence`, `loudness_boost` | false, 0 | Пропуск тишины, усиление громкости |
 | `audio_track_memory`, `audio_track_stats` | `AUDIO_MEMORY_OFF` (0), — | Запоминание аудиодорожки: 0 выкл, 1 в пределах плейлиста (дорожка, выбранная в этом плейлисте), 2 + между видео (экспериментально): до 20 наиболее используемых дорожек (подпись: название, язык, кодек, каналы), порядок пользователь меняет в настройках |
 | `pref_audio_lang`, `pref_sub_lang` | `""` | `""` — как в файле, `device` — язык системы, иначе код языка |
@@ -60,10 +65,13 @@
 
 `GlobalSettingsActivity`: слева список категорий (`categories`, пункты `item_settings_category`), справа
 прокручиваемые настройки выбранной категории (контейнеры `section_*`, видим только один).
+Категории по порядку: Воспроизведение (`section_playback`), Интерфейс (`section_ui`), Видео, Звук, Субтитры, 3D,
+Управление (`section_control`), Приложение (`section_app`). У каждой своя иконка `ic_settings_*`.
 
 Управление с пульта: фокус на категории сразу показывает ее настройки; Вправо — в настройки (на последний
 выбранный в категории пункт); Влево или Назад — обратно к категориям; CH+/CH- и PgUp/PgDn — соседняя категория
-из любой колонки; Назад в списке категорий закрывает экран. Выбор из списка значений — `ChoiceDialog`.
+из любой колонки; Назад в списке категорий закрывает экран. Выбор из списка значений — `ChoiceDialog.show`,
+несколько флажков (например, кнопки панели управления) — `ChoiceDialog.showMulti`.
 
 ## Перезапуск плеера
 
@@ -86,11 +94,10 @@
    **должно сохранять текущее поведение.**
 2. Если старый ключ поменял смысл, напишите миграцию (пример — `getClockTransparency`).
 3. `GlobalSettingsViewModel`: добавьте `MutableLiveData` с начальным значением из репозитория и метод изменения.
-4. `activity_global_settings.xml`: добавьте пункт в контейнер нужной категории (`section_playback`, `section_screen`,
-   `section_video`, `section_audio`, `section_subtitles`, `section_control`, `section_3d`, `section_app`) по образцу
+4. `activity_global_settings.xml`: добавьте пункт в контейнер нужной категории (`section_playback`, `section_ui`,
+   `section_video`, `section_audio`, `section_subtitles`, `section_3d`, `section_control`, `section_app`) по образцу
    соседних. Пункты фокусируемые: навигация идет с пульта. Новая категория — это новый контейнер `section_*`
    плюс запись в `GlobalSettingsActivity.categories`.
-   потому что навигация идет с пульта).
 5. `GlobalSettingsActivity`: `lateinit` поля, `bindViews`, обработчик в `setupListeners` и подписка
    в `observeViewModel`. Для выбора из списка используйте `showSingleChoiceDialog`.
 6. Строки (`title` и `summary`/значения) добавьте во все 5 локалей.

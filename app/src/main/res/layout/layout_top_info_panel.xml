@@ -7,6 +7,23 @@
     android:background="@drawable/bg_player_panel"
     android:padding="12dp">
 
+    <!-- Кнопка выхода для сенсорных экранов (включается в настройках). Без фокуса, чтобы не мешать пульту -->
+    <ImageButton
+        android:id="@+id/button_back"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_marginEnd="8dp"
+        android:background="?android:attr/selectableItemBackgroundBorderless"
+        android:contentDescription="@string/action_exit"
+        android:focusable="false"
+        android:padding="12dp"
+        android:src="@drawable/ic_arrow_back"
+        android:visibility="gone"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        tools:visibility="visible" />
+
     <!-- Постер -->
     <androidx.cardview.widget.CardView
         android:id="@+id/poster_card"
@@ -15,7 +32,7 @@
         app:cardCornerRadius="4dp"
         app:cardElevation="0dp"
         app:cardBackgroundColor="@color/bg_placeholder_card"
-        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintStart_toEndOf="@id/button_back"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent">
 
