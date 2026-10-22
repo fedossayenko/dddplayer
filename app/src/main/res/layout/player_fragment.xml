@@ -173,6 +173,10 @@
                 android:src="@drawable/ic_skip_previous"
                 app:tint="@color/tv_white" />
 
+            <include
+                android:id="@+id/card_swipe_prev"
+                layout="@layout/layout_swipe_poster" />
+
             <TextView
                 android:id="@+id/text_swipe_prev_title"
                 android:layout_width="wrap_content"
@@ -219,6 +223,10 @@
                 android:layout_height="64dp"
                 android:src="@drawable/ic_skip_next"
                 app:tint="@color/tv_white" />
+
+            <include
+                android:id="@+id/card_swipe_next"
+                layout="@layout/layout_swipe_poster" />
 
             <TextView
                 android:id="@+id/text_swipe_next_title"

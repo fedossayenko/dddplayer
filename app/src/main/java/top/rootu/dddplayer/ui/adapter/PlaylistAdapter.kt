@@ -13,10 +13,9 @@ import androidx.core.view.isVisible
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
-import coil.dispose
-import coil.load
 import top.rootu.dddplayer.R
 import top.rootu.dddplayer.model.MediaItem
+import top.rootu.dddplayer.ui.PosterCard
 
 class PlaylistAdapter(
     private val onLoopRequest: (Int) -> Unit, // Колбэк для зацикливания
@@ -26,6 +25,15 @@ class PlaylistAdapter(
     private var playingItemUuid: String? = null
     private var showIndexBadge: Boolean = true
     var shouldLoop: Boolean = false // Флаг зацикливания
+
+    // В плейлисте одно видео: без постера показываем баннер приложения (как в инфопанели)
+    var isSingleVideo: Boolean = false
+        set(value) {
+            if (field != value) {
+                field = value
+                notifyDataSetChanged()
+            }
+        }
 
     // Логотипы каналов (M3U) вписываем целиком, постеры видео - обрезаем по карточке
     var fitPosters: Boolean = false
@@ -114,46 +122,8 @@ class PlaylistAdapter(
                 itemView.isSelected = false
             }
 
-            val numberText = (item.absoluteIndex + 1).toString()
-
-            // Важно: очищаем слушатели предыдущего запроса
-            poster.dispose()
             poster.scaleType = if (fitPosters) ImageView.ScaleType.FIT_CENTER else ImageView.ScaleType.CENTER_CROP
-
-            if (item.posterUri != null) {
-                // Сразу ставим заглушку, чтобы пользователь видел номер
-                placeholder.text = numberText
-                placeholder.isVisible = true
-                numberBadge.isVisible = false
-
-                // Постер делаем невидимым, но оставляем в layout (INVISIBLE)
-                poster.setImageDrawable(null)
-                poster.isVisible = true
-
-                poster.load(item.posterUri) {
-                    crossfade(true)
-                    listener(
-                        onSuccess = { _, _ ->
-                            // Картинка есть -> скрываем заглушку, показываем бейдж
-                            placeholder.isVisible = false
-                            numberBadge.text = numberText
-                            numberBadge.isVisible = showIndexBadge
-                        },
-                        onError = { _, _ ->
-                            // Ошибка -> убеждаемся, что заглушка видна
-                            placeholder.isVisible = true
-                            numberBadge.isVisible = false
-                        }
-                    )
-                }
-            } else {
-                // Нет URI: просто показываем заглушку
-                placeholder.text = numberText
-                placeholder.isVisible = true
-                poster.isVisible = false
-                numberBadge.isVisible = false
-                poster.setImageDrawable(null)
-            }
+            PosterCard.bind(poster, placeholder, numberBadge, item.posterUri, item.absoluteIndex, isSingleVideo, showIndexBadge)
 
             progress.progress = 0
             progress.isVisible = false

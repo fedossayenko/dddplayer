@@ -449,6 +449,7 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
             // === PLAYLIST MODE (в режиме "Выход или След" вправо - всегда выход) ===
             swipePlaylistAccumulator += deltaX
             isPlaylistSwipeActive = true
+            val showIndexBadge = SettingsRepository.getInstance(requireContext().applicationContext).isShowPlaylistIndexEnabled()
 
             // В эфирном режиме листаем каналы текущей группы по кругу
             val isLiveMode = viewModel.isOverallLiveMode()
@@ -456,13 +457,14 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
             if (swipePlaylistAccumulator < 0) {
                 // Тянем ВЛЕВО -> NEXT
                 currentSwipeTargetIsNext = true
-                val targetItem = if (isLiveMode) viewModel.getRelativePlaylistItem(1) else null
-                val nextTitle = targetItem?.title ?: viewModel.getNextTrackTitle()
+                val liveItem = if (isLiveMode) viewModel.getRelativePlaylistItem(1) else null
+                val nextTitle = liveItem?.title ?: viewModel.getNextTrackTitle()
 
                 if (nextTitle != null) {
                     currentSwipeIsExit = false
-                    // Передаем название следующего видео
-                    ui.updatePlaylistSwipe(swipePlaylistAccumulator, screenWidth, nextTitle, false, targetItem?.posterUri)
+                    // Передаем название и карточку следующего видео
+                    val targetItem = liveItem ?: viewModel.getAdjacentPlaylistItem(next = true)
+                    ui.updatePlaylistSwipe(swipePlaylistAccumulator, screenWidth, nextTitle, false, targetItem, showIndexBadge)
                 } else {
                     currentSwipeIsExit = true
                     ui.updatePlaylistSwipe(swipePlaylistAccumulator, screenWidth, getString(R.string.action_exit), true)
@@ -471,13 +473,14 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
                 // Тянем ВПРАВО -> PREV
                 currentSwipeTargetIsNext = false
                 val exitOnly = swipeAction == SettingsRepository.SWIPE_EXIT_NEXT
-                val targetItem = if (isLiveMode && !exitOnly) viewModel.getRelativePlaylistItem(-1) else null
-                val prevTitle = if (exitOnly) null else targetItem?.title ?: viewModel.getPrevTrackTitle()
+                val liveItem = if (isLiveMode && !exitOnly) viewModel.getRelativePlaylistItem(-1) else null
+                val prevTitle = if (exitOnly) null else liveItem?.title ?: viewModel.getPrevTrackTitle()
 
                 if (prevTitle != null) {
                     currentSwipeIsExit = false
-                    // Передаем название предыдущего видео
-                    ui.updatePlaylistSwipe(swipePlaylistAccumulator, screenWidth, prevTitle, false, targetItem?.posterUri)
+                    // Передаем название и карточку предыдущего видео
+                    val targetItem = liveItem ?: viewModel.getAdjacentPlaylistItem(next = false)
+                    ui.updatePlaylistSwipe(swipePlaylistAccumulator, screenWidth, prevTitle, false, targetItem, showIndexBadge)
                 } else {
                     currentSwipeIsExit = true
                     ui.updatePlaylistSwipe(swipePlaylistAccumulator, screenWidth, getString(R.string.action_exit), true)
@@ -1546,6 +1549,7 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
             showIndexBadge = showIndex,
             shouldLoop = isM3u || viewModel.isLive.value == true,
             fitPosters = isM3u,
+            isSingleVideo = (viewModel.player?.mediaItemCount ?: 0) <= 1,
             onItemSelected = { indexInList ->
                 val item = viewModel.playlistUiState.value?.items?.getOrNull(indexInList)
                 if (item != null) {

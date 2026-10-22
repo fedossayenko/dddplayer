@@ -1465,6 +1465,18 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
+    /** Соседнее видео плейлиста (как у кнопок Пред/След плеера) для карточки в шторке свайпа. */
+    fun getAdjacentPlaylistItem(next: Boolean): MediaItem? {
+        val p = player ?: return null
+        val index = when {
+            next && p.hasNextMediaItem() -> p.nextMediaItemIndex
+            !next && p.hasPreviousMediaItem() -> p.previousMediaItemIndex
+            else -> return null
+        }
+        val mediaId = p.getMediaItemAt(index).mediaId
+        return _currentPlaylist.value?.find { it.uuid == mediaId }
+    }
+
     fun getNextTrackTitle(): String? {
         val p = player ?: return null
         if (p.hasNextMediaItem()) {

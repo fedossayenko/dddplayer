@@ -14,7 +14,6 @@ import android.widget.ImageView
 import android.widget.ProgressBar
 import android.widget.SeekBar
 import android.widget.TextView
-import android.content.res.ColorStateList
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.toDrawable
 import androidx.core.graphics.toColorInt
@@ -24,7 +23,6 @@ import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.SubtitleView
 import androidx.recyclerview.widget.LinearSmoothScroller
 import androidx.recyclerview.widget.RecyclerView
-import coil.load
 import top.rootu.dddplayer.R
 import top.rootu.dddplayer.data.SettingsRepository
 import top.rootu.dddplayer.logic.PlaybackErrorLogic
@@ -34,6 +32,7 @@ import top.rootu.dddplayer.model.StereoInputType
 import top.rootu.dddplayer.model.StereoOutputMode
 import top.rootu.dddplayer.model.SubtitleStyle
 import top.rootu.dddplayer.renderer.StereoGLSurfaceView
+import top.rootu.dddplayer.ui.PosterCard
 import top.rootu.dddplayer.ui.SubtitleStyleOptions
 import top.rootu.dddplayer.ui.adapter.OptionsAdapter
 import top.rootu.dddplayer.ui.adapter.PlaylistAdapter
@@ -143,11 +142,15 @@ class PlayerUiController(private val rootView: View) {
     private val iconPrev: ImageView = rootView.findViewById(R.id.icon_swipe_prev)
     private val textPrevTitle: TextView = rootView.findViewById(R.id.text_swipe_prev_title)
     private val textPrevHint: TextView = rootView.findViewById(R.id.text_swipe_prev_hint)
+    private val cardPrev: View = rootView.findViewById(R.id.card_swipe_prev)
 
     private val overlayNext: View = rootView.findViewById(R.id.overlay_swipe_next)
     private val iconNext: ImageView = rootView.findViewById(R.id.icon_swipe_next)
     private val textNextTitle: TextView = rootView.findViewById(R.id.text_swipe_next_title)
     private val textNextHint: TextView = rootView.findViewById(R.id.text_swipe_next_hint)
+    private val cardNext: View = rootView.findViewById(R.id.card_swipe_next)
+    // Видео, уже показанное в карточке шторки (свайп обновляет шторку на каждом движении пальца)
+    private val boundSwipeCards = mutableMapOf<View, String?>()
     private val hideHandler = Handler(Looper.getMainLooper())
     private val hideGestureRunnable = Runnable {
         gestureContainer.isVisible = false
@@ -211,14 +214,23 @@ class PlayerUiController(private val rootView: View) {
             clockTransparency != SettingsRepository.CLOCK_OFF && !topInfoPanel.isVisible
     }
 
-    private fun setSwipeIcon(icon: ImageView, posterUri: android.net.Uri?, iconRes: Int) {
-        if (posterUri != null) {
-            icon.imageTintList = null
-            icon.load(posterUri) { crossfade(true) }
-        } else {
-            icon.imageTintList = ColorStateList.valueOf(ContextCompat.getColor(rootView.context, R.color.tv_white))
+    /** Карточка соседнего видео вместо иконки; без [target] (выход) - иконка. */
+    private fun setSwipeTarget(icon: ImageView, card: View, target: MediaItem?, iconRes: Int, showIndexBadge: Boolean) {
+        icon.isVisible = target == null
+        card.isVisible = target != null
+        if (target == null) {
             icon.setImageResource(iconRes)
+            return
         }
+        val key = "${target.uuid}/$showIndexBadge"
+        if (boundSwipeCards[card] == key) return
+        boundSwipeCards[card] = key
+        PosterCard.bind(
+            card.findViewById(R.id.swipe_poster_image),
+            card.findViewById(R.id.swipe_poster_placeholder),
+            card.findViewById(R.id.swipe_poster_badge),
+            target.posterUri, target.absoluteIndex, isSingleVideo = false, showIndexBadge = showIndexBadge
+        )
     }
 
     /**
@@ -299,9 +311,9 @@ class PlayerUiController(private val rootView: View) {
      * @param screenWidth Ширина экрана
      * @param title Заголовок следующего/предыдущего видео (или "Выход")
      * @param isExitMode Если true, показываем иконку выхода
-     * @param posterUri Логотип канала вместо иконки (эфирный режим)
+     * @param target Видео, на которое переключит свайп: карточка с постером или номером вместо иконки
      */
-    fun updatePlaylistSwipe(offsetPx: Float, screenWidth: Int, title: String, isExitMode: Boolean, posterUri: android.net.Uri? = null) {
+    fun updatePlaylistSwipe(offsetPx: Float, screenWidth: Int, title: String, isExitMode: Boolean, target: MediaItem? = null, showIndexBadge: Boolean = true) {
         gestureContainer.isVisible = false
 
         // Порог срабатывания (50% экрана)
@@ -322,7 +334,7 @@ class PlayerUiController(private val rootView: View) {
             textPrevTitle.text = title
             textPrevHint.alpha = hintAlpha
 
-            setSwipeIcon(iconPrev, posterUri, if (isExitMode) R.drawable.ic_exit else R.drawable.ic_skip_previous)
+            setSwipeTarget(iconPrev, cardPrev, target, if (isExitMode) R.drawable.ic_exit else R.drawable.ic_skip_previous, showIndexBadge)
             if (isExitMode) {
                 textPrevHint.text = if (thresholdPassed)
                     context.getString(R.string.swipe_release_exit)
@@ -346,7 +358,7 @@ class PlayerUiController(private val rootView: View) {
             textNextTitle.text = title
             textNextHint.alpha = hintAlpha
 
-            setSwipeIcon(iconNext, posterUri, if (isExitMode) R.drawable.ic_exit else R.drawable.ic_skip_next)
+            setSwipeTarget(iconNext, cardNext, target, if (isExitMode) R.drawable.ic_exit else R.drawable.ic_skip_next, showIndexBadge)
             if (isExitMode) {
                 textNextHint.text = if (thresholdPassed)
                     context.getString(R.string.swipe_release_exit)
@@ -663,41 +675,7 @@ class PlayerUiController(private val rootView: View) {
     }
 
     fun loadPoster(uri: android.net.Uri?, playlistIndex: Int, playlistSize: Int, showIndex: Boolean) {
-        val isPlaylist = playlistSize > 1
-        val numberText = (playlistIndex + 1).toString()
-        posterNumberBadge.text = numberText
-        posterPlaceholderText.text = numberText
-
-        if (uri != null) {
-            // Постер есть -> Грузим
-            videoPoster.isVisible = true
-            posterPlaceholderText.isVisible = false
-            // Показываем бейдж только если это плейлист И включена настройка
-            posterNumberBadge.isVisible = isPlaylist && showIndex
-
-            videoPoster.load(uri) {
-                crossfade(true)
-                listener(onError = { _, _ -> handleNoPoster(isPlaylist)})
-            }
-        } else {
-            // Постера нет
-            handleNoPoster(isPlaylist)
-        }
-    }
-
-    private fun handleNoPoster(isPlaylist: Boolean) {
-        if (isPlaylist) {
-            // Плейлист без постера -> Заглушка с номером
-            videoPoster.isVisible = false
-            posterNumberBadge.isVisible = false
-            posterPlaceholderText.isVisible = true
-        } else {
-            // Одиночное видео без постера -> Дефолтная иконка (старая логика)
-            videoPoster.isVisible = true
-            videoPoster.setImageResource(R.drawable.tv_banner)
-            posterNumberBadge.isVisible = false
-            posterPlaceholderText.isVisible = false
-        }
+        PosterCard.bind(videoPoster, posterPlaceholderText, posterNumberBadge, uri, playlistIndex, playlistSize <= 1, showIndex)
     }
 
     // Колбэки текущего показа плейлиста (диалог переиспользуется между показами)
@@ -714,6 +692,7 @@ class PlayerUiController(private val rootView: View) {
         showIndexBadge: Boolean,
         shouldLoop: Boolean,
         fitPosters: Boolean,
+        isSingleVideo: Boolean,
         onItemSelected: (Int) -> Unit,
         onDismiss: () -> Unit
     ) {
@@ -750,6 +729,7 @@ class PlayerUiController(private val rootView: View) {
 
         playlistAdapter?.shouldLoop = shouldLoop
         playlistAdapter?.fitPosters = fitPosters
+        playlistAdapter?.isSingleVideo = isSingleVideo
         playlistAdapter?.setShowIndexBadge(showIndexBadge)
         updatePlaylistItems(items, playingUuid)
         playlistDialog?.show()
