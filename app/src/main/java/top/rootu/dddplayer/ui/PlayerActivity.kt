@@ -36,11 +36,39 @@ import top.rootu.dddplayer.R
 import top.rootu.dddplayer.data.SettingsRepository
 import top.rootu.dddplayer.utils.IntentUtils
 import top.rootu.dddplayer.viewmodel.PlayerViewModel
+import java.lang.ref.WeakReference
 
 private const val ACTION_PIP_PLAY_PAUSE = "top.rootu.dddplayer.action.PIP_PLAY_PAUSE"
 
 @UnstableApi
 class PlayerActivity : AppCompatActivity() {
+
+    companion object {
+        // Пометка интента, которым разворачиваем окно PiP (не новое видео)
+        private const val EXTRA_RESTORE_PIP = "top.rootu.dddplayer.extra.RESTORE_PIP"
+
+        // Плеер в окне PiP. При входе в PiP система переносит его в отдельную задачу,
+        // поэтому новый запуск видео создает второй плеер, а открытие приложения не возвращает в видео
+        private var pipActivity: WeakReference<PlayerActivity>? = null
+
+        private fun activePipPlayer(): PlayerActivity? = pipActivity?.get()?.takeIf {
+            !it.isFinishing && Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && it.isInPictureInPictureMode
+        }
+
+        /**
+         * Разворачивает окно PiP на весь экран: повторный запуск активити в PiP система (SystemUI)
+         * обрабатывает как возврат из PiP. @return false - окна PiP нет
+         */
+        fun restorePictureInPicture(): Boolean {
+            val pip = activePipPlayer() ?: return false
+            pip.startActivity(
+                Intent(pip, PlayerActivity::class.java)
+                    .addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
+                    .putExtra(EXTRA_RESTORE_PIP, true)
+            )
+            return true
+        }
+    }
 
     private var playerFragment: PlayerFragment? = null
     private val viewModel: PlayerViewModel by viewModels()
@@ -175,6 +203,8 @@ class PlayerActivity : AppCompatActivity() {
 
     override fun onPictureInPictureModeChanged(inPip: Boolean, newConfig: Configuration) {
         super.onPictureInPictureModeChanged(inPip, newConfig)
+        if (inPip) pipActivity = WeakReference(this)
+        else if (pipActivity?.get() === this) pipActivity = null
         playerFragment?.setPictureInPictureMode(inPip)
         if (!inPip) updatePictureInPictureParams()
     }
@@ -201,7 +231,8 @@ class PlayerActivity : AppCompatActivity() {
 
         // Запуск из лаунчера -> стартовый экран (история, плейлисты, хранилища, вход в настройки)
         if (isLaunchedFromLauncher(intent)) {
-            startActivity(Intent(this, FileBrowserActivity::class.java))
+            // Видео в окне PiP: возвращаем его на весь экран вместо стартового экрана
+            if (!restorePictureInPicture()) startActivity(Intent(this, FileBrowserActivity::class.java))
             finish()
             return
         }
@@ -238,6 +269,8 @@ class PlayerActivity : AppCompatActivity() {
         }
 
         if (savedInstanceState == null) {
+            // Новое видео при открытом окне PiP: старый плеер закрываем, а не оставляем висеть вторым
+            activePipPlayer()?.takeIf { it !== this }?.closeFromPictureInPicture()
             checkPermissionsAndHandleIntent(intent)
 
             val fragment = PlayerFragment.newInstance()
@@ -272,6 +305,7 @@ class PlayerActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
+        if (pipActivity?.get() === this) pipActivity = null
         if (pipReceiverRegistered) {
             unregisterReceiver(pipControlReceiver)
             pipReceiverRegistered = false
@@ -295,6 +329,8 @@ class PlayerActivity : AppCompatActivity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
+        // Разворачивание окна PiP: видео то же, интент не меняем
+        if (intent.getBooleanExtra(EXTRA_RESTORE_PIP, false)) return
         setIntent(intent)
         // Также проверяем разрешения при новом интенте
         checkPermissionsAndHandleIntent(intent)
@@ -380,6 +416,19 @@ class PlayerActivity : AppCompatActivity() {
     }
 
     override fun finish() {
+        prepareFinish()
+        super.finish()
+    }
+
+    /** Закрывает плеер в окне PiP вместе с его задачей (иначе в "Недавних" остается пустая). */
+    private fun closeFromPictureInPicture() {
+        if (isFinishing) return
+        prepareFinish()
+        finishAndRemoveTask()
+    }
+
+    /** Сохраняет настройки видео и готовит результат для вызвавшего приложения. */
+    private fun prepareFinish() {
         viewModel.saveCurrentSettings()
         if (shouldReturnResult) {
             val resultIntent = Intent("top.rootu.dddplayer.intent.result.VIEW")
@@ -398,6 +447,5 @@ class PlayerActivity : AppCompatActivity() {
 
             setResult(RESULT_OK, resultIntent)
         }
-        super.finish()
     }
 }

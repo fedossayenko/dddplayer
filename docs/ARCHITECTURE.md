@@ -16,8 +16,11 @@ SurfaceView (2D/HDR)  или  StereoGLSurfaceView ─► StereoRenderer (GLSL)
 
 - **`PlayerActivity`** — единственная точка входа для видео. Здесь проверяются разрешения на файлы,
   разбирается Intent (`IntentUtils`), запуск из лаунчера переводится на стартовый экран и работает PiP (действие
-  play/pause через `RemoteAction` и `BroadcastReceiver`, авто-PiP по настройке). В `finish()`
-  формируется результат для вызывающего приложения (`return_result`). Нажатия клавиш передаются в
+  play/pause через `RemoteAction` и `BroadcastReceiver`, авто-PiP по настройке). В PiP система переносит плеер
+  в отдельную задачу, поэтому он запоминается в `PlayerActivity.pipActivity`: новое видео закрывает старое окно
+  PiP (`closeFromPictureInPicture`), а открытие приложения снаружи (лаунчер, «Недавние», `PipReturnCallbacks`)
+  разворачивает его повторным запуском той же активити (`restorePictureInPicture`, SystemUI считает это
+  возвратом из PiP). В `finish()` (`prepareFinish`) формируется результат для вызывающего приложения (`return_result`). Нажатия клавиш передаются в
   `PlayerFragment.handleKeyEvent` через `dispatchKeyEvent`.
 - **`PlayerFragment`** — экран плеера. Создает GL-поверхность (выбор ES 2/3), подписывается на LiveData
   (`observeViewModel`), показывает меню, диалоги (продолжение просмотра, плейлист, группы,
