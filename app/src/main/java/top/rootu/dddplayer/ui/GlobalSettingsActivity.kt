@@ -31,6 +31,7 @@ import top.rootu.dddplayer.R
 import top.rootu.dddplayer.data.SettingsRepository
 import top.rootu.dddplayer.logic.AudioMixerLogic
 import top.rootu.dddplayer.logic.UpdateInfo
+import top.rootu.dddplayer.model.PlaybackSpeed
 import top.rootu.dddplayer.player.DoviBridge
 import top.rootu.dddplayer.ui.calibration.CalibrationWizardActivity
 import top.rootu.dddplayer.utils.LocaleUtils
@@ -119,6 +120,8 @@ class GlobalSettingsActivity : AppCompatActivity() {
     private lateinit var textUpActionValue: TextView
     private lateinit var itemOkAction: LinearLayout
     private lateinit var textOkActionValue: TextView
+    private lateinit var itemDefaultSpeed: LinearLayout
+    private lateinit var textDefaultSpeedValue: TextView
     private lateinit var itemResumeAction: LinearLayout
     private lateinit var textResumeActionValue: TextView
     private lateinit var itemExternalPosition: LinearLayout
@@ -378,6 +381,8 @@ class GlobalSettingsActivity : AppCompatActivity() {
         textUpActionValue = findViewById(R.id.text_up_action_value)
         itemOkAction = findViewById(R.id.item_ok_action)
         textOkActionValue = findViewById(R.id.text_ok_action_value)
+        itemDefaultSpeed = findViewById(R.id.item_default_speed)
+        textDefaultSpeedValue = findViewById(R.id.text_default_speed_value)
         itemResumeAction = findViewById(R.id.item_resume_mode)
         textResumeActionValue = findViewById(R.id.text_resume_mode_value)
         itemExternalPosition = findViewById(R.id.item_external_position)
@@ -538,6 +543,20 @@ class GlobalSettingsActivity : AppCompatActivity() {
         }
 
         itemShowClock.setOnClickListener { settingsViewModel.cycleClockTransparency() }
+        itemDefaultSpeed.setOnClickListener {
+            // Список скоростей и своя скорость из меню плеера
+            val custom = settingsViewModel.getCustomPlaybackSpeed()
+            val speeds = PlaybackSpeed.entries.map { it.value } + custom
+            val options = PlaybackSpeed.entries.map { it.label } +
+                getString(R.string.playback_speed_custom_value, PlaybackSpeed.label(custom))
+            val current = settingsViewModel.defaultPlaybackSpeed.value ?: 1.0f
+            val currentIndex = PlaybackSpeed.preset(current)?.ordinal
+                ?: options.lastIndex.takeIf { kotlin.math.abs(custom - current) < 0.001f } ?: -1
+            showSingleChoiceDialog(getString(R.string.pref_default_speed), options, currentIndex) {
+                settingsViewModel.setDefaultPlaybackSpeed(speeds[it])
+            }
+        }
+
         itemResumeAction.setOnClickListener {
             val options = listOf(getString(R.string.resume_mode_ask), getString(R.string.resume_mode_always), getString(R.string.resume_mode_never))
             showSingleChoiceDialog(getString(R.string.pref_resume_mode), options, settingsViewModel.resumeModeAction.value ?: 0) {
@@ -739,6 +758,7 @@ class GlobalSettingsActivity : AppCompatActivity() {
         }
 
         // UI
+        settingsViewModel.defaultPlaybackSpeed.observe(this) { textDefaultSpeedValue.text = PlaybackSpeed.label(it) }
         settingsViewModel.resumeModeAction.observe(this) { action ->
             textResumeActionValue.text = when (action) {
                 SettingsRepository.RESUME_NEVER -> getString(R.string.resume_mode_never)

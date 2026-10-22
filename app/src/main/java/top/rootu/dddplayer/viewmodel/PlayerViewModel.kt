@@ -106,6 +106,8 @@ data class PlaylistUiState(
 @UnstableApi
 // Пункт "Загрузить из файла" в меню субтитров
 const val SUBTITLE_MENU_LOAD_FILE = "load_file"
+// Пункт "Своя скорость" в меню скорости
+const val SPEED_MENU_CUSTOM = "custom_speed"
 
 class PlayerViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -243,8 +245,11 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     val bufferedPercentage: LiveData<Int> = _bufferedPercentage
     private val _bufferedPosition = MutableLiveData(0L)
     val bufferedPosition: LiveData<Long> = _bufferedPosition
-    private val _playbackSpeed = MutableLiveData(PlaybackSpeed.X1_00)
-    val playbackSpeed: LiveData<PlaybackSpeed> = _playbackSpeed
+    // Скорость воспроизведения (может быть своей, не из списка PlaybackSpeed)
+    private val _playbackSpeed = MutableLiveData(repository.getDefaultPlaybackSpeed())
+    val playbackSpeed: LiveData<Float> = _playbackSpeed
+    // Скорость взята из настройки по умолчанию, а не выбрана в меню: в прямом эфире ее сбрасываем на 1.00x
+    private var speedFromDefault = true
 
     private val _resizeMode = MutableLiveData(ResizeMode.FIT)
     val resizeMode: LiveData<ResizeMode> = _resizeMode
@@ -381,6 +386,11 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             updateProgressUpdaterState()
             val isCurrentItemLive = player?.isCurrentMediaItemLive ?: false
             _isLive.value = isCurrentItemLive
+            // Ускоренный эфир упирается в край трансляции: скорость по умолчанию к нему не применяем
+            if (speedFromDefault) {
+                val target = if (isCurrentItemLive) 1.0f else repository.getDefaultPlaybackSpeed()
+                if (_playbackSpeed.value != target) applyPlaybackSpeed(target)
+            }
             if (isCurrentItemLive) _isSessionLive.value = true
         }
 
@@ -438,6 +448,8 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
         // Подписываемся на создание нового плеера
         playerManager.onPlayerCreated = { newPlayer ->
+            // Новый плеер (и пересозданный после смены настроек) идет с выбранной скоростью
+            newPlayer.setPlaybackSpeed(_playbackSpeed.value ?: 1.0f)
             _playerRecreatedEvent.postValue(newPlayer)
             // Принудительно обновляем UI состояние
             _isPlaying.postValue(newPlayer.isPlaying)
@@ -1027,10 +1039,27 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     fun nextTrack() { if (player?.hasNextMediaItem() == true) player!!.seekToNextMediaItem() }
     fun prevTrack() { if (player?.hasPreviousMediaItem() == true) player!!.seekToPreviousMediaItem() }
 
-    fun setPlaybackSpeed(speed: PlaybackSpeed) {
-        _playbackSpeed.value = speed
-        player?.setPlaybackSpeed(speed.value)
+    fun setPlaybackSpeed(speed: Float) {
+        speedFromDefault = false
+        applyPlaybackSpeed(speed)
     }
+
+    private fun applyPlaybackSpeed(speed: Float) {
+        _playbackSpeed.value = speed
+        player?.setPlaybackSpeed(speed)
+    }
+
+    /** Своя скорость с ползунка: запоминаем и сразу применяем. */
+    fun setCustomPlaybackSpeed(speed: Float) {
+        val normalized = PlaybackSpeed.normalize(speed)
+        repository.setCustomPlaybackSpeed(normalized)
+        setPlaybackSpeed(normalized)
+    }
+
+    fun getCustomPlaybackSpeed(): Float = repository.getCustomPlaybackSpeed()
+
+    /** Скорость по умолчанию (долгое нажатие в меню скорости). */
+    fun setDefaultPlaybackSpeed(speed: Float) = repository.setDefaultPlaybackSpeed(speed)
 
     fun setResizeMode(mode: ResizeMode) {
         _resizeMode.value = mode
@@ -1316,15 +1345,33 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
     // --- Menu Generation ---
 
-    fun getPlaybackSpeedMenuItems(): List<MenuItem> {
-        val currentSpeed = _playbackSpeed.value ?: PlaybackSpeed.X1_00
-        return PlaybackSpeed.entries.map { speed ->
+    fun getPlaybackSpeedMenuItems(context: Context): List<MenuItem> {
+        val currentSpeed = _playbackSpeed.value ?: 1.0f
+        val defaultSpeed = repository.getDefaultPlaybackSpeed()
+        val customSpeed = repository.getCustomPlaybackSpeed()
+        val currentIsCustom = PlaybackSpeed.preset(currentSpeed) == null
+        val defaultMark = context.getString(R.string.playback_speed_default_mark)
+        val presets = PlaybackSpeed.entries.map { speed ->
             MenuItem(
                 id = speed.value.toString(),
                 title = speed.label,
-                isSelected = speed == currentSpeed
+                description = defaultMark.takeIf { PlaybackSpeed.preset(defaultSpeed) == speed },
+                isSelected = PlaybackSpeed.preset(currentSpeed) == speed
             )
         }
+        // Своя скорость: показываем текущую, если она не из списка, иначе сохраненную
+        val customValue = if (currentIsCustom) currentSpeed else customSpeed
+        val customDescription = listOfNotNull(
+            PlaybackSpeed.label(customValue),
+            defaultMark.takeIf { PlaybackSpeed.preset(defaultSpeed) == null }
+        ).joinToString(" · ")
+        return presets + MenuItem(
+            id = SPEED_MENU_CUSTOM,
+            title = context.getString(R.string.playback_speed_custom),
+            description = customDescription,
+            data = customValue,
+            isSelected = currentIsCustom
+        )
     }
 
     private fun getResizeModeIconResId(mode: ResizeMode?): Int? {
@@ -1389,7 +1436,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     fun getMainMenuItems(context: Context): List<MenuItem> {
         val currentAudioName = currentAudioTrack.value?.let { TrackLogic.buildTrackLabel(it, context) } ?: ""
         val currentSubtitleName = currentSubtitleTrack.value?.let { TrackLogic.buildTrackLabel(it, context) } ?: ""
-        val currentSpeed = _playbackSpeed.value?.label ?: PlaybackSpeed.X1_00.label
+        val currentSpeed = PlaybackSpeed.label(_playbackSpeed.value ?: 1.0f)
 
         return listOf(
             MenuItem(

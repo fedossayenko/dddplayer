@@ -244,7 +244,7 @@ class PlayerInputHandler(
         val realPos = viewModel.player?.currentPosition ?: 0L
         pendingSeekDelta = target - realPos
 
-        val speed = viewModel.playbackSpeed.value?.value ?: 1.0f
+        val speed = viewModel.playbackSpeed.value ?: 1.0f
         val isLive = viewModel.isLive.value ?: false
         val liveOffset = if (isLive) (duration - target).coerceAtLeast(0)  else 0L
 

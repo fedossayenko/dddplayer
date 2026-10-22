@@ -16,6 +16,12 @@
 
     <!-- Кіраванне прайграваннем -->
     <string name="playback_speed">Хуткасць</string>
+    <string name="playback_speed_custom">Свая хуткасць</string>
+    <string name="playback_speed_custom_value">Свая: %s</string>
+    <string name="playback_speed_default_mark">Па змаўчанні</string>
+    <string name="playback_speed_default_set">Хуткасць па змаўчанні: %s</string>
+    <string name="pref_default_speed">Хуткасць па змаўчанні</string>
+    <string name="pref_default_speed_desc">З гэтай хуткасцю пачынаецца прайграванне, прамы эфір заўсёды ідзе на 1.00x. У плэеры: доўгі націск на пункт меню хуткасці</string>
     <string name="playback_zoom">Маштаб</string>
     <string name="aspect_ratio">Суадносіны бакоў</string>
     <string name="aspect_ratio_auto">Як у відэа</string>

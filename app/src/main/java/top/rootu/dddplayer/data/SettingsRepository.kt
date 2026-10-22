@@ -135,6 +135,14 @@ class SettingsRepository private constructor(context: Context) {
     fun getZoomScalePercent(): Int = prefs.getInt("video_zoom_scale", 115)
     fun setZoomScalePercent(percent: Int) = prefs.edit { putInt("video_zoom_scale", percent) }
 
+    // Скорость, с которой начинается воспроизведение (прямой эфир всегда идет на 1.00x)
+    fun getDefaultPlaybackSpeed(): Float = prefs.getFloat("default_playback_speed", 1.0f)
+    fun setDefaultPlaybackSpeed(speed: Float) = prefs.edit { putFloat("default_playback_speed", speed) }
+
+    // Своя скорость (пункт меню скорости с ползунком)
+    fun getCustomPlaybackSpeed(): Float = prefs.getFloat("custom_playback_speed", 1.10f)
+    fun setCustomPlaybackSpeed(speed: Float) = prefs.edit { putFloat("custom_playback_speed", speed) }
+
     // --- Playlist Settings ---
     // Плейлист, который открывается при запуске из лаунчера
     // --- Стартовый экран: плейлисты по ссылке и история просмотра ---

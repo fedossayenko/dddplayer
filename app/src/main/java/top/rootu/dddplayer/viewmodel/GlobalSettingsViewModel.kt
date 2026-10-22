@@ -115,6 +115,9 @@ class GlobalSettingsViewModel(application: Application) : AndroidViewModel(appli
     private val _okButtonAction = MutableLiveData(repository.getOkButtonAction())
     val okButtonAction: LiveData<Int> = _okButtonAction
 
+    private val _defaultPlaybackSpeed = MutableLiveData(repository.getDefaultPlaybackSpeed())
+    val defaultPlaybackSpeed: LiveData<Float> = _defaultPlaybackSpeed
+
     private val _horizontalSwipeAction = MutableLiveData(repository.getHorizontalSwipeAction())
     val horizontalSwipeAction: LiveData<Int> = _horizontalSwipeAction
 
@@ -374,6 +377,13 @@ class GlobalSettingsViewModel(application: Application) : AndroidViewModel(appli
         repository.setVolumeBrightnessGesturesEnabled(enabled)
         _isVolumeBrightnessGestures.value = enabled
     }
+
+    fun setDefaultPlaybackSpeed(speed: Float) {
+        repository.setDefaultPlaybackSpeed(speed)
+        _defaultPlaybackSpeed.value = speed
+    }
+
+    fun getCustomPlaybackSpeed(): Float = repository.getCustomPlaybackSpeed()
 
     fun setHorizontalSwipeAction(action: Int) {
         repository.setHorizontalSwipeAction(action)

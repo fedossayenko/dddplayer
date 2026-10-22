@@ -16,6 +16,9 @@ class SideMenuAdapter(
     var onItemClick: (MenuItem) -> Unit
 ) : ListAdapter<MenuItem, SideMenuAdapter.ViewHolder>(MenuItemDiffCallback()) {
 
+    // Долгое нажатие (OK с удержанием на пульте); null - меню его не поддерживает
+    var onItemLongClick: ((MenuItem) -> Unit)? = null
+
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val view = LayoutInflater.from(parent.context)
             .inflate(R.layout.item_side_menu, parent, false)
@@ -37,6 +40,12 @@ class SideMenuAdapter(
                 if (pos != RecyclerView.NO_POSITION) {
                     onItemClick(getItem(pos))
                 }
+            }
+            itemView.setOnLongClickListener {
+                val handler = onItemLongClick ?: return@setOnLongClickListener false
+                val pos = bindingAdapterPosition
+                if (pos != RecyclerView.NO_POSITION) handler(getItem(pos))
+                true
             }
         }
 

@@ -16,6 +16,12 @@
 
     <!-- Керування відтворенням -->
     <string name="playback_speed">Швидкість</string>
+    <string name="playback_speed_custom">Своя швидкість</string>
+    <string name="playback_speed_custom_value">Своя: %s</string>
+    <string name="playback_speed_default_mark">Типово</string>
+    <string name="playback_speed_default_set">Типова швидкість: %s</string>
+    <string name="pref_default_speed">Типова швидкість</string>
+    <string name="pref_default_speed_desc">З цією швидкістю починається відтворення, прямий ефір завжди йде на 1.00x. У плеєрі: довге натискання на пункт меню швидкості</string>
     <string name="playback_zoom">Масштаб</string>
     <string name="aspect_ratio">Співвідношення сторін</string>
     <string name="aspect_ratio_auto">Як у відео</string>

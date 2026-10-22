@@ -1,5 +1,9 @@
 package top.rootu.dddplayer.model
 
+import java.util.Locale
+import kotlin.math.abs
+import kotlin.math.roundToInt
+
 /**
  * Доступные режимы масштабирования видео.
  */
@@ -39,6 +43,19 @@ enum class PlaybackSpeed(val value: Float, val label: String) {
     X3_00(3.00f, "3.00x");
 
     companion object {
-        fun fromValue(value: Float) = entries.firstOrNull { it.value == value } ?: X1_00
+        // Своя скорость: диапазон и шаг ползунка
+        const val CUSTOM_MIN = 0.25f
+        const val CUSTOM_MAX = 4.00f
+        const val CUSTOM_STEP = 0.05f
+
+        /** Предустановка с этой скоростью или null (своя скорость). */
+        fun preset(value: Float): PlaybackSpeed? = entries.firstOrNull { abs(it.value - value) < 0.001f }
+
+        /** Подпись скорости: "1.25x". */
+        fun label(value: Float): String = String.format(Locale.US, "%.2fx", value)
+
+        /** Скорость в пределах ползунка, округленная до шага. */
+        fun normalize(value: Float): Float =
+            ((value / CUSTOM_STEP).roundToInt() * CUSTOM_STEP).coerceIn(CUSTOM_MIN, CUSTOM_MAX)
     }
 }

@@ -158,6 +158,15 @@
                 </LinearLayout>
 
                 <!-- Live Mode -->
+                <!-- Скорость по умолчанию -->
+                <LinearLayout android:id="@+id/item_default_speed" style="@style/SettingsItemContainer">
+                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:duplicateParentState="true">
+                        <TextView style="@style/SettingsItemTitle" android:text="@string/pref_default_speed" />
+                        <TextView style="@style/SettingsItemDesc" android:text="@string/pref_default_speed_desc" />
+                    </LinearLayout>
+                    <TextView android:id="@+id/text_default_speed_value" style="@style/SettingsItemValue" tools:text="1.00x" />
+                </LinearLayout>
+
                 <LinearLayout android:id="@+id/item_live_mode" style="@style/SettingsItemContainer">
                     <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:duplicateParentState="true">
                         <TextView style="@style/SettingsItemTitle" android:text="@string/pref_live_mode" />

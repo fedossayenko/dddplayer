@@ -17,6 +17,12 @@
 
     <!-- 播放控制 -->
     <string name="playback_speed">播放速度</string>
+    <string name="playback_speed_custom">自定义速度</string>
+    <string name="playback_speed_custom_value">自定义：%s</string>
+    <string name="playback_speed_default_mark">默认</string>
+    <string name="playback_speed_default_set">默认速度：%s</string>
+    <string name="pref_default_speed">默认速度</string>
+    <string name="pref_default_speed_desc">播放以此速度开始，直播始终为 1.00x。播放器中：在速度菜单中长按某项</string>
     <string name="playback_zoom">缩放</string>
     <string name="aspect_ratio">宽高比</string>
     <string name="aspect_ratio_auto">原始</string>
