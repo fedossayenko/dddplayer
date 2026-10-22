@@ -14,6 +14,7 @@ import androidx.core.os.LocaleListCompat
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.Format
+import androidx.media3.common.ForwardingPlayer
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.Player
@@ -54,12 +55,14 @@ import androidx.media3.extractor.ts.TsExtractor
 import androidx.media3.session.MediaSession
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import top.rootu.dddplayer.App.Companion.USER_AGENT
 import top.rootu.dddplayer.data.SettingsRepository
 import top.rootu.dddplayer.logic.AudioMixerLogic
 import top.rootu.dddplayer.logic.M3uParser
+import top.rootu.dddplayer.logic.StreamTypeLogic
 import top.rootu.dddplayer.logic.UnifiedMetadataReader
 import top.rootu.dddplayer.model.MediaItem
 import top.rootu.dddplayer.utils.MediaFormatHelper
@@ -121,6 +124,8 @@ class PlayerManager(
     var onAudioOutputFormatChanged: ((String) -> Unit)? = null
     // Туннельный режим реально включился (декодеры и аудиовыход его поддержали)
     var onTunnelingChanged: ((Boolean) -> Unit)? = null
+    // "Стоп" извне (карточка "Сейчас играет" на Android TV, пульт, ассистент): закрываем плеер, а не замираем на кадре
+    var onStopRequested: (() -> Unit)? = null
 
     /**
      * Звук идет на HDMI битстримом. Такой выход в системе один: плеер в фоне держит его,
@@ -170,30 +175,7 @@ class PlayerManager(
             val contentType = response.header("Content-Type")
             val finalUrl = response.request.url.toString()
 
-            var exoMimeType: String? = null
-
-            // Пытаемся определить по Content-Type
-            if (contentType != null) {
-                val lowerType = contentType.lowercase()
-                exoMimeType = when (lowerType) {
-                    "application/x-mpegurl",
-                    "application/vnd.apple.mpegurl" -> MimeTypes.APPLICATION_M3U8
-                    "application/dash+xml" -> MimeTypes.APPLICATION_MPD
-                    "application/vnd.ms-sstr+xml" -> MimeTypes.APPLICATION_SS
-                    else -> null
-                }
-            }
-
-            // Если Content-Type кривой (например octet-stream), смотрим на расширение финального URL
-            if (exoMimeType == null) {
-                val extension = MediaFormatHelper.getFileExtension(finalUrl.toUri().path ?: "")
-                exoMimeType = when (extension) {
-                    "m3u8" -> MimeTypes.APPLICATION_M3U8
-                    "mpd" -> MimeTypes.APPLICATION_MPD
-                    "ism", "isml" -> MimeTypes.APPLICATION_SS
-                    else -> null
-                }
-            }
+            val exoMimeType = StreamTypeLogic.fromResponse(contentType, finalUrl.toUri().path)
 
             // Сохраняем найденный тип
             if (exoMimeType != null) {
@@ -575,7 +557,12 @@ class PlayerManager(
             try {
                 // ID уникален в процессе: при открытии файла из другого приложения новый экран плеера создает
                 // сессию раньше, чем старый освободит свою, и одинаковый ID ("") дал бы IllegalStateException
-                mediaSession = MediaSession.Builder(appContext, player)
+                val sessionPlayer = object : ForwardingPlayer(player) {
+                    override fun stop() {
+                        onStopRequested?.invoke() ?: super.stop()
+                    }
+                }
+                mediaSession = MediaSession.Builder(appContext, sessionPlayer)
                     .setId("dddplayer-${sessionCounter.incrementAndGet()}")
                     .build()
             } catch (e: Exception) {
@@ -671,7 +658,7 @@ class PlayerManager(
         return exoItems.map { exoItem ->
             val headers = headersByMediaId[exoItem.mediaId].orEmpty()
             val uriStr = exoItem.localConfiguration?.uri?.toString() ?: ""
-            val mimeType = resolvedMediaTypes[uriStr]
+            val mimeType = resolvedTypeFor(uriStr)
                 ?: exoItem.localConfiguration?.mimeType
                 ?: MediaFormatHelper.getVideoMimeType(uriStr.toUri())
             val isHls = mimeType == MimeTypes.APPLICATION_M3U8
@@ -751,9 +738,11 @@ class PlayerManager(
         return languages.toTypedArray()
     }
 
-    fun getResolvedMimeType(uri: android.net.Uri): String? {
-        return resolvedMediaTypes[uri.toString()]
-    }
+    fun getResolvedMimeType(uri: android.net.Uri): String? = resolvedTypeFor(uri.toString())
+
+    // Тип запоминается по URL из OkHttp: он может быть перекодирован (кириллица, пробелы, "|")
+    private fun resolvedTypeFor(url: String): String? =
+        resolvedMediaTypes[url] ?: url.toHttpUrlOrNull()?.toString()?.let { resolvedMediaTypes[it] }
 
     /**
      * Если передана одна ссылка на .m3u/.m3u8, проверяет, не плейлист ли это (IPTV/список файлов).
