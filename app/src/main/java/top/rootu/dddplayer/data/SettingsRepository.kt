@@ -91,6 +91,12 @@ class SettingsRepository private constructor(context: Context) {
         const val DV_MODE_ALWAYS = 2 // Всегда HEVC
         const val DV_MODE_CONVERT = 3 // Profile 7 -> 8.1 (libdovi), иначе как Авто
         const val RENDER_API_AUTO = 0
+
+        // Не настройки, а данные пользователя: сброс настроек их сохраняет
+        val USER_DATA_KEYS = setOf(
+            "watch_history", "saved_playlists", "smb_servers", "startup_playlist_uri", "last_channel_uri",
+            "last_update_check", "last_update_info_json"
+        )
         const val RENDER_API_GLES2 = 1
 
         @Volatile
@@ -575,6 +581,31 @@ class SettingsRepository private constructor(context: Context) {
             listOf("vr_k1", "vr_k2", "vr_scale", "global_screen_separation_pct").forEach { remove(it) }
         }
         bumpCalibrationVersion()
+    }
+
+    /**
+     * Сброс всех настроек к значениям по умолчанию. Пользовательские данные ([USER_DATA_KEYS]: история,
+     * плейлисты, SMB-серверы и т.п.) и настройки отдельных видео (Room) не трогаем.
+     */
+    fun resetAllSettings() {
+        val keep = prefs.all.filterKeys { it in USER_DATA_KEYS }
+        // Новая версия калибровки: плеер перечитает VR и анаглиф уже без сохраненных значений
+        val calibrationVersion = getCalibrationVersion() + 1
+        prefs.edit(commit = true) {
+            clear()
+            keep.forEach { (key, value) ->
+                @Suppress("UNCHECKED_CAST")
+                when (value) {
+                    is String -> putString(key, value)
+                    is Set<*> -> putStringSet(key, value as Set<String>)
+                    is Int -> putInt(key, value)
+                    is Long -> putLong(key, value)
+                    is Float -> putFloat(key, value)
+                    is Boolean -> putBoolean(key, value)
+                }
+            }
+            putInt("calibration_version", calibrationVersion)
+        }
     }
 
     // Счетчик сохранений калибровки: плеер перечитывает параметры VR и анаглифа, если он изменился

@@ -298,4 +298,25 @@ class SettingsRepositoryTest {
         assertFalse(repo.isHdr10PlusEnabled())
         assertTrue(before != repo.getHardSettingsSignature())
     }
+
+    @Test
+    fun `reset all settings keeps user data`() {
+        val repo = repo()
+        repo.putSavedPlaylist(SavedPlaylist("1", "TV", "http://a/tv.m3u"))
+        repo.setConfirmExitEnabled(false)
+        repo.setAppLanguage("ru")
+        repo.setDefaultPlaybackSpeed(1.5f)
+        repo.setHiddenControlButtons(setOf(SettingsRepository.BUTTON_SPEED))
+        val calibrationVersion = repo.getCalibrationVersion()
+
+        repo.resetAllSettings()
+
+        assertTrue(repo.isConfirmExitEnabled())
+        assertEquals(SettingsRepository.LANG_SYSTEM_DEFAULT, repo.getAppLanguage())
+        assertEquals(1.0f, repo.getDefaultPlaybackSpeed())
+        assertTrue(repo.getHiddenControlButtons().isEmpty())
+        assertEquals(listOf("TV"), repo.getSavedPlaylists().map { it.name })
+        // Плеер перечитает калибровку
+        assertTrue(repo.getCalibrationVersion() > calibrationVersion)
+    }
 }

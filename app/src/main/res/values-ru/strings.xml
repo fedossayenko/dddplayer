@@ -415,6 +415,12 @@
     <string name="wizard_ana_check_title">Проверка</string>
     <string name="pref_reset_calibration">Сбросить калибровку</string>
     <string name="pref_reset_calibration_desc">Вернуть значения приложения для Cardboard VR и/или анаглиф-очков</string>
+    <string name="cancel">Отмена</string>
+    <string name="pref_reset_settings">Сбросить все настройки</string>
+    <string name="pref_reset_settings_desc">Вернуть значения по умолчанию. История, плейлисты, сетевые папки и настройки отдельных видео сохранятся</string>
+    <string name="reset_settings_title">Сбросить все настройки на значения по умолчанию?</string>
+    <string name="reset_settings_confirm">Сбросить</string>
+    <string name="reset_settings_done">Настройки сброшены</string>
     <string name="reset_calibration_vr">Cardboard VR</string>
     <string name="reset_calibration_anaglyph">Анаглиф-очки</string>
     <string name="reset_calibration_all">Все</string>

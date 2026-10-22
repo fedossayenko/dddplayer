@@ -1231,6 +1231,14 @@
                     <ImageView android:layout_width="24dp" android:layout_height="24dp" android:importantForAccessibility="no" android:src="@drawable/ic_arrow_right" android:duplicateParentState="true" app:tint="@color/selector_settings_secondary" />
                 </LinearLayout>
 
+                <!-- Сброс всех настроек -->
+                <LinearLayout android:id="@+id/item_reset_settings" style="@style/SettingsItemContainer">
+                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:duplicateParentState="true">
+                        <TextView style="@style/SettingsItemTitle" android:text="@string/pref_reset_settings" />
+                        <TextView style="@style/SettingsItemDesc" android:text="@string/pref_reset_settings_desc" />
+                    </LinearLayout>
+                </LinearLayout>
+
                 <!-- Пункт: Выход -->
                 <LinearLayout
                     android:id="@+id/item_exit"

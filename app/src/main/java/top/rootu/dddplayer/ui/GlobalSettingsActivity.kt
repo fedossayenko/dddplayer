@@ -428,6 +428,7 @@ class GlobalSettingsActivity : AppCompatActivity() {
         btnClose.setOnClickListener { finish() }
         itemExit.setOnClickListener { finish() }
 
+        findViewById<View>(R.id.item_reset_settings).setOnClickListener { showResetSettingsDialog() }
         findViewById<View>(R.id.item_diagnostics).setOnClickListener {
             startActivity(Intent(this, DeviceInfoActivity::class.java))
         }
@@ -889,6 +890,22 @@ class GlobalSettingsActivity : AppCompatActivity() {
 
     private fun startCalibration(mode: String) {
         startActivity(Intent(this, CalibrationWizardActivity::class.java).putExtra(CalibrationWizardActivity.EXTRA_MODE, mode))
+    }
+
+    /** Сброс всех настроек. Фокус в подтверждении стоит на "Отмена" (первый пункт). */
+    private fun showResetSettingsDialog() {
+        val options = listOf(getString(R.string.cancel), getString(R.string.reset_settings_confirm))
+        showSingleChoiceDialog(getString(R.string.reset_settings_title), options, -1) { index ->
+            if (index != 1) return@showSingleChoiceDialog
+            val repository = SettingsRepository.getInstance(this)
+            val customLanguage = repository.getAppLanguage() != SettingsRepository.LANG_SYSTEM_DEFAULT
+            repository.resetAllSettings()
+            Toast.makeText(this, R.string.reset_settings_done, Toast.LENGTH_SHORT).show()
+            // Открываем экран заново: пункты и ViewModel читают уже сброшенные значения
+            startActivity(Intent(this, GlobalSettingsActivity::class.java).putExtra("FOCUS_ITEM_ID", R.id.item_reset_settings))
+            finish()
+            if (customLanguage) applyAppLocale(SettingsRepository.LANG_SYSTEM_DEFAULT)
+        }
     }
 
     // Сброс калибровки к значениям приложения: VR, анаглиф или все

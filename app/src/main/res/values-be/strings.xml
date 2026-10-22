@@ -387,6 +387,12 @@
     <string name="wizard_ana_check_title">Праверка</string>
     <string name="pref_reset_calibration">Скінуць каліброўку</string>
     <string name="pref_reset_calibration_desc">Вярнуць значэнні праграмы для Cardboard VR і/або анагліф-акуляраў</string>
+    <string name="cancel">Адмена</string>
+    <string name="pref_reset_settings">Скінуць усе налады</string>
+    <string name="pref_reset_settings_desc">Вярнуць значэнні па змаўчанні. Гісторыя, плэйлісты, сеткавыя папкі і налады асобных відэа захаваюцца</string>
+    <string name="reset_settings_title">Скінуць усе налады на значэнні па змаўчанні?</string>
+    <string name="reset_settings_confirm">Скінуць</string>
+    <string name="reset_settings_done">Налады скінуты</string>
     <string name="reset_calibration_vr">Cardboard VR</string>
     <string name="reset_calibration_anaglyph">Анагліф-акуляры</string>
     <string name="reset_calibration_all">Усё</string>

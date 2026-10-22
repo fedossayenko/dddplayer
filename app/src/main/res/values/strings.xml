@@ -418,6 +418,12 @@
     <string name="wizard_ana_check_title">Check</string>
     <string name="pref_reset_calibration">Reset calibration</string>
     <string name="pref_reset_calibration_desc">Restore the app defaults for Cardboard VR and/or anaglyph glasses</string>
+    <string name="cancel">Cancel</string>
+    <string name="pref_reset_settings">Reset all settings</string>
+    <string name="pref_reset_settings_desc">Restore default values. History, playlists, network folders and per-video settings are kept</string>
+    <string name="reset_settings_title">Reset all settings to defaults?</string>
+    <string name="reset_settings_confirm">Reset</string>
+    <string name="reset_settings_done">Settings have been reset</string>
     <string name="reset_calibration_vr">Cardboard VR</string>
     <string name="reset_calibration_anaglyph">Anaglyph glasses</string>
     <string name="reset_calibration_all">Everything</string>
