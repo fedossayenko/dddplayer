@@ -14,6 +14,7 @@ import androidx.core.os.LocaleListCompat
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.Format
+import androidx.media3.common.ForwardingPlayer
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.Player
@@ -123,6 +124,8 @@ class PlayerManager(
     var onAudioOutputFormatChanged: ((String) -> Unit)? = null
     // Туннельный режим реально включился (декодеры и аудиовыход его поддержали)
     var onTunnelingChanged: ((Boolean) -> Unit)? = null
+    // "Стоп" извне (карточка "Сейчас играет" на Android TV, пульт, ассистент): закрываем плеер, а не замираем на кадре
+    var onStopRequested: (() -> Unit)? = null
 
     /**
      * Звук идет на HDMI битстримом. Такой выход в системе один: плеер в фоне держит его,
@@ -554,7 +557,12 @@ class PlayerManager(
             try {
                 // ID уникален в процессе: при открытии файла из другого приложения новый экран плеера создает
                 // сессию раньше, чем старый освободит свою, и одинаковый ID ("") дал бы IllegalStateException
-                mediaSession = MediaSession.Builder(appContext, player)
+                val sessionPlayer = object : ForwardingPlayer(player) {
+                    override fun stop() {
+                        onStopRequested?.invoke() ?: super.stop()
+                    }
+                }
+                mediaSession = MediaSession.Builder(appContext, sessionPlayer)
                     .setId("dddplayer-${sessionCounter.incrementAndGet()}")
                     .build()
             } catch (e: Exception) {

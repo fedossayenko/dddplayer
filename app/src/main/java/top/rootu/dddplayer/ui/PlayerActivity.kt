@@ -288,6 +288,13 @@ class PlayerActivity : AppCompatActivity() {
         // Скрываем системные панели
         hideSystemUI()
 
+        viewModel.closeRequested.observe(this) { event ->
+            if (event.getContentIfNotHandled() == null) return@observe
+            // В окне PiP закрываем и его задачу, иначе просто выходим из плеера
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && isInPictureInPictureMode) closeFromPictureInPicture(-1)
+            else finish()
+        }
+
         viewModel.playbackEnded.observe(this) { ended ->
             if (ended && shouldReturnResult) {
                 isCompleted = true

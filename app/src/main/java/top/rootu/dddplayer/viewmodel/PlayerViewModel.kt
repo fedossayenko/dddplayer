@@ -315,6 +315,10 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     var stoppedInBackground = false
 
     // Событие: Плеер был пересоздан (нужно привязать Surface)
+    // Плеер нужно закрыть: "Стоп" через MediaSession
+    private val _closeRequested = MutableLiveData<Event<Unit>>()
+    val closeRequested: LiveData<Event<Unit>> = _closeRequested
+
     private val _playerRecreatedEvent = MutableLiveData<ExoPlayer>()
     val playerRecreatedEvent: LiveData<ExoPlayer> = _playerRecreatedEvent
 
@@ -474,6 +478,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             _audioOutputInfo.postValue(info)
         }
         playerManager.onTunnelingChanged = { _tunnelingActive.postValue(it) }
+        playerManager.onStopRequested = { _closeRequested.value = Event(Unit) }
 
         // Инициализируем плеер сразу
         playerManager.initializePlayer()
