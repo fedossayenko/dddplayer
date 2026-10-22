@@ -64,8 +64,12 @@
 - Application-interceptor записывает MIME-тип HLS, DASH или SmoothStreaming по Content-Type и финальному URL
   в `resolvedMediaTypes`. Так после редиректа выбирается правильная фабрика при повторной загрузке.
 - HTTP-заголовки элемента (`MediaItem.headers` из Intent `headers` или из M3U `#EXTVLCOPT`/`#EXTHTTP`)
-  применяются через `baseHttpFactory.setDefaultRequestProperties` при переходе на элемент
-  (`applyHeadersForIndex`). User-Agent по умолчанию — `App.USER_AGENT`.
+  привязаны к самому элементу: `buildMediaSources` берет их по `mediaId` (`headersByMediaId`), и фабрика
+  источников этого элемента (`createParsingDataSourceFactory(headers)`, `ResolvingDataSource`) добавляет их
+  в каждый запрос: плейлист HLS, сегменты, субтитры, чтение метаданных. Глобально по `onMediaItemTransition`
+  их не переключаем: следующий элемент плеер начинает грузить раньше. User-Agent по умолчанию —
+  `App.USER_AGENT`, только если источник не задал свой (`requestHeaders`). У `OkHttpDataSource.Factory`
+  `setUserAgent` не вызываем: он добавляет User-Agent вторым заголовком поверх заданного, и сервер отвечает 403.
 
 ### Цепочка DataSource
 

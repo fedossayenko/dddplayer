@@ -20,6 +20,7 @@ import androidx.media3.common.Player
 import androidx.media3.common.audio.ChannelMixingAudioProcessor
 import androidx.media3.common.util.Util
 import androidx.media3.datasource.DefaultDataSource
+import androidx.media3.datasource.ResolvingDataSource
 import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.DefaultRenderersFactory
@@ -107,7 +108,8 @@ class PlayerManager(
     private var currentWindowIndex = 0
     private var currentPosition = 0L
     private var currentMediaItems: List<Media3MediaItem> = emptyList()
-    private var currentHeaders: List<Map<String, String>> = emptyList()
+    // Заголовки (Referer, Cookie, User-Agent и т.п.) каждого видео по mediaId: у элементов плейлиста они свои
+    private var headersByMediaId: Map<String, Map<String, String>> = emptyMap()
     private var playWhenReady = true
 
     // Пишется из IO-потока парсера, читается из потоков загрузки и главного потока
@@ -202,9 +204,9 @@ class PlayerManager(
         }
         .build()
 
-    // Фабрика для HTTP (сеть)
+    // Фабрика для HTTP (сеть). User-Agent не задаем: OkHttpDataSource добавляет его вторым заголовком
+    // поверх User-Agent источника, и часть серверов отвечает 403. Он приходит в заголовках видео (requestHeaders)
     private val baseHttpFactory = OkHttpDataSource.Factory(okHttpClient)
-        .setUserAgent(USER_AGENT)
 
     // Универсальная фабрика, которая умеет работать с content://, file:// и http://
     // Мы передаем baseHttpFactory как источник для сетевых запросов.
@@ -219,10 +221,22 @@ class PlayerManager(
     // Типы, определенные при проверке ссылки (переживают очистку resolvedMediaTypes в loadPlaylist)
     private val probedMediaTypes = ConcurrentHashMap<String, String>()
 
-    // Пересоздаем фабрику при инициализации, чтобы гарантировать чистое состояние
-    private fun createParsingDataSourceFactory(): ParsingDataSourceFactory {
+    /** Заголовки запросов видео: свои заголовки источника и наш User-Agent, если источник его не задал. */
+    private fun requestHeaders(headers: Map<String, String>): Map<String, String> =
+        if (headers.keys.any { it.equals("User-Agent", ignoreCase = true) }) headers
+        else headers + ("User-Agent" to USER_AGENT)
+
+    /**
+     * Фабрика источников одного видео. Заголовки добавляются в каждый запрос этого видео
+     * (плейлист HLS, сегменты, субтитры, чтение метаданных), а не переключаются глобально
+     * при смене элемента: следующий элемент плеер начинает грузить раньше, чем приходит onMediaItemTransition.
+     */
+    private fun createParsingDataSourceFactory(headers: Map<String, String> = emptyMap()): ParsingDataSourceFactory {
+        val itemHeaders = requestHeaders(headers)
         return ParsingDataSourceFactory(
-            upstreamFactory = prefetchingDataSourceFactory,
+            upstreamFactory = ResolvingDataSource.Factory(prefetchingDataSourceFactory) { dataSpec ->
+                dataSpec.withAdditionalHeaders(itemHeaders)
+            },
             onMetadataParsed = { metadataMap ->
                 currentTrackInfo = metadataMap
                 onMetadataAvailable?.invoke()
@@ -546,8 +560,6 @@ class PlayerManager(
             }
 
             override fun onMediaItemTransition(mediaItem: Media3MediaItem?, reason: Int) {
-                // Заголовки (Referer, Cookie и т.п.) у каждого элемента плейлиста свои
-                applyHeadersForIndex(player.currentMediaItemIndex)
                 // Новое видео снова может идти через несущую, даже если прошлое не подошло
                 iecSink?.beginMediaItem()
             }
@@ -614,7 +626,6 @@ class PlayerManager(
 
         // 6. Restore State
         if (currentMediaItems.isNotEmpty()) {
-            applyHeadersForIndex(currentWindowIndex)
             val sources = buildMediaSources(currentMediaItems)
             player.setMediaSources(sources, currentWindowIndex, currentPosition)
             player.playWhenReady = playWhenReady
@@ -653,15 +664,12 @@ class PlayerManager(
         // и проанализировать его структуру, вместо того чтобы гадать по пустому m3u8.
         val hlsExtractorFactory = DefaultHlsExtractorFactory(tsExtractorFlags, false)
 
-        val hlsMediaSourceFactory = HlsMediaSource.Factory(createParsingDataSourceFactory())
-            .setExtractorFactory(hlsExtractorFactory)
-            .setLoadErrorHandlingPolicy(loadErrorHandlingPolicy)
-
-        val defaultMediaSourceFactory = DefaultMediaSourceFactory(appContext, extractorsFactory)
-            .setDataSourceFactory(createParsingDataSourceFactory())
-            .setLoadErrorHandlingPolicy(loadErrorHandlingPolicy)
+        // Фабрики по набору заголовков: обычно он один на весь плейлист
+        val hlsFactories = HashMap<Map<String, String>, HlsMediaSource.Factory>()
+        val defaultFactories = HashMap<Map<String, String>, DefaultMediaSourceFactory>()
 
         return exoItems.map { exoItem ->
+            val headers = headersByMediaId[exoItem.mediaId].orEmpty()
             val uriStr = exoItem.localConfiguration?.uri?.toString() ?: ""
             val mimeType = resolvedMediaTypes[uriStr]
                 ?: exoItem.localConfiguration?.mimeType
@@ -669,9 +677,17 @@ class PlayerManager(
             val isHls = mimeType == MimeTypes.APPLICATION_M3U8
 
             if (isHls) {
-                hlsMediaSourceFactory.createMediaSource(exoItem)
+                hlsFactories.getOrPut(headers) {
+                    HlsMediaSource.Factory(createParsingDataSourceFactory(headers))
+                        .setExtractorFactory(hlsExtractorFactory)
+                        .setLoadErrorHandlingPolicy(loadErrorHandlingPolicy)
+                }.createMediaSource(exoItem)
             } else {
-                defaultMediaSourceFactory.createMediaSource(exoItem)
+                defaultFactories.getOrPut(headers) {
+                    DefaultMediaSourceFactory(appContext, extractorsFactory)
+                        .setDataSourceFactory(createParsingDataSourceFactory(headers))
+                        .setLoadErrorHandlingPolicy(loadErrorHandlingPolicy)
+                }.createMediaSource(exoItem)
             }
         }
     }
@@ -690,10 +706,6 @@ class PlayerManager(
         } catch (e: Exception) {
             e.printStackTrace()
         }
-    }
-
-    private fun applyHeadersForIndex(index: Int) {
-        baseHttpFactory.setDefaultRequestProperties(currentHeaders.getOrNull(index) ?: emptyMap())
     }
 
     /**
@@ -875,7 +887,7 @@ class PlayerManager(
      * Перезагружает плейлист с измененными элементами (например, добавлены субтитры) с той же позиции.
      */
     fun reloadPlaylistItems(items: List<MediaItem>, index: Int, positionMs: Long) {
-        currentHeaders = items.map { it.headers }
+        headersByMediaId = items.associate { it.uuid to it.headers }
         reloadMediaItems(items.map { buildExoItem(it) }, index, positionMs)
     }
 
@@ -886,8 +898,7 @@ class PlayerManager(
         probedMediaTypes.clear()
 
         val safeStartIndex = if (items.isEmpty()) 0 else startIndex.coerceIn(0, items.lastIndex)
-        currentHeaders = items.map { it.headers }
-        applyHeadersForIndex(safeStartIndex)
+        headersByMediaId = items.associate { it.uuid to it.headers }
 
         val exoItems = items.map { buildExoItem(it) }
 
