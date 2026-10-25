@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.app.Dialog
 import android.content.ClipData
 import android.content.ClipboardManager
+import android.content.ComponentName
 import android.content.Context
 import android.content.ActivityNotFoundException
 import android.content.Intent
@@ -178,7 +179,8 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
             onShowControls = { ui.showControls(); timerController.resetControlsTimer() },
             onHideControls = { ui.hideControls() },
             onResetHideTimer = { timerController.resetControlsTimer() },
-            onShowPlaylist = { showPlaylist() }
+            onShowPlaylist = { showPlaylist() },
+            onOpenExternal = { openInExternalPlayer() }
         )
 
         swipeAction = settingsRepo.getHorizontalSwipeAction()
@@ -763,6 +765,22 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
             pickSubtitleLauncher.launch(arrayOf("*/*"))
         } catch (e: ActivityNotFoundException) {
             Toast.makeText(requireContext(), R.string.subtitle_no_file_picker, Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    // Открыть текущее видео в другом плеере (контейнер, который Media3 не читает, например Blu-ray .m2ts)
+    private fun openInExternalPlayer() {
+        val uri = viewModel.player?.currentMediaItem?.localConfiguration?.uri ?: return
+        val view = Intent(Intent.ACTION_VIEW)
+            .setDataAndType(uri, "video/*")
+            .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        val chooser = Intent.createChooser(view, null)
+            .putExtra(Intent.EXTRA_EXCLUDE_COMPONENTS, arrayOf(ComponentName(requireContext(), PlayerActivity::class.java)))
+        try {
+            startActivity(chooser)
+            requireActivity().finish()
+        } catch (e: ActivityNotFoundException) {
+            // Других плееров нет: остаемся на экране ошибки
         }
     }
 

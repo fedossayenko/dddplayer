@@ -454,11 +454,16 @@ class PlayerUiController(private val rootView: View) {
     }
 
     // Подсказка для известных причин: файл не отдало приложение-источник (content://)
+    // или формат не разобран (OK открывает видео в другом плеере)
     private fun showErrorHint(error: PlaybackException) {
         val isIoError = error.errorCode in 2000..2999
-        val showHint = isIoError && PlaybackErrorLogic.isContentSourceError(error)
-        errorHint.isVisible = showHint
-        if (showHint) errorHint.setText(R.string.error_hint_content_source)
+        val hint = when {
+            isIoError && PlaybackErrorLogic.isContentSourceError(error) -> R.string.error_hint_content_source
+            PlaybackErrorLogic.canOpenInOtherPlayer(error) -> R.string.error_hint_open_external
+            else -> 0
+        }
+        errorHint.isVisible = hint != 0
+        if (hint != 0) errorHint.setText(hint)
     }
 
     private fun formatErrorDetails(error: PlaybackException): String {
