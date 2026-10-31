@@ -1262,6 +1262,11 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         historySource = source
     }
 
+    fun setAudioLanguages(languages: Array<String>?) {
+        playerManager.audioLanguages = languages
+        playerManager.updateTrackSelectionParameters()
+    }
+
     /**
      * Запись истории для источника: текущее видео и позиция. Серия в той же папке заменяет запись источника,
      * а не добавляет новую.

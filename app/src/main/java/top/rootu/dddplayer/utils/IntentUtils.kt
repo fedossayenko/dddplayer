@@ -21,6 +21,8 @@ object IntentUtils {
     const val EXTRA_HISTORY_NAME = "top.rootu.dddplayer.history_name"
     // Ссылка может быть плейлистом без расширения .m3u (например, get.php?...): проверить содержимое
     const val EXTRA_FORCE_M3U = "top.rootu.dddplayer.force_m3u"
+    // Для внешних приложений: языки аудио этого видео через запятую, по порядку предпочтения
+    const val EXTRA_AUDIO_LANG = "audio_lang"
 
     /** Источник для истории "Продолжить просмотр" или null, если видео открыто не со стартового экрана. */
     fun parseHistorySource(intent: Intent): HistorySource? {
@@ -30,6 +32,11 @@ object IntentUtils {
     }
 
     fun isForceM3u(intent: Intent): Boolean = intent.getBooleanExtra(EXTRA_FORCE_M3U, false)
+
+    /** Языки аудио для этого видео ("ru,uk"): важнее настройки плеера. null - как в настройке. */
+    fun parseAudioLanguages(intent: Intent): Array<String>? =
+        intent.getStringExtra(EXTRA_AUDIO_LANG)?.split(',')?.map { it.trim() }?.filter { it.isNotEmpty() }
+            ?.takeIf { it.isNotEmpty() }?.toTypedArray()
 
     /**
      * Парсит Intent и возвращает список медиа-элементов и стартовую позицию.

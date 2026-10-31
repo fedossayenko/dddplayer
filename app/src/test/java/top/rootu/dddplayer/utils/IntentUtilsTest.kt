@@ -91,4 +91,13 @@ class IntentUtilsTest {
         val (items, _) = IntentUtils.parseIntent(context, intent)
         assertEquals(listOf("first.mp4", "second.mp4", "third.mp4"), items.map { it.title })
     }
+
+    @Test
+    fun `audio languages for this launch`() {
+        fun langs(value: String?) = IntentUtils.parseAudioLanguages(
+            Intent(Intent.ACTION_VIEW).apply { if (value != null) putExtra("audio_lang", value) })?.toList()
+        assertEquals(listOf("ru", "uk"), langs("ru, uk"))
+        assertEquals(null, langs(null))
+        assertEquals(null, langs(" , "))
+    }
 }

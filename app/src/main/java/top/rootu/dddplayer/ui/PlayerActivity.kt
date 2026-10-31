@@ -414,6 +414,7 @@ class PlayerActivity : AppCompatActivity() {
             // Новое видео при открытом окне PiP: старый плеер закрываем, а не оставляем висеть вторым.
             // Только когда видео действительно пришло: служебный запуск окно PiP не закрывает
             activePipPlayer()?.takeIf { it !== this }?.closeFromPictureInPicture(taskId)
+            viewModel.setAudioLanguages(IntentUtils.parseAudioLanguages(intent))
             viewModel.loadMedia(playlist, startIndex, forceM3uProbe = IntentUtils.isForceM3u(intent))
         }
     }
