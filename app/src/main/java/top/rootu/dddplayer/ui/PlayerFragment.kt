@@ -46,6 +46,7 @@ import top.rootu.dddplayer.BuildConfig
 import top.rootu.dddplayer.R
 import top.rootu.dddplayer.data.SettingsRepository
 import top.rootu.dddplayer.logic.AnaglyphLogic
+import top.rootu.dddplayer.logic.SkipSegmentLogic
 import top.rootu.dddplayer.logic.StereoFormatLogic
 import top.rootu.dddplayer.logic.TrackLogic
 import top.rootu.dddplayer.model.AspectRatioMode
@@ -1087,6 +1088,14 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
             // Сбрасываем таймер затемнения при снятии/постановке на паузу
             resetDimTimer()
         }
+        // Отрезок для кнопки «Пропустить» (заставка, титры)
+        viewModel.skipSegment.observe(viewLifecycleOwner) { segment ->
+            val p = viewModel.player
+            ui.showSkipButton(segment, segment != null && p != null && p.hasNextMediaItem() &&
+                SkipSegmentLogic.runsToEnd(segment, p.duration))
+        }
+        ui.skipButton.setOnClickListener { viewModel.skipCurrentSegment() }
+
         // Фатальная ошибка (плеер стоп)
         viewModel.fatalError.observe(viewLifecycleOwner) { error ->
             if (error != null) {

@@ -97,6 +97,12 @@ class PlayerInputHandler(
             viewModel.stopZap()
         }
 
+        // Кнопка «Пропустить» на экране, панель скрыта: OK пропускает отрезок
+        if (isOkKey && !ui.controlsView.isVisible && ui.skipButton.isVisible) {
+            viewModel.skipCurrentSegment()
+            return true
+        }
+
         when (event.keyCode) {
             KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> {
                 if (!ui.controlsView.isVisible && isLiveMode) {

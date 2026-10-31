@@ -86,3 +86,16 @@ HLS (`application/vnd.apple.mpegurl`, `application/x-mpegURL`), `application/das
   поэтому сравнивается один раз; не нашлись — работает автовключение;
 - скорость: `setPlaybackSpeed` до загрузки, на весь плейлист;
 - выбор пользователя в этом запуске заменяет дорожки `TitleTracks` для следующих элементов плейлиста.
+
+## Пропуск заставки и титров (`SkipSegmentLogic`)
+
+`segments` (одно видео) и `video_list.segments` (String[] по элементам плейлиста) разбирает `SkipSegmentLogic.parse`
+в `MediaItem.segments`: `intro|recap|credits:<начало>-<конец>` через `;`, мс, у `credits` конец можно опустить.
+Неизвестные виды, конец раньше начала и заставка без конца отбрасываются. В `PlayerViewModel`:
+- `progressUpdater` (раз в 200 мс во время воспроизведения) находит отрезок под позицией (`active`) и при смене
+  отдает его в `skipSegment`; при `auto_skip_intro` заставка и пересказ перематываются сразу, без кнопки;
+- `skipCurrentSegment` перематывает в `target`: конец отрезка, а для титров, кончающихся в последние 15 с
+  (`runsToEnd`), - в конец видео: дальше обычный переход к следующему элементу или завершение.
+
+Кнопка (`PlayerUiController.showSkipButton`) видна 10 с после входа в отрезок; OK при скрытой панели управления
+нажимает ее (`PlayerInputHandler`).

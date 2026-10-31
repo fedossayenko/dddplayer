@@ -28,6 +28,7 @@ import top.rootu.dddplayer.data.SettingsRepository
 import top.rootu.dddplayer.logic.PlaybackErrorLogic
 import top.rootu.dddplayer.model.MediaItem
 import top.rootu.dddplayer.model.ResizeMode
+import top.rootu.dddplayer.model.SkipSegment
 import top.rootu.dddplayer.model.StereoInputType
 import top.rootu.dddplayer.model.StereoOutputMode
 import top.rootu.dddplayer.model.SubtitleStyle
@@ -167,12 +168,33 @@ class PlayerUiController(private val rootView: View) {
     // Автоскрытие инфопанели, показанной без панели управления
     private val hideInfoPanelRunnable = Runnable { hideInfoPanel() }
 
+    // Кнопка «Пропустить»: видна 10 с после входа в отрезок (дальше OK снова работает как обычно)
+    val skipButton: TextView = rootView.findViewById(R.id.skip_segment_button)
+    private val hideSkipButtonRunnable = Runnable { skipButton.isVisible = false }
+
+    /** toNextItem: титры идут до конца, а в плейлисте есть следующий элемент. */
+    fun showSkipButton(segment: SkipSegment?, toNextItem: Boolean) {
+        skipButton.removeCallbacks(hideSkipButtonRunnable)
+        if (segment == null || inPictureInPicture) {
+            skipButton.isVisible = false
+            return
+        }
+        skipButton.setText(when (segment.kind) {
+            SkipSegment.Kind.INTRO -> R.string.skip_intro
+            SkipSegment.Kind.RECAP -> R.string.skip_recap
+            SkipSegment.Kind.CREDITS -> if (toNextItem) R.string.skip_to_next_episode else R.string.skip_credits
+        })
+        skipButton.isVisible = true
+        skipButton.postDelayed(hideSkipButtonRunnable, 10_000)
+    }
+
     private var inPictureInPicture = false
 
     fun setPictureInPictureMode(enabled: Boolean) {
         inPictureInPicture = enabled
         if (enabled) {
             playlistDialog?.dismiss()
+            showSkipButton(null, false)
             hideControls()
             topSettingsPanel.isVisible = false
             hideHandler.removeCallbacks(hideGestureRunnable)

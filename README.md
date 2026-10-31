@@ -191,6 +191,20 @@ An app can remember the tracks per movie or series and pass them back on the nex
 A video's own saved tracks (the player's per-URI settings) still win. Passing any of the three keys, even an empty
 `audio_track`, turns the memory on for this launch: a track the user picks is also used for the next items of the playlist.
 
+#### Skipping the Intro and Credits
+An app that knows when the intro, the recap of earlier episodes or the end credits run can pass them; the player then
+shows a button for 10 seconds after each one starts, and OK on the remote (or a tap) skips it:
+
+| Key | Type | Description |
+| :--- | :--- | :--- |
+| `segments` | String | Single video: `intro:0-58867;recap:95000-259000;credits:3395489-` (milliseconds; `credits` with no end runs to the end of the video). |
+| `video_list.segments` | String[] | Playlist: the same per item, an empty string for none. |
+
+Unknown kinds and broken parts are ignored. "Skip Intro" and "Skip Recap" jump to the end of the part. Credits that
+run to the end of the video (within 15 s) skip to the next playlist item ("Next Episode") or end the video like a
+completion ("Skip Credits"); credits that end earlier (a scene after them) jump to their end. The "Skip Intros
+Automatically" setting (Playback, off by default) skips the intro and the recap without the button.
+
 ### Tech Stack
 
 *   **Language**: Kotlin
