@@ -1095,6 +1095,7 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
                 SkipSegmentLogic.runsToEnd(segment, p.duration))
         }
         ui.skipButton.setOnClickListener { viewModel.skipCurrentSegment() }
+        ui.creditsStartMs = { viewModel.creditsStartMs() }
 
         // Фатальная ошибка (плеер стоп)
         viewModel.fatalError.observe(viewLifecycleOwner) { error ->

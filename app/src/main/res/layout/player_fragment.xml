@@ -474,7 +474,7 @@
         android:visibility="gone"
         tools:visibility="visible"/>
 
-    <!-- Кнопка «Пропустить» (заставка, титры): 10 с после входа в отрезок, нажимается OK -->
+    <!-- Кнопка «Пропустить» (заставка, титры): видна, пока идет отрезок, нажимается OK -->
     <TextView
         android:id="@+id/skip_segment_button"
         android:layout_width="wrap_content"

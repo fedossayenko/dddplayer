@@ -55,4 +55,12 @@ class SkipSegmentLogicTest {
         // длительность неизвестна: некуда
         assertNull(SkipSegmentLogic.target(SkipSegment(CREDITS, 100, null), -9223372036854775807L))
     }
+
+    @Test
+    fun `credits start for "ends at" only when they run to the end`() {
+        val segments = SkipSegmentLogic.parse("intro:32000-111000;credits:3390000-3451000")
+        assertEquals(3_390_000L, SkipSegmentLogic.creditsStart(segments, 3_452_000))
+        assertNull(SkipSegmentLogic.creditsStart(SkipSegmentLogic.parse("credits:6000000-6300000"), 6_500_000))
+        assertNull(SkipSegmentLogic.creditsStart(emptyList(), 3_452_000))
+    }
 }

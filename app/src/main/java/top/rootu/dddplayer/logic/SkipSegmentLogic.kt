@@ -30,6 +30,10 @@ object SkipSegmentLogic {
     fun runsToEnd(segment: SkipSegment, durationMs: Long): Boolean =
         segment.endMs == null || (durationMs > 0 && segment.endMs >= durationMs - END_SLACK_MS)
 
+    /** Начало финальных титров, идущих до конца видео (для «Закончится в»), или null. */
+    fun creditsStart(segments: List<SkipSegment>, durationMs: Long): Long? =
+        segments.firstOrNull { it.kind == SkipSegment.Kind.CREDITS && runsToEnd(it, durationMs) }?.startMs
+
     /** Куда перематывать: конец отрезка, для титров до конца - конец видео (null, если длительность неизвестна). */
     fun target(segment: SkipSegment, durationMs: Long): Long? =
         if (runsToEnd(segment, durationMs)) durationMs.takeIf { it > 0 } else segment.endMs

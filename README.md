@@ -193,7 +193,8 @@ A video's own saved tracks (the player's per-URI settings) still win. Passing an
 
 #### Skipping the Intro and Credits
 An app that knows when the intro, the recap of earlier episodes or the end credits run can pass them; the player then
-shows a button for 10 seconds after each one starts, and OK on the remote (or a tap) skips it:
+shows a button while each one runs, and OK on the remote (or a tap) skips it, also while the control panel is up with
+the focus on Pause:
 
 | Key | Type | Description |
 | :--- | :--- | :--- |
@@ -203,7 +204,8 @@ shows a button for 10 seconds after each one starts, and OK on the remote (or a 
 Unknown kinds and broken parts are ignored. "Skip Intro" and "Skip Recap" jump to the end of the part. Credits that
 run to the end of the video (within 15 s) skip to the next playlist item ("Next Episode") or end the video like a
 completion ("Skip Credits"); credits that end earlier (a scene after them) jump to their end. The "Skip Intros
-Automatically" setting (Playback, off by default) skips the intro and the recap without the button.
+Automatically" setting (Playback, off by default) skips the intro and the recap without the button. With credits that
+run to the end, "Ends at" counts to where they start.
 
 ### Tech Stack
 

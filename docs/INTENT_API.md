@@ -97,5 +97,6 @@ HLS (`application/vnd.apple.mpegurl`, `application/x-mpegURL`), `application/das
 - `skipCurrentSegment` перематывает в `target`: конец отрезка, а для титров, кончающихся в последние 15 с
   (`runsToEnd`), - в конец видео: дальше обычный переход к следующему элементу или завершение.
 
-Кнопка (`PlayerUiController.showSkipButton`) видна 10 с после входа в отрезок; OK при скрытой панели управления
-нажимает ее (`PlayerInputHandler`).
+Кнопка (`PlayerUiController.showSkipButton`) видна, пока идет отрезок; OK нажимает ее при скрытой панели управления
+или фокусе на паузе (панель сама показывается при старте видео) (`PlayerInputHandler`). «Закончится в» считается до
+начала титров, идущих до конца (`creditsStart`).

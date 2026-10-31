@@ -97,8 +97,11 @@ class PlayerInputHandler(
             viewModel.stopZap()
         }
 
-        // Кнопка «Пропустить» на экране, панель скрыта: OK пропускает отрезок
-        if (isOkKey && !ui.controlsView.isVisible && ui.skipButton.isVisible) {
+        // Кнопка «Пропустить» на экране: OK пропускает отрезок, если панель скрыта или фокус на паузе (панель
+        // сама показывается при старте видео, а заставка обычно с первых секунд)
+        if (isOkKey && ui.skipButton.isVisible &&
+            (!ui.controlsView.isVisible || currentFocus?.id == R.id.button_play_pause)
+        ) {
             viewModel.skipCurrentSegment()
             return true
         }

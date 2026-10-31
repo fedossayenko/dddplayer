@@ -168,13 +168,14 @@ class PlayerUiController(private val rootView: View) {
     // Автоскрытие инфопанели, показанной без панели управления
     private val hideInfoPanelRunnable = Runnable { hideInfoPanel() }
 
-    // Кнопка «Пропустить»: видна 10 с после входа в отрезок (дальше OK снова работает как обычно)
+    // Кнопка «Пропустить»: видна, пока идет отрезок (после пропуска или выхода из отрезка скрывается)
     val skipButton: TextView = rootView.findViewById(R.id.skip_segment_button)
-    private val hideSkipButtonRunnable = Runnable { skipButton.isVisible = false }
+
+    // Начало финальных титров текущего видео (PlayerViewModel.creditsStartMs), для «Закончится в»
+    var creditsStartMs: () -> Long? = { null }
 
     /** toNextItem: титры идут до конца, а в плейлисте есть следующий элемент. */
     fun showSkipButton(segment: SkipSegment?, toNextItem: Boolean) {
-        skipButton.removeCallbacks(hideSkipButtonRunnable)
         if (segment == null || inPictureInPicture) {
             skipButton.isVisible = false
             return
@@ -185,7 +186,6 @@ class PlayerUiController(private val rootView: View) {
             SkipSegment.Kind.CREDITS -> if (toNextItem) R.string.skip_to_next_episode else R.string.skip_credits
         })
         skipButton.isVisible = true
-        skipButton.postDelayed(hideSkipButtonRunnable, 10_000)
     }
 
     private var inPictureInPicture = false
@@ -619,8 +619,10 @@ class PlayerUiController(private val rootView: View) {
             val remainingMs = (durationMs - currentMs).coerceAtLeast(0)
             timeDurationTextView.text = rootView.context.getString(R.string.seek_delta_format, "-", formatTime(remainingMs))
 
+            // «Закончится в» - к началу финальных титров, если они известны (их пропускают)
+            val endMs = creditsStartMs()?.takeIf { currentMs < it } ?: durationMs
             // Если скорость 2.0x, то 10 минут видео пройдут за 5 минут реального времени
-            val realTimeLeftMs = (remainingMs / speed).toLong()
+            val realTimeLeftMs = ((endMs - currentMs).coerceAtLeast(0) / speed).toLong()
             val endTimeMs = System.currentTimeMillis() + realTimeLeftMs
 
             val endTimeStr = timeFormat.format(Date(endTimeMs))

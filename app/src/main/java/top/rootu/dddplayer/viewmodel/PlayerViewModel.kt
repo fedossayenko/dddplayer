@@ -1091,6 +1091,10 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         _skipSegment.value = segment
     }
 
+    /** Начало финальных титров текущего видео, если они известны (из Intent), иначе null. */
+    fun creditsStartMs(): Long? =
+        SkipSegmentLogic.creditsStart(getPlayingItem()?.segments.orEmpty(), player?.duration ?: 0L)
+
     /** Кнопка «Пропустить»: в конец отрезка; титры до конца - следующий элемент плейлиста или завершение. */
     fun skipCurrentSegment() {
         val p = player ?: return
