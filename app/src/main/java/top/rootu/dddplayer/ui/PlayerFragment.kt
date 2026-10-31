@@ -1212,6 +1212,7 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
         viewModel.currentSubtitleTrack.observe(viewLifecycleOwner) { trackOption ->
             val name = trackOption?.let { TrackLogic.buildTrackLabel(it, requireContext()) } ?: ""
             ui.badgeSubtitle.text = name
+            ui.subtitlesOn = trackOption != null && !trackOption.isOff
             updateSettingsText()
         }
         viewModel.playbackSpeed.observe(viewLifecycleOwner) { speed ->

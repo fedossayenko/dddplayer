@@ -474,7 +474,8 @@
         android:visibility="gone"
         tools:visibility="visible"/>
 
-    <!-- Кнопка «Пропустить» (заставка, титры): видна, пока идет отрезок, нажимается OK -->
+    <!-- Кнопка «Пропустить» (заставка, титры): видна, пока идет отрезок, нажимается OK. Отступ снизу задает
+         PlayerUiController.placeSkipButton (над панелью, над субтитрами или в самом углу) -->
     <TextView
         android:id="@+id/skip_segment_button"
         android:layout_width="wrap_content"

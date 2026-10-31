@@ -18,6 +18,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.toDrawable
 import androidx.core.graphics.toColorInt
 import androidx.core.view.isVisible
+import androidx.core.view.updateLayoutParams
 import androidx.media3.common.PlaybackException
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.SubtitleView
@@ -185,7 +186,32 @@ class PlayerUiController(private val rootView: View) {
             SkipSegment.Kind.RECAP -> R.string.skip_recap
             SkipSegment.Kind.CREDITS -> if (toNextItem) R.string.skip_to_next_episode else R.string.skip_credits
         })
+        placeSkipButton()
         skipButton.isVisible = true
+    }
+
+    // Субтитры включены (не «Выкл»): кнопка «Пропустить» тогда над ними
+    var subtitlesOn = false
+        set(value) {
+            field = value
+            placeSkipButton()
+        }
+    private var subtitleStyle = SubtitleStyle()
+
+    /**
+     * Кнопка «Пропустить» в правом нижнем углу: над панелью управления, пока она видна; иначе над двумя строками
+     * субтитров, если они включены (их отступ и размер из стиля), а без субтитров в самом углу.
+     */
+    private fun placeSkipButton() {
+        val metrics = rootView.resources.displayMetrics
+        val height = rootView.height.takeIf { it > 0 } ?: metrics.heightPixels
+        val bottom = when {
+            controlsView.isVisible -> 160 * metrics.density
+            subtitlesOn -> height * (subtitleStyle.bottomPercent / 100f +
+                2.4f * SubtitleView.DEFAULT_TEXT_SIZE_FRACTION * subtitleStyle.sizePercent / 100f) + 8 * metrics.density
+            else -> 40 * metrics.density
+        }
+        skipButton.updateLayoutParams<ViewGroup.MarginLayoutParams> { bottomMargin = bottom.toInt() }
     }
 
     private var inPictureInPicture = false
@@ -692,6 +718,7 @@ class PlayerUiController(private val rootView: View) {
         updateClockVisibility() // Скрываем одиночные часы, т.к. показана панель
 
         if (focusOnSeekBar) seekBar.requestFocus() else playPauseButton.requestFocus()
+        placeSkipButton()
     }
 
     fun hideControls() {
@@ -701,6 +728,7 @@ class PlayerUiController(private val rootView: View) {
         updateClockVisibility() // Показываем одиночные часы, если они разрешены
 
         rootView.findViewById<View>(R.id.root_container).requestFocus()
+        placeSkipButton()
     }
 
     fun loadPoster(uri: android.net.Uri?, playlistIndex: Int, playlistSize: Int, showIndex: Boolean) {
@@ -866,6 +894,8 @@ class PlayerUiController(private val rootView: View) {
 
     /** Стиль субтитров из настроек - для обычного слоя и двойного (Cardboard VR). */
     fun applySubtitleStyle(style: SubtitleStyle) {
+        subtitleStyle = style
+        placeSkipButton()
         listOf(subtitleView, subtitleViewLeft, subtitleViewRight).forEach { SubtitleStyleOptions.apply(it, style) }
     }
 
