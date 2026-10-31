@@ -65,6 +65,18 @@ class TrackLogicTest {
         assertNull(TrackLogic.audioTrackSignature(option(null)))
     }
 
+    @Test
+    fun `subtitle signature is label, language and format, off for the off item`() {
+        val forced = Format.Builder().setLabel(" Forced ").setLanguage("ru").setSampleMimeType(MimeTypes.APPLICATION_SUBRIP).build()
+        assertEquals("Forced|ru|${MimeTypes.APPLICATION_SUBRIP}", TrackLogic.subtitleTrackSignature(option(forced)))
+        // Название из метаданных файла не участвует: оно приходит позже дорожек
+        assertEquals("Forced|ru|${MimeTypes.APPLICATION_SUBRIP}",
+            TrackLogic.subtitleTrackSignature(option(forced, nameFromMeta = "Other")))
+        assertEquals("|und|${MimeTypes.APPLICATION_SUBRIP}",
+            TrackLogic.subtitleTrackSignature(option(Format.Builder().setSampleMimeType(MimeTypes.APPLICATION_SUBRIP).build())))
+        assertEquals("off", TrackLogic.subtitleTrackSignature(option(null, isOff = true)))
+    }
+
     // Субтитры: пункт "Выкл" первым, как в extractSubtitleTracks
     private fun sub(language: String?, flags: Int = 0) =
         option(Format.Builder().setLanguage(language).setSelectionFlags(flags).setSampleMimeType(MimeTypes.APPLICATION_SUBRIP).build())

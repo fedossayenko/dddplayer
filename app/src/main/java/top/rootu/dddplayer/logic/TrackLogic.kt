@@ -9,6 +9,7 @@ import androidx.media3.common.Tracks
 import androidx.media3.common.util.Util
 import top.rootu.dddplayer.R
 import top.rootu.dddplayer.data.SettingsRepository
+import top.rootu.dddplayer.utils.IntentUtils
 import top.rootu.dddplayer.utils.LocaleUtils
 import top.rootu.dddplayer.viewmodel.TrackOption
 import top.rootu.dddplayer.viewmodel.VideoQualityOption
@@ -142,6 +143,18 @@ object TrackLogic {
         val format = option.format ?: return null
         val name = option.nameFromMeta?.trim()?.ifEmpty { null } ?: format.label?.trim().orEmpty()
         return listOf(name, format.language ?: "und", format.sampleMimeType.orEmpty(), format.channelCount.toString())
+            .joinToString("|")
+            .replace('\n', ' ')
+    }
+
+    /**
+     * Подпись субтитров для памяти фильма/сериала: название, язык и формат, "off" для пункта "Выкл".
+     * Только поля дорожки (без метаданных файла): они есть с первого списка дорожек, сравнение делается один раз.
+     */
+    fun subtitleTrackSignature(option: TrackOption): String? {
+        if (option.isOff) return IntentUtils.SUBTITLES_OFF
+        val format = option.format ?: return null
+        return listOf(format.label?.trim().orEmpty(), format.language ?: "und", format.sampleMimeType.orEmpty())
             .joinToString("|")
             .replace('\n', ' ')
     }

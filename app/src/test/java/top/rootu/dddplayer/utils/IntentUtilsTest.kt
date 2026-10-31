@@ -100,4 +100,20 @@ class IntentUtilsTest {
         assertEquals(null, langs(null))
         assertEquals(null, langs(" , "))
     }
+
+    @Test
+    fun `title tracks from the app`() {
+        fun tracks(block: Intent.() -> Unit) = IntentUtils.parseTitleTracks(Intent(Intent.ACTION_VIEW).apply(block))
+        assertEquals(null, tracks {})
+        assertEquals(IntentUtils.TitleTracks("Dub|ru|audio/ac3|6", "off", 1.25f), tracks {
+            putExtra("audio_track", "Dub|ru|audio/ac3|6")
+            putExtra("subtitle_track", "off")
+            putExtra("speed", 1.25f)
+        })
+        // Пустой ключ включает память, но дорожки еще нет; скорость строкой или Double тоже подходит
+        assertEquals(IntentUtils.TitleTracks(null, null, null), tracks { putExtra("audio_track", "") })
+        assertEquals(1.5f, tracks { putExtra("speed", "1.5") }?.speed)
+        assertEquals(0.75f, tracks { putExtra("speed", 0.75) }?.speed)
+        assertEquals(null, tracks { putExtra("speed", 0f) }?.speed)
+    }
 }
