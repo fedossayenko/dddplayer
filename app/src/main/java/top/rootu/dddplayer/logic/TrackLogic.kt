@@ -191,6 +191,10 @@ object TrackLogic {
         }
     }
 
+    /** Дорожка на одном из языков запуска (extra audio_lang); без них подходит любая */
+    fun isWantedAudio(language: String?, wanted: Array<String>?): Boolean =
+        wanted == null || wanted.any { sameLanguage(it, language) }
+
     /** Сравнение кодов языков без учета региона и формата (ru, rus, ru-RU) */
     fun sameLanguage(a: String?, b: String?): Boolean {
         val x = primaryLanguage(a) ?: return false

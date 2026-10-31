@@ -945,7 +945,10 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         var finalAudioIdx = audioIdx
         pendingAudioId?.let { id ->
             val foundIdx = audioOptions.indexOfFirst { it.format?.id == id }
-            if (foundIdx != -1) {
+            // Запуск просит языки (audio_lang): запомненная для ссылки дорожка на другом языке не мешает,
+            // кроме выбранной вручную в этом сеансе
+            if (foundIdx != -1 && (audioChosenByUser ||
+                    TrackLogic.isWantedAudio(audioOptions[foundIdx].format?.language, playerManager.audioLanguages))) {
                 finalAudioIdx = foundIdx
                 selectTrackByIndex(C.TRACK_TYPE_AUDIO, foundIdx)
                 audioTrackResolved = true

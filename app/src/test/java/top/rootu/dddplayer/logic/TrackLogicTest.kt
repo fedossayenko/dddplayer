@@ -130,4 +130,13 @@ class TrackLogicTest {
         assertFalse(TrackLogic.sameLanguage("ext", "ext"))
         assertFalse(TrackLogic.sameLanguage(null, "en"))
     }
+
+    @Test
+    fun `remembered audio track counts only in the languages the launch asked for`() {
+        assertTrue(TrackLogic.isWantedAudio("eng", null))
+        assertTrue(TrackLogic.isWantedAudio("rus", arrayOf("ru", "uk")))
+        assertTrue(TrackLogic.isWantedAudio("ukr", arrayOf("ru", "uk")))
+        assertFalse(TrackLogic.isWantedAudio("eng", arrayOf("ru", "uk")))
+        assertFalse(TrackLogic.isWantedAudio(null, arrayOf("ru")))
+    }
 }
