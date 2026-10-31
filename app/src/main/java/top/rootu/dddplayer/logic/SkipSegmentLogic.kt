@@ -9,6 +9,8 @@ import top.rootu.dddplayer.model.SkipSegment
 object SkipSegmentLogic {
     // Титры, которые кончаются в последние 15 с видео, считаются идущими до конца
     private const val END_SLACK_MS = 15_000L
+    // Заставка не дальше 3 с от конца пересказа идет сразу за ним; дальше - сцена серии между ними
+    private const val JOIN_GAP_MS = 3_000L
 
     fun parse(text: String?): List<SkipSegment> = text.orEmpty().split(';').mapNotNull { part ->
         val m = Regex("""^\s*(intro|recap|credits)\s*:\s*(\d+)\s*-\s*(\d*)\s*$""").find(part) ?: return@mapNotNull null
@@ -34,7 +36,22 @@ object SkipSegmentLogic {
     fun creditsStart(segments: List<SkipSegment>, durationMs: Long): Long? =
         segments.firstOrNull { it.kind == SkipSegment.Kind.CREDITS && runsToEnd(it, durationMs) }?.startMs
 
-    /** Куда перематывать: конец отрезка, для титров до конца - конец видео (null, если длительность неизвестна). */
-    fun target(segment: SkipSegment, durationMs: Long): Long? =
-        if (runsToEnd(segment, durationMs)) durationMs.takeIf { it > 0 } else segment.endMs
+    /**
+     * Заставка сразу за пересказом [segment], или null: «Пропустить пересказ и заставку» прыгает за обе (кто
+     * пропускает пересказ, почти никогда не смотрит заставку, а иначе через секунду нажимать еще раз).
+     */
+    fun introAfter(segment: SkipSegment, segments: List<SkipSegment>): SkipSegment? {
+        val end = segment.endMs?.takeIf { segment.kind == SkipSegment.Kind.RECAP } ?: return null
+        return segments.firstOrNull {
+            it.kind == SkipSegment.Kind.INTRO && it.endMs != null && it.startMs in end - JOIN_GAP_MS..end + JOIN_GAP_MS
+        }
+    }
+
+    /**
+     * Куда перематывать: конец отрезка (пересказа - вместе с заставкой сразу за ним), для титров до конца - конец
+     * видео (null, если длительность неизвестна).
+     */
+    fun target(segment: SkipSegment, durationMs: Long, segments: List<SkipSegment> = emptyList()): Long? =
+        if (runsToEnd(segment, durationMs)) durationMs.takeIf { it > 0 }
+        else introAfter(segment, segments)?.endMs ?: segment.endMs
 }

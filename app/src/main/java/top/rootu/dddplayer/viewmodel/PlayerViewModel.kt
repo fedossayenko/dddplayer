@@ -1082,14 +1082,19 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
     // Позиция вошла в отрезок или вышла из него: кнопка (или сразу перемотка, если включен автопропуск заставок)
     private fun updateSkipSegment(p: Player) {
-        val segment = SkipSegmentLogic.active(getPlayingItem()?.segments.orEmpty(), p.currentPosition)
+        val segments = getPlayingItem()?.segments.orEmpty()
+        val segment = SkipSegmentLogic.active(segments, p.currentPosition)
         if (segment == _skipSegment.value) return
         if (segment != null && segment.kind != SkipSegment.Kind.CREDITS && repository.isAutoSkipIntroEnabled()) {
-            SkipSegmentLogic.target(segment, p.duration)?.let { p.seekTo(it) }
+            SkipSegmentLogic.target(segment, p.duration, segments)?.let { p.seekTo(it) }
             return
         }
         _skipSegment.value = segment
     }
+
+    /** Пересказ, за которым сразу идет заставка: кнопка пропускает обе. */
+    fun skipsIntroToo(segment: SkipSegment): Boolean =
+        SkipSegmentLogic.introAfter(segment, getPlayingItem()?.segments.orEmpty()) != null
 
     /** Начало финальных титров текущего видео, если они известны (из Intent), иначе null. */
     fun creditsStartMs(): Long? =
@@ -1099,7 +1104,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     fun skipCurrentSegment() {
         val p = player ?: return
         val segment = _skipSegment.value ?: return
-        val target = SkipSegmentLogic.target(segment, p.duration) ?: return
+        val target = SkipSegmentLogic.target(segment, p.duration, getPlayingItem()?.segments.orEmpty()) ?: return
         _skipSegment.value = null
         seekTo(target)
     }

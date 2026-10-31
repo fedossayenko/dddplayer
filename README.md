@@ -198,7 +198,7 @@ the focus on Pause:
 
 | Key | Type | Description |
 | :--- | :--- | :--- |
-| `segments` | String | Single video: `intro:0-58867;recap:95000-259000;credits:3395489-` (milliseconds; `credits` with no end runs to the end of the video). |
+| `segments` | String | Single video: `intro:0-58867;recap:95000-259000;credits:3395489-` (milliseconds; `credits` with no end runs to the end of the video). A recap with the intro within 3 s after it: one button skips both. |
 | `video_list.segments` | String[] | Playlist: the same per item, an empty string for none. |
 
 Unknown kinds and broken parts are ignored. "Skip Intro" and "Skip Recap" jump to the end of the part. Credits that

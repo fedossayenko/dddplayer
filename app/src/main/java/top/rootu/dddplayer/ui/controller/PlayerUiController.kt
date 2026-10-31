@@ -175,15 +175,15 @@ class PlayerUiController(private val rootView: View) {
     // Начало финальных титров текущего видео (PlayerViewModel.creditsStartMs), для «Закончится в»
     var creditsStartMs: () -> Long? = { null }
 
-    /** toNextItem: титры идут до конца, а в плейлисте есть следующий элемент. */
-    fun showSkipButton(segment: SkipSegment?, toNextItem: Boolean) {
+    /** toNextItem: титры идут до конца, а в плейлисте есть следующий элемент; withIntro: пересказ вместе с заставкой. */
+    fun showSkipButton(segment: SkipSegment?, toNextItem: Boolean, withIntro: Boolean = false) {
         if (segment == null || inPictureInPicture) {
             skipButton.isVisible = false
             return
         }
         skipButton.setText(when (segment.kind) {
             SkipSegment.Kind.INTRO -> R.string.skip_intro
-            SkipSegment.Kind.RECAP -> R.string.skip_recap
+            SkipSegment.Kind.RECAP -> if (withIntro) R.string.skip_recap_intro else R.string.skip_recap
             SkipSegment.Kind.CREDITS -> if (toNextItem) R.string.skip_to_next_episode else R.string.skip_credits
         })
         placeSkipButton()

@@ -492,6 +492,7 @@
     <!-- Пропуск заставки и титров -->
     <string name="skip_intro">Пропустити заставку</string>
     <string name="skip_recap">Пропустити переказ</string>
+    <string name="skip_recap_intro">Пропустити переказ і заставку</string>
     <string name="skip_credits">Пропустити титри</string>
     <string name="skip_to_next_episode">Наступна серія</string>
     <string name="pref_auto_skip_intro">Пропускати заставки автоматично</string>

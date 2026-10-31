@@ -63,4 +63,20 @@ class SkipSegmentLogicTest {
         assertNull(SkipSegmentLogic.creditsStart(SkipSegmentLogic.parse("credits:6000000-6300000"), 6_500_000))
         assertNull(SkipSegmentLogic.creditsStart(emptyList(), 3_452_000))
     }
+
+    @Test
+    fun `a recap with the intro right after it skips both, a cold open between keeps them apart`() {
+        val foundation = SkipSegmentLogic.parse("recap:0-31900;intro:31900-113900;credits:3390000-")
+        val recap = foundation[0]
+        assertEquals(INTRO, SkipSegmentLogic.introAfter(recap, foundation)?.kind)
+        assertEquals(113900L, SkipSegmentLogic.target(recap, 3_452_000, foundation))
+        assertEquals("the intro alone", 113900L, SkipSegmentLogic.target(foundation[1], 3_452_000, foundation))
+        // 2 s of black between them still counts; a 40 s cold open doesn't
+        val gap = SkipSegmentLogic.parse("recap:0-30000;intro:32000-90000")
+        assertEquals(90000L, SkipSegmentLogic.target(gap[0], 3_000_000, gap))
+        val coldOpen = SkipSegmentLogic.parse("recap:0-30000;intro:70000-120000")
+        assertNull(SkipSegmentLogic.introAfter(coldOpen[0], coldOpen))
+        assertEquals(30000L, SkipSegmentLogic.target(coldOpen[0], 3_000_000, coldOpen))
+        assertNull("only a recap joins", SkipSegmentLogic.introAfter(foundation[1], foundation))
+    }
 }

@@ -1092,7 +1092,7 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
         viewModel.skipSegment.observe(viewLifecycleOwner) { segment ->
             val p = viewModel.player
             ui.showSkipButton(segment, segment != null && p != null && p.hasNextMediaItem() &&
-                SkipSegmentLogic.runsToEnd(segment, p.duration))
+                SkipSegmentLogic.runsToEnd(segment, p.duration), segment != null && viewModel.skipsIntroToo(segment))
         }
         ui.skipButton.setOnClickListener { viewModel.skipCurrentSegment() }
         ui.creditsStartMs = { viewModel.creditsStartMs() }

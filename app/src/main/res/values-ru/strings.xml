@@ -520,6 +520,7 @@
     <!-- Пропуск заставки и титров -->
     <string name="skip_intro">Пропустить заставку</string>
     <string name="skip_recap">Пропустить пересказ</string>
+    <string name="skip_recap_intro">Пропустить пересказ и заставку</string>
     <string name="skip_credits">Пропустить титры</string>
     <string name="skip_to_next_episode">Следующая серия</string>
     <string name="pref_auto_skip_intro">Пропускать заставки автоматически</string>
