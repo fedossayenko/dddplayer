@@ -29,6 +29,10 @@ object IntentUtils {
     const val EXTRA_AUDIO_TRACK = "audio_track"       // подпись аудиодорожки (TrackLogic.audioTrackSignature)
     const val EXTRA_SUBTITLE_TRACK = "subtitle_track" // подпись субтитров (TrackLogic.subtitleTrackSignature) или "off"
     const val EXTRA_SPEED = "speed"                    // скорость воспроизведения
+    // Для внешних приложений (с return_result): позиция, пока идет видео - широковещательным ACTION_PROGRESS
+    // приложению, которое запустило плеер. Результат приходит только при закрытии, а выключение питания его теряет
+    const val EXTRA_RETURN_PROGRESS = "return_progress"
+    const val ACTION_PROGRESS = "top.rootu.dddplayer.intent.action.PROGRESS"
     const val SUBTITLES_OFF = "off"
     // Для внешних приложений: что можно пропустить кнопкой (SkipSegmentLogic.parse), у плейлиста - по элементам
     const val EXTRA_SEGMENTS = "segments"

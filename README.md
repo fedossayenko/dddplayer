@@ -101,6 +101,7 @@ A single link to an `.m3u`/`.m3u8` file is checked automatically: an M3U channel
 | `position` | Long / Int / String | Start position in milliseconds. Depending on the "Position from another app" setting it is applied immediately (default) or offered in the resume dialog. |
 | `headers` | String[] | HTTP headers as an array: `["Key1", "Val1", "Key2", "Val2"]`. |
 | `return_result`| Boolean | If true, the player returns the playback result to the calling app (see below). |
+| `return_progress`| Boolean | With `return_result`: also report the position while playing (see below). |
 
 #### Subtitles (Single Video)
 To add external subtitles to a single video, use the following extras:
@@ -177,6 +178,10 @@ When started with `startActivityForResult` and `return_result = true`, the playe
 | `audio_track` | String | Signature of the current audio track (see below). |
 | `subtitle_track` | String | Signature of the current subtitles or `off`; only when the video has subtitles. |
 | `speed` | Float | Playback speed, only when it was chosen (not the default). |
+
+With `return_progress = true` the same keys (without `end_by`) also come while the video plays: a broadcast
+`top.rootu.dddplayer.intent.action.PROGRESS` to the calling package every 30 s, on pause and when the player leaves the
+screen, so a power cut loses 30 s at most. The calling app needs a manifest receiver for it.
 
 #### Tracks and Speed of a Movie or Series
 An app can remember the tracks per movie or series and pass them back on the next launch (single video or playlist):

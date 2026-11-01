@@ -76,6 +76,11 @@ HLS (`application/vnd.apple.mpegurl`, `application/x-mpegURL`), `application/das
 | `subtitle_track` | String | `TrackLogic.subtitleTrackSignature` (или `off`), только если в видео есть субтитры |
 | `speed` | Float | Только если скорость выбрана (`speedFromDefault == false`) |
 
+С `return_progress = true` (вместе с `return_result`) те же ключи, кроме `end_by`, приходят и пока видео идет:
+широковещательный `top.rootu.dddplayer.intent.action.PROGRESS` с `setPackage(callingPackage)` каждые 30 с, на паузе
+и в `onStop` (выключили экран, ушли домой), если позиция изменилась. Результат приходит только при закрытии,
+а обесточенный стик (проектор питает его по USB) его не отправит. Вызывающему приложению нужен ресивер в манифесте.
+
 ## Дорожки фильма/сериала (`IntentUtils.parseTitleTracks`)
 
 `audio_lang` (`parseAudioLanguages`) задает языки аудио этого запуска поверх настройки. `audio_track`, `subtitle_track`
