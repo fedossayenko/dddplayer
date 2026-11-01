@@ -90,6 +90,8 @@ class GlobalSettingsActivity : AppCompatActivity() {
     private lateinit var switchTunneling: SwitchCompat
     private lateinit var itemHdAudioIec: LinearLayout
     private lateinit var switchHdAudioIec: SwitchCompat
+    private lateinit var itemDolbyOnly: LinearLayout
+    private lateinit var switchDolbyOnly: SwitchCompat
     private lateinit var itemDv: LinearLayout
     private lateinit var textDvValue: TextView
     private lateinit var itemAfr: LinearLayout
@@ -353,6 +355,8 @@ class GlobalSettingsActivity : AppCompatActivity() {
         switchTunneling = findViewById(R.id.switch_tunneling)
         itemHdAudioIec = findViewById(R.id.item_hd_audio_iec)
         switchHdAudioIec = findViewById(R.id.switch_hd_audio_iec)
+        itemDolbyOnly = findViewById(R.id.item_dolby_only)
+        switchDolbyOnly = findViewById(R.id.switch_dolby_only)
         itemDv = findViewById(R.id.item_dv)
         textDvValue = findViewById(R.id.text_dv_value)
         itemAfr = findViewById(R.id.item_afr)
@@ -477,6 +481,9 @@ class GlobalSettingsActivity : AppCompatActivity() {
         }
 
         // HD-звук через IEC 61937
+        itemDolbyOnly.setOnClickListener {
+            settingsViewModel.toggleDolbyOnlyPassthrough(!switchDolbyOnly.isChecked)
+        }
         itemHdAudioIec.setOnClickListener {
             settingsViewModel.toggleHdAudioIec(!switchHdAudioIec.isChecked)
         }
@@ -712,6 +719,7 @@ class GlobalSettingsActivity : AppCompatActivity() {
         settingsViewModel.isTunnelingEnabled.observe(this) { switchTunneling.isChecked = it }
         settingsViewModel.isHdr10PlusEnabled.observe(this) { switchHdr10Plus.isChecked = it }
         settingsViewModel.isHdAudioIecEnabled.observe(this) { switchHdAudioIec.isChecked = it }
+        settingsViewModel.isDolbyOnlyPassthroughEnabled.observe(this) { switchDolbyOnly.isChecked = it }
         settingsViewModel.dvMode.observe(this) { mode ->
             textDvValue.text = when (mode) {
                 SettingsRepository.DV_MODE_OFF -> getString(R.string.dv_mode_off)
