@@ -31,6 +31,7 @@
 | `show_info_on_change` | false | Инфопанель при смене элемента плейлиста |
 | `show_playlist_index` | true | Номера в плейлисте |
 | `auto_skip_intro` | false | Пропускать заставку и пересказ без кнопки (отрезки из Intent `segments`), один раз за видео; титры - всегда кнопкой |
+| `next_card` | false | Карточка следующей серии на финальных титрах (титры до конца из Intent `segments`, в плейлисте есть следующий элемент): кадр (`thumbnail`), название и отсчет 8 с (пока идет воспроизведение); OK - сразу, Назад - смотреть титры (остается кнопка) |
 | `saved_playlists` | — | Плейлисты по ссылке на стартовом экране (JSON: id, name, url). Прежний `startup_playlist_uri` переносится сюда один раз и удаляется |
 | `smb_servers` | — | Сетевые папки SMB стартового экрана (JSON: id, name, address, user, password, domain) |
 | `watch_history` | — | История «Продолжить просмотр» (JSON, до 30 записей, одна на источник: папку или плейлист) |
@@ -38,6 +39,7 @@
 | `clock_transparency` | `CLOCK_OFF` (-1) | -1 выкл, 0..80 % прозрачности. Мигрирует из старого `show_clock` |
 | `buffer_display_mode` | `BUFFER_DISPLAY_OFF` (0) | 0 выкл, 1 в панели, 2 рядом с часами (и в инфопанели) |
 | `target_buffer_mb` | `BUFFER_SIZE_AUTO` (-1) | Буфер сетевого видео в МБ, варианты ограничены кучей |
+| `reuse_connections` | false | Прыжки экстрактора по сетевому файлу через открытое соединение (`ReusingDataSource`): MP4 с множеством субтитров, перемотка. Читается при каждом запросе, перезапуск плеера не нужен |
 | `render_api_mode` | `RENDER_API_AUTO` (0) | 0 авто (ES 3.0 если есть), 1 принудительно GLES 2.0 |
 | `pause_dim_level` | 60 | Затемнение на паузе, % |
 | `global_resize_mode`, `video_zoom_scale`, `remember_zoom` | 0 (FIT), 115, false | Масштаб |

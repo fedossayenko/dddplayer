@@ -270,6 +270,9 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     private var pendingAudioId: String? = null
     // pendingAudioId запомнен для ссылки (Room), а не текущая дорожка перед перезагрузкой: только его проверяем по audio_lang
     private var pendingAudioSaved = false
+    // Ссылка, для которой пользователь выбрал дорожку в этом сеансе: выбор важнее audio_lang и после пересоздания
+    // плеера (тот же файл снова проходит handleMediaItemTransition, audioChosenByUser сбрасывается)
+    private var userAudioUri: String? = null
     private var pendingSubtitleId: String? = null
 
     // Название внешних субтитров, которые нужно включить после их добавления
@@ -404,7 +407,10 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                 // После буферизации или старта обновляем инфо
                 player?.videoFormat?.let { updateVideoInfoBadge(it) }
             }
-            if (playbackState == Player.STATE_ENDED) _playbackEnded.value = true
+            if (playbackState == Player.STATE_ENDED) {
+                _playbackEnded.value = true
+                _skipSegment.value = null // титры без конца иначе остались бы на экране и забрали бы OK
+            }
             updateProgressUpdaterState()
             val isCurrentItemLive = player?.isCurrentMediaItemLive ?: false
             _isLive.value = isCurrentItemLive
@@ -458,6 +464,13 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             if (reason == Player.DISCONTINUITY_REASON_SEEK) {
                 // При перемотке просто останавливаем текущий процесс детекции, если он был запущен.
                 fpsDetector.stop(player)
+                // Перемотали внутрь отрезка сами: кнопка, а не автопропуск. Кнопку обновляем сразу: на паузе
+                // перемотка в пределах буфера не запускает progressUpdater
+                if (oldPosition.mediaItemIndex == newPosition.mediaItemIndex) {
+                    SkipSegmentLogic.active(getPlayingItem()?.segments.orEmpty(), newPosition.positionMs)
+                        ?.let { autoSkipped.add(it) }
+                    player?.let { updateSkipSegment(it) }
+                }
             }
         }
     }
@@ -470,7 +483,9 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
         // Подписываемся на создание нового плеера
         playerManager.onPlayerCreated = { newPlayer ->
-            // Новый плеер (и пересозданный после смены настроек) идет с выбранной скоростью
+            // Новый плеер (и пересозданный после смены настроек) идет с выбранной скоростью; ее же знает
+            // SpeedDecodeSink с первого выбора дорожки (скорость по умолчанию не через applyPlaybackSpeed)
+            playerManager.requestedSpeed = _playbackSpeed.value ?: 1.0f
             newPlayer.setPlaybackSpeed(_playbackSpeed.value ?: 1.0f)
             _playerRecreatedEvent.postValue(newPlayer)
             // Принудительно обновляем UI состояние
@@ -663,7 +678,9 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         // Сбрасываем отложенные ID дорожек при переходе на новое видео
         pendingAudioId = null
         pendingSubtitleId = null
-        autoSkipped.clear()
+        _skipSegment.value = null
+        // Тот же файл после пересоздания плеера: пропущенную заставку не пропускаем снова
+        if (mediaItem?.localConfiguration?.uri?.toString() != currentUri) autoSkipped.clear()
         audioChosenByUser = false
         audioChoicePendingStat = false
         audioTrackResolved = false
@@ -965,8 +982,8 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             val foundIdx = audioOptions.indexOfFirst { it.format?.id == id }
             // Запуск просит языки (audio_lang): запомненная для ссылки дорожка на другом языке не мешает,
             // кроме выбранной вручную в этом сеансе
-            if (foundIdx != -1 && (audioChosenByUser || !pendingAudioSaved ||
-                    TrackLogic.isWantedAudio(audioOptions[foundIdx].format?.language, playerManager.audioLanguages))) {
+            if (foundIdx != -1 && (audioChosenByUser || userAudioUri == currentUri || !pendingAudioSaved ||
+                    TrackLogic.keepsSavedAudio(audioOptions, foundIdx, playerManager.audioLanguages))) {
                 finalAudioIdx = foundIdx
                 selectTrackByIndex(C.TRACK_TYPE_AUDIO, foundIdx)
                 audioTrackResolved = true
@@ -1101,6 +1118,8 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         _skipSegment.value = segment
     }
 
+    fun isNextCardEnabled() = repository.isNextCardEnabled()
+
     /** Пересказ, за которым сразу идет заставка: кнопка пропускает обе. */
     fun skipsIntroToo(segment: SkipSegment): Boolean =
         SkipSegmentLogic.introAfter(segment, getPlayingItem()?.segments.orEmpty()) != null
@@ -1109,13 +1128,22 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     fun creditsStartMs(): Long? =
         SkipSegmentLogic.creditsStart(getPlayingItem()?.segments.orEmpty(), player?.duration ?: 0L)
 
-    /** Кнопка «Пропустить»: в конец отрезка; титры до конца - следующий элемент плейлиста или завершение. */
-    fun skipCurrentSegment() {
-        val p = player ?: return
-        val segment = _skipSegment.value ?: return
-        val target = SkipSegmentLogic.target(segment, p.duration, getPlayingItem()?.segments.orEmpty()) ?: return
+    /**
+     * Кнопка «Пропустить»: в конец отрезка; титры до конца - следующий элемент плейлиста или завершение.
+     * false - отрезок уже кончился (кнопка устарела): OK делает свое обычное дело.
+     */
+    fun skipCurrentSegment(): Boolean {
+        val p = player ?: return false
+        val segment = _skipSegment.value ?: return false
+        val segments = getPlayingItem()?.segments.orEmpty()
+        if (SkipSegmentLogic.active(segments, p.currentPosition) != segment) {
+            _skipSegment.value = null
+            return false
+        }
+        val target = SkipSegmentLogic.target(segment, p.duration, segments) ?: return false
         _skipSegment.value = null
         seekTo(target)
+        return true
     }
     fun nextTrack() { if (player?.hasNextMediaItem() == true) player!!.seekToNextMediaItem() }
     fun prevTrack() { if (player?.hasPreviousMediaItem() == true) player!!.seekToPreviousMediaItem() }
@@ -1710,16 +1738,14 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         // Дорожка фильма/сериала от приложения действует при любом режиме памяти
         val titleAudio = titleTracks?.audio
         if (mode == SettingsRepository.AUDIO_MEMORY_OFF && titleAudio == null) return null
-        val candidates = buildList {
-            if (mode != SettingsRepository.AUDIO_MEMORY_OFF) sessionAudioSignature?.let { add(it) }
-            titleAudio?.let { add(it) }
-            if (mode == SettingsRepository.AUDIO_MEMORY_ALL) {
-                addAll(repository.getAudioTrackStats().map { it.signature })
-            }
-        }
-        for (signature in candidates) {
+        // Частые в других видео - только на языках audio_lang (выбор в этом плейлисте и от приложения важнее)
+        val stats = if (mode == SettingsRepository.AUDIO_MEMORY_ALL) repository.getAudioTrackStats().map { it.signature }
+        else emptyList()
+        val chosen = listOfNotNull(sessionAudioSignature.takeIf { mode != SettingsRepository.AUDIO_MEMORY_OFF }, titleAudio)
+        for (signature in chosen + stats) {
             val idx = audioOptions.indexOfFirst { TrackLogic.audioTrackSignature(it) == signature }
-            if (idx != -1) return idx
+            if (idx != -1 && (signature in chosen ||
+                    TrackLogic.isWantedAudio(audioOptions[idx].format?.language, playerManager.audioLanguages))) return idx
         }
         return null
     }
@@ -1744,6 +1770,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             if (trackType == C.TRACK_TYPE_AUDIO) {
                 if (fromUser) {
                     audioChosenByUser = true
+                    userAudioUri = currentUri
                     audioChoicePendingStat = true
                     audioTrackResolved = true
                     sessionAudioSignature = TrackLogic.audioTrackSignature(option)

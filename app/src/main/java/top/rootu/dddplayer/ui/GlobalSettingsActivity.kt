@@ -81,12 +81,16 @@ class GlobalSettingsActivity : AppCompatActivity() {
     private lateinit var itemAutoPip: LinearLayout
     private lateinit var switchAutoPip: SwitchCompat
     private lateinit var itemAutoSkipIntro: LinearLayout
+    private lateinit var itemNextCard: LinearLayout
+    private lateinit var switchNextCard: SwitchCompat
     private lateinit var switchAutoSkipIntro: SwitchCompat
     private lateinit var textDecoderDesc: TextView
     private lateinit var textDecoderValue: TextView
     private lateinit var itemHdr10Plus: LinearLayout
     private lateinit var switchHdr10Plus: SwitchCompat
     private lateinit var itemTunneling: LinearLayout
+    private lateinit var itemConnectionReuse: LinearLayout
+    private lateinit var switchConnectionReuse: SwitchCompat
     private lateinit var switchTunneling: SwitchCompat
     private lateinit var itemHdAudioIec: LinearLayout
     private lateinit var switchHdAudioIec: SwitchCompat
@@ -346,12 +350,16 @@ class GlobalSettingsActivity : AppCompatActivity() {
         itemAutoPip = findViewById(R.id.item_auto_pip)
         switchAutoPip = findViewById(R.id.switch_auto_pip)
         itemAutoSkipIntro = findViewById(R.id.item_auto_skip_intro)
+        itemNextCard = findViewById(R.id.item_next_card)
+        switchNextCard = findViewById(R.id.switch_next_card)
         switchAutoSkipIntro = findViewById(R.id.switch_auto_skip_intro)
         textDecoderDesc = findViewById(R.id.text_decoder_desc)
         textDecoderValue = findViewById(R.id.text_decoder_value)
         itemHdr10Plus = findViewById(R.id.item_hdr10plus)
         switchHdr10Plus = findViewById(R.id.switch_hdr10plus)
         itemTunneling = findViewById(R.id.item_tunneling)
+        itemConnectionReuse = findViewById(R.id.item_connection_reuse)
+        switchConnectionReuse = findViewById(R.id.switch_connection_reuse)
         switchTunneling = findViewById(R.id.switch_tunneling)
         itemHdAudioIec = findViewById(R.id.item_hd_audio_iec)
         switchHdAudioIec = findViewById(R.id.switch_hd_audio_iec)
@@ -461,6 +469,9 @@ class GlobalSettingsActivity : AppCompatActivity() {
         itemAutoSkipIntro.setOnClickListener {
             settingsViewModel.toggleAutoSkipIntro(!switchAutoSkipIntro.isChecked)
         }
+        itemNextCard.setOnClickListener {
+            settingsViewModel.toggleNextCard(!switchNextCard.isChecked)
+        }
 
         // Downmix
         itemDownmix.setOnClickListener {
@@ -476,6 +487,9 @@ class GlobalSettingsActivity : AppCompatActivity() {
         }
 
         // Tunneling
+        itemConnectionReuse.setOnClickListener {
+            settingsViewModel.toggleConnectionReuse(!switchConnectionReuse.isChecked)
+        }
         itemTunneling.setOnClickListener {
             settingsViewModel.toggleTunneling(!switchTunneling.isChecked)
         }
@@ -709,6 +723,7 @@ class GlobalSettingsActivity : AppCompatActivity() {
         // Playback
         settingsViewModel.isAutoPipEnabled.observe(this) { switchAutoPip.isChecked = it }
         settingsViewModel.isAutoSkipIntroEnabled.observe(this) { switchAutoSkipIntro.isChecked = it }
+        settingsViewModel.isNextCardEnabled.observe(this) { switchNextCard.isChecked = it }
         settingsViewModel.videoDecoderPriority.observe(this) { mode ->
             textDecoderValue.text = settingsViewModel.getDecoderValueString(mode)
             textDecoderDesc.setText(settingsViewModel.getDecoderDescResId(mode, video = true))
@@ -718,6 +733,7 @@ class GlobalSettingsActivity : AppCompatActivity() {
             findViewById<TextView>(R.id.text_audio_decoder_desc).setText(settingsViewModel.getDecoderDescResId(mode, video = false))
         }
         settingsViewModel.isTunnelingEnabled.observe(this) { switchTunneling.isChecked = it }
+        settingsViewModel.isConnectionReuseEnabled.observe(this) { switchConnectionReuse.isChecked = it }
         settingsViewModel.isHdr10PlusEnabled.observe(this) { switchHdr10Plus.isChecked = it }
         settingsViewModel.isHdAudioIecEnabled.observe(this) { switchHdAudioIec.isChecked = it }
         settingsViewModel.isDolbyOnlyPassthroughEnabled.observe(this) { switchDolbyOnly.isChecked = it }

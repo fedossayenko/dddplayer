@@ -196,8 +196,10 @@ class PlayerManager(
     private val baseHttpFactory = OkHttpDataSource.Factory(okHttpClient)
 
     // Универсальная фабрика, которая умеет работать с content://, file:// и http://
-    // Сеть идет через ReusingDataSource: прыжки экстрактора по файлу не открывают новое соединение каждый раз.
-    private val defaultDataSourceFactory = DefaultDataSource.Factory(appContext, ReusingDataSource.Factory(baseHttpFactory))
+    // Сеть идет через ReusingDataSource: прыжки экстрактора по файлу не открывают новое соединение каждый раз
+    // (настройка reuse_connections, по умолчанию выключена; читается при каждом запросе - без перезапуска плеера)
+    private val defaultDataSourceFactory = DefaultDataSource.Factory(appContext,
+        ReusingDataSource.Factory(baseHttpFactory) { settingsRepo.isConnectionReuseEnabled() })
 
     // Ответы, уже скачанные при проверке ссылки на M3U: плеер получает их без повторного запроса
     private val prefetchStore = PrefetchStore()
@@ -483,9 +485,11 @@ class PlayerManager(
                         DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON
                     } else it
                 }
-                // Снаружи всех: при скорости не 1x битстрим уходит в декодер, иначе ускорять нечему
-                val finalSink = SpeedDecodeSink((iec ?: baseSink).let { if (dolbyOnly) DolbyOnlySink(it) else it },
-                    { requestedSpeed }, iec)
+                // Снаружи всех: при скорости не 1x битстрим уходит в декодер, иначе ускорять нечему. Только с FFmpeg:
+                // в режиме «только декодеры устройства» (OFF) DTS на Fire TV декодировать нечем - звук пропал бы
+                val inner = (iec ?: baseSink).let { if (dolbyOnly) DolbyOnlySink(it) else it }
+                val finalSink = if (audioPriority == DefaultRenderersFactory.EXTENSION_RENDERER_MODE_OFF) inner
+                else SpeedDecodeSink(inner, { requestedSpeed }, iec)
 
                 // Приоритет встроенного FFmpeg - своя настройка аудио
                 super.buildAudioRenderers(

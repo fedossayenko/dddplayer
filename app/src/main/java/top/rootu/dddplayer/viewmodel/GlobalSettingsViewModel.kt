@@ -203,6 +203,14 @@ class GlobalSettingsViewModel(application: Application) : AndroidViewModel(appli
         _isAutoPipEnabled.value = enabled
     }
 
+    private val _isNextCardEnabled = MutableLiveData(repository.isNextCardEnabled())
+    val isNextCardEnabled: LiveData<Boolean> = _isNextCardEnabled
+
+    fun toggleNextCard(enabled: Boolean) {
+        repository.setNextCardEnabled(enabled)
+        _isNextCardEnabled.value = enabled
+    }
+
     fun toggleAutoSkipIntro(enabled: Boolean) {
         repository.setAutoSkipIntroEnabled(enabled)
         _isAutoSkipIntroEnabled.value = enabled
@@ -269,6 +277,14 @@ class GlobalSettingsViewModel(application: Application) : AndroidViewModel(appli
     fun toggleHdr10Plus(enabled: Boolean) {
         repository.setHdr10PlusEnabled(enabled)
         _isHdr10PlusEnabled.value = enabled
+    }
+
+    private val _isConnectionReuseEnabled = MutableLiveData(repository.isConnectionReuseEnabled())
+    val isConnectionReuseEnabled: LiveData<Boolean> = _isConnectionReuseEnabled
+
+    fun toggleConnectionReuse(enabled: Boolean) {
+        repository.setConnectionReuseEnabled(enabled)
+        _isConnectionReuseEnabled.value = enabled
     }
 
     fun toggleTunneling(enabled: Boolean) {
