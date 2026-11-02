@@ -234,6 +234,14 @@ class GlobalSettingsViewModel(application: Application) : AndroidViewModel(appli
         _targetBufferMB.value = sizeInMB
     }
 
+    private val _isPauseInfoEnabled = MutableLiveData(repository.isPauseInfoEnabled())
+    val isPauseInfoEnabled: LiveData<Boolean> = _isPauseInfoEnabled
+
+    fun togglePauseInfo(enabled: Boolean) {
+        repository.setPauseInfoEnabled(enabled)
+        _isPauseInfoEnabled.value = enabled
+    }
+
     fun toggleRememberZoom(enabled: Boolean) {
         repository.setRememberZoomEnabled(enabled)
         _isRememberZoomEnabled.value = enabled

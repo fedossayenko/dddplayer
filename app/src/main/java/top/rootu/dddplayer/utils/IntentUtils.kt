@@ -130,7 +130,8 @@ object IntentUtils {
             // Если субтитры не переданы, ищем рядом с файлом (movie.mkv -> movie.srt)
             subtitles = singleSubs.ifEmpty { SubtitleFinder.findSidecarSubtitles(uri) },
             startPositionMs = startPosition,
-            segments = SkipSegmentLogic.parse(extras.getString(EXTRA_SEGMENTS))
+            segments = SkipSegmentLogic.parse(extras.getString(EXTRA_SEGMENTS)),
+            overview = extras.getString("overview")?.takeIf { it.isNotBlank() }
         )
 
         return Pair(listOf(item), 0)
@@ -144,6 +145,7 @@ object IntentUtils {
         val names = getSmartStringArray(extras, "video_list.name")
         val filenames = getSmartStringArray(extras, "video_list.filename")
         val posters = getSmartStringArray(extras, "video_list.thumbnail")
+        val overviews = getSmartStringArray(extras, "video_list.overview")
         val playlistSubsBundles = getParcelableArrayListCompat<Bundle>(extras, "video_list.subtitles")
         val segments = getSmartStringArray(extras, EXTRA_VIDEO_LIST_SEGMENTS)
 
@@ -181,7 +183,8 @@ object IntentUtils {
                     headers = headersMap,
                     subtitles = itemSubs.ifEmpty { SubtitleFinder.findSidecarSubtitles(uri, listDir) },
                     startPositionMs = pos,
-                    segments = SkipSegmentLogic.parse(segments?.getOrNull(i))
+                    segments = SkipSegmentLogic.parse(segments?.getOrNull(i)),
+                    overview = overviews?.getOrNull(i)?.takeIf { it.isNotBlank() }
                 )
             )
         }

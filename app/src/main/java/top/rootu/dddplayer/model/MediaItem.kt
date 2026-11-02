@@ -15,6 +15,7 @@ data class MediaItem(
     val startPositionMs: Long = 0,
     val stereoType: StereoInputType = StereoInputType.NONE,
     val segments: List<SkipSegment> = emptyList(), // что можно пропустить (заставка, титры), из Intent
+    val overview: String? = null, // описание (серии) для экрана паузы, из Intent: overview, video_list.overview
     // Уникальный ID для DiffUtil, генерируется автоматически при создании объекта
     val uuid: String = UUID.randomUUID().toString()
 )

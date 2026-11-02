@@ -105,6 +105,56 @@
         android:visibility="gone"
         android:importantForAccessibility="no" />
 
+    <!-- Экран паузы (настройка pause_info): поверх затемнения, любое действие убирает -->
+    <LinearLayout
+        android:id="@+id/pause_info"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|start"
+        android:layout_marginStart="64dp"
+        android:layout_marginBottom="64dp"
+        android:alpha="0"
+        android:orientation="vertical"
+        android:visibility="gone">
+        <TextView
+            android:id="@+id/pause_info_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:maxWidth="720dp"
+            android:maxLines="2"
+            android:shadowColor="@color/black"
+            android:shadowRadius="6"
+            android:textColor="@color/tv_white"
+            android:textSize="30sp"
+            android:textStyle="bold" />
+        <TextView
+            android:id="@+id/pause_info_time"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:alpha="0.85"
+            android:maxWidth="720dp"
+            android:shadowColor="@color/black"
+            android:shadowRadius="6"
+            android:textColor="@color/tv_white"
+            android:textSize="18sp" />
+        <TextView
+            android:id="@+id/pause_info_overview"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:alpha="0.85"
+            android:ellipsize="end"
+            android:lineSpacingMultiplier="1.15"
+            android:maxWidth="720dp"
+            android:maxLines="5"
+            android:shadowColor="@color/black"
+            android:shadowRadius="6"
+            android:textColor="@color/tv_white"
+            android:textSize="18sp" />
+    </LinearLayout>
+
     <!-- === ЭЛЕМЕНТЫ ДЛЯ ЖЕСТОВ === -->
 
     <!-- Индикатор Громкости/Яркости (Центр) -->
