@@ -317,6 +317,8 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     private val _skipSegment = MutableLiveData<SkipSegment?>()
     // Автопропуск - один раз за видео: кто перемотал назад в заставку, хочет ее посмотреть (тогда кнопка)
     private val autoSkipped = mutableSetOf<SkipSegment>()
+    // Куда перематывает сам пропуск (автопропуск, кнопка): отрезок встык за ним - не «перемотали внутрь сами»
+    private var skipSeekTarget = -1L
     val skipSegment: LiveData<SkipSegment?> = _skipSegment
 
     private val _playbackEnded = MutableLiveData<Boolean>()
@@ -474,8 +476,11 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                 // Перемотали внутрь отрезка сами: кнопка, а не автопропуск. Кнопку обновляем сразу: на паузе
                 // перемотка в пределах буфера не запускает progressUpdater
                 if (oldPosition.mediaItemIndex == newPosition.mediaItemIndex) {
-                    SkipSegmentLogic.active(getPlayingItem()?.segments.orEmpty(), newPosition.positionMs)
-                        ?.let { autoSkipped.add(it) }
+                    if (newPosition.positionMs != skipSeekTarget) {
+                        SkipSegmentLogic.active(getPlayingItem()?.segments.orEmpty(), newPosition.positionMs)
+                            ?.let { autoSkipped.add(it) }
+                    }
+                    skipSeekTarget = -1L
                     player?.let { updateSkipSegment(it) }
                 }
                 startRewindSubtitles(oldPosition, newPosition)
@@ -1149,7 +1154,10 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             autoSkipped.add(segment)
         ) {
             SkipSegmentLogic.introAfter(segment, segments)?.let { autoSkipped.add(it) }
-            SkipSegmentLogic.target(segment, p.duration, segments)?.let { seekTo(it) }
+            SkipSegmentLogic.target(segment, p.duration, segments)?.let {
+                skipSeekTarget = it
+                seekTo(it)
+            }
             return
         }
         _skipSegment.value = segment
@@ -1179,6 +1187,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         }
         val target = SkipSegmentLogic.target(segment, p.duration, segments) ?: return false
         _skipSegment.value = null
+        skipSeekTarget = target
         seekTo(target)
         return true
     }
@@ -1271,6 +1280,8 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         var startPos = startItem?.startPositionMs ?: 0L
         pendingExternalPosition = null
         sessionAudioSignature = null // Новый плейлист - выбор дорожки начинается заново
+        autoSkipped.clear() // и пропуски: тот же файл, открытый снова, пропускает заставку снова
+        userAudioUri = null
         isFirstItemLoaded = false // Продолжение просмотра - для первого элемента нового плейлиста
         if (startItem != null && startPos > 0 &&
             repository.getExternalPositionMode() == SettingsRepository.EXTERNAL_POSITION_ASK
@@ -1785,7 +1796,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         for (signature in chosen + stats) {
             val idx = audioOptions.indexOfFirst { TrackLogic.audioTrackSignature(it) == signature }
             if (idx != -1 && (signature in chosen ||
-                    TrackLogic.isWantedAudio(audioOptions[idx].format?.language, playerManager.audioLanguages))) return idx
+                    TrackLogic.keepsSavedAudio(audioOptions, idx, playerManager.audioLanguages))) return idx
         }
         return null
     }
