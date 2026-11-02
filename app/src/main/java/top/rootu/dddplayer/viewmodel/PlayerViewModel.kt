@@ -17,6 +17,7 @@ import androidx.media3.common.MimeTypes
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.TrackSelectionOverride
+import androidx.media3.common.TrackSelectionParameters
 import androidx.media3.common.Tracks
 import androidx.media3.common.VideoSize
 import androidx.media3.common.text.Cue
@@ -107,6 +108,7 @@ data class PlaylistUiState(
 @UnstableApi
 // Пункт "Загрузить из файла" в меню субтитров
 const val SUBTITLE_MENU_LOAD_FILE = "load_file"
+private const val REWIND_SUBS_MAX_MS = 30_000L
 // Пункт "Своя скорость" в меню скорости
 const val SPEED_MENU_CUSTOM = "custom_speed"
 
@@ -333,6 +335,10 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     // Храним хэш настроек при старте
     private var lastSettingsHash = repository.getHardSettingsSignature()
 
+    // Субтитры после перемотки назад: до какой позиции включены (-1 - нет) и текстовые дорожки до них
+    private var rewindSubsUntil = -1L
+    private var rewindSubsBefore: TrackSelectionParameters? = null
+
     private val progressUpdater = object : Runnable {
         override fun run() {
             val p = playerManager.exoPlayer ?: return
@@ -341,6 +347,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                     _currentPosition.value = p.currentPosition
                 }
                 updateBufferInfo(p)
+                if (rewindSubsUntil >= 0 && p.currentPosition >= rewindSubsUntil) endRewindSubtitles()
 
                 // Если AFR еще не сработал, проверяем формат
                 if (!afrAppliedForCurrentItem) {
@@ -443,6 +450,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             if (reason == Player.DISCONTINUITY_REASON_SEEK) {
                 // При перемотке просто останавливаем текущий процесс детекции, если он был запущен.
                 fpsDetector.stop(player)
+                startRewindSubtitles(oldPosition, newPosition)
             }
         }
     }
@@ -641,6 +649,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     private fun handleMediaItemTransition(mediaItem: Media3MediaItem?) {
+        endRewindSubtitles()
         afrAppliedForCurrentItem = false
         fpsDetector.stop(player)
         fpsDetector.reset() // Сброс для нового видео
@@ -1041,6 +1050,34 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         updateAvailableSettings()
     }
 
+    /** Перемотка назад до 30 с при выключенных субтитрах: включаем их на языке звука до места, откуда отмотали */
+    private fun startRewindSubtitles(old: Player.PositionInfo, new: Player.PositionInfo) {
+        val back = old.positionMs - new.positionMs
+        // Уже включены: выключим там, откуда отмотали в первый раз
+        if (rewindSubsUntil >= 0 || old.mediaItemIndex != new.mediaItemIndex || back <= 0 || back > REWIND_SUBS_MAX_MS) return
+        if (!repository.isRewindSubtitlesEnabled()) return
+        if (subtitleOptions.getOrNull(currentSubtitleIndex)?.isOff != true) return
+        val p = player ?: return
+        val idx = TrackLogic.rewindSubtitleIndex(subtitleOptions, _currentAudioTrack.value?.format?.language) ?: return
+        rewindSubsBefore = p.trackSelectionParameters
+        rewindSubsUntil = old.positionMs
+        selectTrackByIndex(C.TRACK_TYPE_TEXT, idx)
+    }
+
+    /** Субтитры перемотки больше не нужны: текстовые дорожки как до них */
+    private fun endRewindSubtitles() {
+        if (rewindSubsUntil < 0) return
+        rewindSubsUntil = -1
+        val before = rewindSubsBefore ?: return
+        rewindSubsBefore = null
+        val p = player ?: return
+        val builder = p.trackSelectionParameters.buildUpon()
+            .clearOverridesOfType(C.TRACK_TYPE_TEXT)
+            .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, C.TRACK_TYPE_TEXT in before.disabledTrackTypes)
+        before.overrides.values.filter { it.type == C.TRACK_TYPE_TEXT }.forEach { builder.addOverride(it) }
+        p.trackSelectionParameters = builder.build()
+    }
+
     // --- Player Controls ---
     fun seekForward() = playerManager.seekForward()
     fun seekBack() = playerManager.seekBack()
@@ -1294,7 +1331,8 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         val positionToSave = if (p.isCurrentMediaItemLive) 0L else p.currentPosition
         // Получаем ID текущих дорожек
         val audioId = _currentAudioTrack.value?.format?.id
-        val subId = if (_currentSubtitleTrack.value?.isOff == true) "disabled"
+        // Субтитры перемотки временные: включают их только при выключенных
+        val subId = if (rewindSubsUntil >= 0 || _currentSubtitleTrack.value?.isOff == true) "disabled"
         else _currentSubtitleTrack.value?.format?.id
 
         val settings = VideoSettings(
@@ -1661,7 +1699,12 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                 currentAudioIndex = index
                 _currentAudioTrack.value = option
             } else {
-                if (fromUser) subtitleResolved = true
+                if (fromUser) {
+                    subtitleResolved = true
+                    // Выбор пользователя важнее: субтитры перемотки больше не выключаем
+                    rewindSubsUntil = -1
+                    rewindSubsBefore = null
+                }
                 currentSubtitleIndex = index
                 _currentSubtitleTrack.value = option
             }

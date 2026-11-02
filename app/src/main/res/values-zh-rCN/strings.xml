@@ -176,6 +176,8 @@
     <string name="pref_sub_lang_default_desc">首选字幕（如果可用）</string>
     <string name="pref_subtitle_auto">自动启用字幕</string>
     <string name="pref_subtitle_auto_desc">视频开始时。为该视频保存的字幕和手动选择优先</string>
+    <string name="pref_rewind_subtitles">后退后显示字幕</string>
+    <string name="pref_rewind_subtitles_desc">字幕关闭时后退不超过 30 秒：显示音轨语言的字幕，直到回到后退前的位置</string>
     <string name="sub_auto_default">由播放器决定</string>
     <string name="sub_auto_off">关闭</string>
     <string name="sub_auto_forced">仅强制字幕</string>

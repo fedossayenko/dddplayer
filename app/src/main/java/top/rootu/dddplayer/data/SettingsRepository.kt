@@ -426,6 +426,11 @@ class SettingsRepository private constructor(context: Context) {
     fun getSubtitleAutoMode(): Int = prefs.getInt("subtitle_auto_mode", SUB_AUTO_DEFAULT)
     fun setSubtitleAutoMode(mode: Int) = prefs.edit { putInt("subtitle_auto_mode", mode) }
 
+    // Субтитры на языке звука после перемотки назад до 30 с, пока не дойдем до места, откуда отмотали.
+    // По умолчанию выключено: у существующих пользователей ничего не меняется
+    fun isRewindSubtitlesEnabled(): Boolean = prefs.getBoolean("rewind_subtitles", false)
+    fun setRewindSubtitlesEnabled(enabled: Boolean) = prefs.edit { putBoolean("rewind_subtitles", enabled) }
+
     fun getLoudnessBoost(): Int = prefs.getInt("loudness_boost", 0)
     fun setLoudnessBoost(boost: Int) = prefs.edit { putInt("loudness_boost", boost) }
 

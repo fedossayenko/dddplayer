@@ -159,6 +159,14 @@ class GlobalSettingsViewModel(application: Application) : AndroidViewModel(appli
         _subtitleAutoMode.value = mode
     }
 
+    private val _isRewindSubtitlesEnabled = MutableLiveData(repository.isRewindSubtitlesEnabled())
+    val isRewindSubtitlesEnabled: LiveData<Boolean> = _isRewindSubtitlesEnabled
+
+    fun toggleRewindSubtitles(enabled: Boolean) {
+        repository.setRewindSubtitlesEnabled(enabled)
+        _isRewindSubtitlesEnabled.value = enabled
+    }
+
     private val _audioTrackMemoryMode = MutableLiveData(repository.getAudioTrackMemoryMode())
     val audioTrackMemoryMode: LiveData<Int> = _audioTrackMemoryMode
 

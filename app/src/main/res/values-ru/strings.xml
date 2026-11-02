@@ -183,6 +183,8 @@
     <string name="pref_sub_lang_default_desc">Предпочитаемые субтитры (если есть)</string>
     <string name="pref_subtitle_auto">Автовключение субтитров</string>
     <string name="pref_subtitle_auto_desc">При запуске видео. Сохраненные для видео субтитры и ручной выбор важнее</string>
+    <string name="pref_rewind_subtitles">Субтитры после перемотки назад</string>
+    <string name="pref_rewind_subtitles_desc">Перемотали назад до 30 с при выключенных субтитрах: субтитры на языке звука до места, откуда перемотали</string>
     <string name="sub_auto_default">Как решит плеер</string>
     <string name="sub_auto_off">Нет</string>
     <string name="sub_auto_forced">Только форсированные</string>
