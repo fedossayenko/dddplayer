@@ -135,6 +135,18 @@ class TrackLogicTest {
     }
 
     @Test
+    fun `rewind subtitles are full ones in the audio language`() {
+        assertEquals(3, TrackLogic.rewindSubtitleIndex(subs, "rus"))
+        assertEquals(1, TrackLogic.rewindSubtitleIndex(subs, "en-US"))
+        // Только форсированные на языке звука, другой язык или язык звука неизвестен - не включаем
+        val onlyForced = listOf(option(null, isOff = true), sub("ru", C.SELECTION_FLAG_FORCED), sub("en"))
+        assertNull(TrackLogic.rewindSubtitleIndex(onlyForced, "ru"))
+        assertNull(TrackLogic.rewindSubtitleIndex(subs, "ja"))
+        assertNull(TrackLogic.rewindSubtitleIndex(subs, null))
+        assertNull(TrackLogic.rewindSubtitleIndex(subs, "und"))
+    }
+
+    @Test
     fun `language codes are compared without region and format`() {
         assertTrue(TrackLogic.sameLanguage("ru", "rus"))
         assertTrue(TrackLogic.sameLanguage("en-GB", "en"))

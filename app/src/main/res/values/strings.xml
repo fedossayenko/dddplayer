@@ -193,6 +193,8 @@
     <string name="pref_sub_lang_default_desc">Preferred subtitles (if available)</string>
     <string name="pref_subtitle_auto">Auto-enable subtitles</string>
     <string name="pref_subtitle_auto_desc">When a video starts. Subtitles saved for the video and a manual choice take priority</string>
+    <string name="pref_rewind_subtitles">Subtitles after rewinding</string>
+    <string name="pref_rewind_subtitles_desc">Rewound up to 30 s with subtitles off: subtitles in the audio language until the point you rewound from</string>
     <string name="sub_auto_default">Player default</string>
     <string name="sub_auto_off">Off</string>
     <string name="sub_auto_forced">Forced only</string>

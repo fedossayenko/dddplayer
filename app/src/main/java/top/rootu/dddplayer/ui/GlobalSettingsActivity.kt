@@ -123,6 +123,8 @@ class GlobalSettingsActivity : AppCompatActivity() {
     private lateinit var itemSubLang: LinearLayout
     private lateinit var textSubLangValue: TextView
     private lateinit var itemSubtitleAuto: LinearLayout
+    private lateinit var itemRewindSubtitles: LinearLayout
+    private lateinit var switchRewindSubtitles: SwitchCompat
     private lateinit var textSubtitleAutoValue: TextView
     private lateinit var itemDefault3dMode: LinearLayout
     private lateinit var textDefault3dModeValue: TextView
@@ -392,6 +394,8 @@ class GlobalSettingsActivity : AppCompatActivity() {
         itemSubLang = findViewById(R.id.item_sub_lang)
         textSubLangValue = findViewById(R.id.text_sub_lang_value)
         itemSubtitleAuto = findViewById(R.id.item_subtitle_auto)
+        itemRewindSubtitles = findViewById(R.id.item_rewind_subtitles)
+        switchRewindSubtitles = findViewById(R.id.switch_rewind_subtitles)
         textSubtitleAutoValue = findViewById(R.id.text_subtitle_auto_value)
         itemDefault3dMode = findViewById(R.id.item_default_3d_mode)
         textDefault3dModeValue = findViewById(R.id.text_default_3d_mode_value)
@@ -570,6 +574,9 @@ class GlobalSettingsActivity : AppCompatActivity() {
 
         itemRememberZoom.setOnClickListener {
             settingsViewModel.toggleRememberZoom(!switchRememberZoom.isChecked)
+        }
+        itemRewindSubtitles.setOnClickListener {
+            settingsViewModel.toggleRewindSubtitles(!switchRewindSubtitles.isChecked)
         }
 
         itemConfirmExit.setOnClickListener {
@@ -848,6 +855,7 @@ class GlobalSettingsActivity : AppCompatActivity() {
         }
 
         settingsViewModel.isRememberZoomEnabled.observe(this) { switchRememberZoom.isChecked = it }
+        settingsViewModel.isRewindSubtitlesEnabled.observe(this) { switchRewindSubtitles.isChecked = it }
         settingsViewModel.isShowPlaylistIndexEnabled.observe(this) { switchShowIndex.isChecked = it }
         settingsViewModel.isConfirmExitEnabled.observe(this) { switchConfirmExit.isChecked = it }
         settingsViewModel.clockTransparency.observe(this) { transparency ->

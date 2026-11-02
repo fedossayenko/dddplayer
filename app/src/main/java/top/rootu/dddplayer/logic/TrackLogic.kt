@@ -216,6 +216,15 @@ object TrackLogic {
     fun keepsSavedAudio(options: List<TrackOption>, index: Int, wanted: Array<String>?): Boolean =
         isWantedAudio(options[index].format?.language, wanted) ||
             options.none { !it.isOff && isWantedAudio(it.format?.language, wanted) }
+    /**
+     * Субтитры на время короткой перемотки назад (настройка rewind_subtitles): полные, не форсированные,
+     * на языке звука. null - таких нет или язык звука неизвестен.
+     */
+    fun rewindSubtitleIndex(options: List<TrackOption>, audioLang: String?): Int? =
+        options.indexOfFirst {
+            !it.isOff && it.format != null && it.format.selectionFlags and C.SELECTION_FLAG_FORCED == 0 &&
+                sameLanguage(it.format.language, audioLang)
+        }.takeIf { it != -1 }
 
     /** Сравнение кодов языков без учета региона и формата (ru, rus, ru-RU) */
     fun sameLanguage(a: String?, b: String?): Boolean {
