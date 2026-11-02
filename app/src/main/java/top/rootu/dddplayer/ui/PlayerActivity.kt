@@ -16,6 +16,8 @@ import android.graphics.Rect
 import android.graphics.drawable.Icon
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import android.util.Rational
 import android.view.KeyEvent
@@ -47,6 +49,7 @@ class PlayerActivity : AppCompatActivity() {
     companion object {
         // Лог жизненного цикла PiP (adb logcat -s PlayerPip): задачи, служебные запуски, кто закрывает плеер
         private const val PIP_TAG = "PlayerPip"
+        private const val PROGRESS_INTERVAL_MS = 30_000L
 
         // Пометка интента, которым разворачиваем окно PiP (не новое видео)
         private const val EXTRA_RESTORE_PIP = "top.rootu.dddplayer.extra.RESTORE_PIP"
@@ -82,6 +85,16 @@ class PlayerActivity : AppCompatActivity() {
     // Служебный запуск (иконка лаунчера, разворачивание PiP): сразу закрывается, плеер не создается
     private var isTrampoline = false
     private var isCompleted = false
+    // return_progress: пакет, которому идет позиция (каждые 30 с, на паузе и при уходе с экрана), и последняя отправленная
+    private var progressPackage: String? = null
+    private var lastProgressMs = -1L
+    private val handler = Handler(Looper.getMainLooper())
+    private val progressTicker = object : Runnable {
+        override fun run() {
+            sendProgress()
+            handler.postDelayed(this, PROGRESS_INTERVAL_MS)
+        }
+    }
     // Сохраняем Intent, чтобы обработать его после получения разрешения
     private var pendingIntent: Intent? = null
     private var pipPlayer: Player? = null
@@ -98,6 +111,7 @@ class PlayerActivity : AppCompatActivity() {
             ) {
                 updatePictureInPictureParams()
             }
+            if (events.contains(Player.EVENT_IS_PLAYING_CHANGED) && !player.isPlaying) sendProgress()
         }
     }
 
@@ -209,6 +223,28 @@ class PlayerActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         updatePictureInPictureParams()
+    }
+
+    override fun onStart() {
+        super.onStart()
+        handler.removeCallbacks(progressTicker)
+        handler.postDelayed(progressTicker, PROGRESS_INTERVAL_MS)
+    }
+
+    override fun onStop() {
+        handler.removeCallbacks(progressTicker)
+        sendProgress() // экран выключили или ушли домой: дальше процесс могут убить или обесточить
+        super.onStop()
+    }
+
+    /** Позиция приложению, которое просило return_progress. При закрытии ее несет результат, а не отчет. */
+    private fun sendProgress() {
+        val target = progressPackage ?: return
+        if (isFinishing) return
+        val position = viewModel.player?.currentPosition ?: return
+        if (position == lastProgressMs) return
+        lastProgressMs = position
+        sendBroadcast(playbackState(IntentUtils.ACTION_PROGRESS).setPackage(target))
     }
 
     override fun onConfigurationChanged(newConfig: Configuration) {
@@ -404,6 +440,9 @@ class PlayerActivity : AppCompatActivity() {
         if (intent == null) return
 
         shouldReturnResult = intent.getBooleanExtra("return_result", false)
+        progressPackage = callingPackage?.takeIf {
+            shouldReturnResult && intent.getBooleanExtra(IntentUtils.EXTRA_RETURN_PROGRESS, false)
+        }
 
         val (playlist, startIndex) = IntentUtils.parseIntent(this, intent)
 
@@ -486,27 +525,31 @@ class PlayerActivity : AppCompatActivity() {
     private fun prepareFinish() {
         viewModel.saveCurrentSettings()
         if (shouldReturnResult) {
-            val resultIntent = Intent("top.rootu.dddplayer.intent.result.VIEW")
-
-            // Возвращаем URI текущего видео (полезно, если это был плейлист)
-            resultIntent.data = viewModel.player?.currentMediaItem?.localConfiguration?.uri
-
-            val duration = viewModel.player?.duration
-            val position = if (isCompleted) duration else viewModel.player?.currentPosition
-
-            resultIntent.putExtra("position", position)
-            resultIntent.putExtra("duration", duration)
-
+            val resultIntent = playbackState("top.rootu.dddplayer.intent.result.VIEW")
             // Сообщаем, закончилось ли видео само ("completion") или закрыл юзер ("user")
             resultIntent.putExtra("end_by", if (isCompleted) "completion" else "user")
-
-            // Дорожки и скорость: приложение может запомнить их для фильма/сериала и передать в следующий раз
-            val tracks = viewModel.currentTitleTracks()
-            tracks.audio?.let { resultIntent.putExtra(IntentUtils.EXTRA_AUDIO_TRACK, it) }
-            tracks.subtitle?.let { resultIntent.putExtra(IntentUtils.EXTRA_SUBTITLE_TRACK, it) }
-            tracks.speed?.let { resultIntent.putExtra(IntentUtils.EXTRA_SPEED, it) }
-
             setResult(RESULT_OK, resultIntent)
         }
+    }
+
+    /** Текущее видео, позиция, длительность, дорожки и скорость: для результата и для отчета о позиции. */
+    private fun playbackState(action: String): Intent {
+        val state = Intent(action)
+
+        // Возвращаем URI текущего видео (полезно, если это был плейлист)
+        state.data = viewModel.player?.currentMediaItem?.localConfiguration?.uri
+
+        val duration = viewModel.player?.duration
+        val position = if (isCompleted) duration else viewModel.player?.currentPosition
+
+        state.putExtra("position", position)
+        state.putExtra("duration", duration)
+
+        // Дорожки и скорость: приложение может запомнить их для фильма/сериала и передать в следующий раз
+        val tracks = viewModel.currentTitleTracks()
+        tracks.audio?.let { state.putExtra(IntentUtils.EXTRA_AUDIO_TRACK, it) }
+        tracks.subtitle?.let { state.putExtra(IntentUtils.EXTRA_SUBTITLE_TRACK, it) }
+        tracks.speed?.let { state.putExtra(IntentUtils.EXTRA_SPEED, it) }
+        return state
     }
 }
