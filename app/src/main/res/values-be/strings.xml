@@ -220,6 +220,9 @@
     <string name="swipe_release_exit">Адпусціце для выхаду</string>
     <string name="pref_pause_dim">Зацьмняць экран на паўзе</string>
     <string name="pref_pause_dim_desc">Абараняе OLED экраны ад выгарання</string>
+    <string name="pref_pause_info">Экран паўзы</string>
+    <string name="pref_pause_info_desc">Праз 5 с паўзы: што ідзе, колькі засталося і калі скончыцца, гукавая дарожка і апісанне, калі яго перадала праграма, якая адкрыла відэа</string>
+    <string name="pause_info_time">Засталося %1$d хв · скончыцца а %2$s</string>
     <string name="dialog_input_url_title">Увядзіце спасылку на плэйліст</string>
     <string name="dialog_input_url_hint">http://...</string>
     <string name="save">Захаваць</string>

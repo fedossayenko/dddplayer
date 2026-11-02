@@ -235,6 +235,9 @@
     <string name="swipe_release_exit">Отпустите для выхода</string>
     <string name="pref_pause_dim">Затемнение экрана на паузе</string>
     <string name="pref_pause_dim_desc">Защищает OLED экраны от выгорания</string>
+    <string name="pref_pause_info">Экран паузы</string>
+    <string name="pref_pause_info_desc">Через 5 с паузы: что идет, сколько осталось и когда закончится, звуковая дорожка и описание, если его передало приложение, открывшее видео</string>
+    <string name="pause_info_time">Осталось %1$d мин · закончится в %2$s</string>
     <string name="dialog_input_url_title">Введите ссылку на плейлист</string>
     <string name="dialog_input_url_hint">http://...</string>
     <string name="save">Сохранить</string>

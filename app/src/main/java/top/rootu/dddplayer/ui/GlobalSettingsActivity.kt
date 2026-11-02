@@ -143,6 +143,8 @@ class GlobalSettingsActivity : AppCompatActivity() {
     private lateinit var itemAppLanguage: LinearLayout
     private lateinit var textAppLanguageValue: TextView
     private lateinit var itemRememberZoom: LinearLayout
+    private lateinit var itemPauseInfo: LinearLayout
+    private lateinit var switchPauseInfo: SwitchCompat
     private lateinit var switchRememberZoom: SwitchCompat
     private lateinit var itemShowIndex: LinearLayout
     private lateinit var switchShowIndex: SwitchCompat
@@ -404,6 +406,8 @@ class GlobalSettingsActivity : AppCompatActivity() {
         itemAppLanguage = findViewById(R.id.item_app_language)
         textAppLanguageValue = findViewById(R.id.text_app_language_value)
         itemRememberZoom = findViewById(R.id.item_remember_zoom)
+        itemPauseInfo = findViewById(R.id.item_pause_info)
+        switchPauseInfo = findViewById(R.id.switch_pause_info)
         switchRememberZoom = findViewById(R.id.switch_remember_zoom)
         itemShowIndex = findViewById(R.id.item_show_index)
         switchShowIndex = findViewById(R.id.switch_show_index)
@@ -541,6 +545,9 @@ class GlobalSettingsActivity : AppCompatActivity() {
 
         itemRememberZoom.setOnClickListener {
             settingsViewModel.toggleRememberZoom(!switchRememberZoom.isChecked)
+        }
+        itemPauseInfo.setOnClickListener {
+            settingsViewModel.togglePauseInfo(!switchPauseInfo.isChecked)
         }
 
         itemConfirmExit.setOnClickListener {
@@ -815,6 +822,7 @@ class GlobalSettingsActivity : AppCompatActivity() {
         }
 
         settingsViewModel.isRememberZoomEnabled.observe(this) { switchRememberZoom.isChecked = it }
+        settingsViewModel.isPauseInfoEnabled.observe(this) { switchPauseInfo.isChecked = it }
         settingsViewModel.isShowPlaylistIndexEnabled.observe(this) { switchShowIndex.isChecked = it }
         settingsViewModel.isConfirmExitEnabled.observe(this) { switchConfirmExit.isChecked = it }
         settingsViewModel.clockTransparency.observe(this) { transparency ->

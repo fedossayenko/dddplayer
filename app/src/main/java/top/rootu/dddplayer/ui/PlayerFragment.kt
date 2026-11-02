@@ -1038,6 +1038,7 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
 
     private fun resetDimTimer() {
         dimJob?.cancel()
+        ui.hidePauseInfo()
         if (inPictureInPicture) return
         ui.animateDimming(0f) // Сразу осветляем экран при любой активности
 
@@ -1045,14 +1046,33 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
         // после ошибки или в конце видео playWhenReady остается true.
         val isPausedByUser = viewModel.player?.playWhenReady == false
         if (isPausedByUser) {
-            val dimLevel = SettingsRepository.getInstance(requireContext()).getPauseDimLevel()
-            if (dimLevel > 0) {
+            val settings = SettingsRepository.getInstance(requireContext())
+            val dimLevel = settings.getPauseDimLevel()
+            val pauseInfo = settings.isPauseInfoEnabled()
+            if (dimLevel > 0 || pauseInfo) {
                 dimJob = viewLifecycleOwner.lifecycleScope.launch {
                     delay(5000) // Ждем 5 секунд бездействия на паузе
-                    ui.animateDimming(dimLevel / 100f)
+                    if (dimLevel > 0) ui.animateDimming(dimLevel / 100f)
+                    if (pauseInfo) showPauseInfo()
                 }
             }
         }
+    }
+
+    // Экран паузы: название, «Осталось N мин · закончится в ЧЧ:ММ · звук», описание серии из Intent
+    private fun showPauseInfo() {
+        val p = viewModel.player ?: return
+        val context = requireContext()
+        val left = (p.duration - p.currentPosition).takeIf { !p.isCurrentMediaItemLive && p.duration > 0 }
+            ?.coerceAtLeast(0)
+        val time = left?.let {
+            val endsAt = System.currentTimeMillis() + (it / (viewModel.playbackSpeed.value ?: 1f)).toLong()
+            getString(R.string.pause_info_time, ((it + 59_999) / 60_000).toInt(),
+                android.text.format.DateFormat.getTimeFormat(context).format(java.util.Date(endsAt)))
+        }
+        val audio = viewModel.currentAudioTrack.value?.takeIf { !it.isOff }?.let { TrackLogic.buildTrackLabel(it, context) }
+        ui.showPauseInfo(viewModel.videoTitle.value, listOfNotNull(time, audio).joinToString(" · "),
+            viewModel.getPlayingItem()?.overview)
     }
 
     private fun observeViewModel() {

@@ -53,6 +53,11 @@ class PlayerUiController(private val rootView: View) {
 
     // Views
     val dimOverlay: View = rootView.findViewById(R.id.dim_overlay)
+    // Экран паузы (настройка pause_info): поверх затемнения
+    private val pauseInfo: View = rootView.findViewById(R.id.pause_info)
+    private val pauseInfoTitle: TextView = rootView.findViewById(R.id.pause_info_title)
+    private val pauseInfoTime: TextView = rootView.findViewById(R.id.pause_info_time)
+    private val pauseInfoOverview: TextView = rootView.findViewById(R.id.pause_info_overview)
     val touchZoneTop: View = rootView.findViewById(R.id.touch_zone_top)
     val subtitleView: SubtitleView = rootView.findViewById(R.id.subtitle_view)
     val subtitleSplitContainer: View = rootView.findViewById(R.id.subtitle_split_container)
@@ -173,6 +178,7 @@ class PlayerUiController(private val rootView: View) {
         inPictureInPicture = enabled
         if (enabled) {
             playlistDialog?.dismiss()
+            hidePauseInfo()
             hideControls()
             topSettingsPanel.isVisible = false
             hideHandler.removeCallbacks(hideGestureRunnable)
@@ -878,6 +884,23 @@ class PlayerUiController(private val rootView: View) {
         } else {
             String.format(Locale.getDefault(), "%02d:%02d", minutes, seconds)
         }
+    }
+
+    fun showPauseInfo(title: String?, time: String?, overview: String?) {
+        if (inPictureInPicture) return
+        listOf(pauseInfoTitle to title, pauseInfoTime to time, pauseInfoOverview to overview).forEach { (view, text) ->
+            view.text = text
+            view.isVisible = !text.isNullOrBlank()
+        }
+        pauseInfo.isVisible = true
+        pauseInfo.animate().alpha(1f).setDuration(800).start()
+    }
+
+    fun hidePauseInfo() {
+        if (!pauseInfo.isVisible) return
+        pauseInfo.animate().cancel()
+        pauseInfo.alpha = 0f
+        pauseInfo.isVisible = false
     }
 
     fun animateDimming(targetAlpha: Float) {

@@ -228,6 +228,9 @@
     <string name="swipe_release_exit">松开退出</string>
     <string name="pref_pause_dim">暂停时调暗屏幕</string>
     <string name="pref_pause_dim_desc">保护 OLED 屏幕免受烧屏影响</string>
+    <string name="pref_pause_info">暂停画面</string>
+    <string name="pref_pause_info_desc">暂停 5 秒后：显示正在播放的内容、剩余时间和结束时间、音轨，以及打开视频的应用提供的简介</string>
+    <string name="pause_info_time">剩余 %1$d 分钟 · %2$s 结束</string>
     <string name="dialog_input_url_title">输入播放列表链接</string>
     <string name="dialog_input_url_hint">http://...</string>
     <string name="save">保存</string>

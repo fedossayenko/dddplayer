@@ -314,6 +314,9 @@ class SettingsRepository private constructor(context: Context) {
 
     // --- UI Settings ---
     fun getPauseDimLevel(): Int = prefs.getInt("pause_dim_level", 60)
+    // Экран паузы: через 5 с паузы - что смотрим, сколько осталось, звук и описание (overview из Intent)
+    fun isPauseInfoEnabled(): Boolean = prefs.getBoolean("pause_info", false)
+    fun setPauseInfoEnabled(enabled: Boolean) = prefs.edit { putBoolean("pause_info", enabled) }
     fun setPauseDimLevel(level: Int) = prefs.edit { putInt("pause_dim_level", level) }
     fun isShowPlaylistIndexEnabled(): Boolean = prefs.getBoolean("show_playlist_index", true)
     fun setShowPlaylistIndexEnabled(enabled: Boolean) = prefs.edit { putBoolean("show_playlist_index", enabled) }

@@ -47,6 +47,18 @@ class IntentUtilsTest {
     }
 
     @Test
+    fun `overview for the paused screen, single and per playlist item (blank is none)`() {
+        val single = Intent(Intent.ACTION_VIEW, Uri.parse("http://example.com/film.mkv")).putExtra("overview", "A heist.")
+        assertEquals("A heist.", IntentUtils.parseIntent(context, single).first.single().overview)
+        val list = Intent(Intent.ACTION_VIEW).apply {
+            setDataAndType(videos[0], "video/*")
+            putExtra("video_list", videos)
+            putExtra("video_list.overview", arrayOf("Walt is ill.", " ", "A body."))
+        }
+        assertEquals(listOf("Walt is ill.", null, "A body."), IntentUtils.parseIntent(context, list).first.map { it.overview })
+    }
+
+    @Test
     fun `playlist starts from the item matching the intent data`() {
         val intent = Intent(Intent.ACTION_VIEW).apply {
             setDataAndType(videos[2], "video/*")

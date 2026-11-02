@@ -245,6 +245,9 @@
     <string name="swipe_release_exit">Release to exit</string>
     <string name="pref_pause_dim">Dim screen on pause</string>
     <string name="pref_pause_dim_desc">Protects OLED screens from burn-in</string>
+    <string name="pref_pause_info">Paused screen</string>
+    <string name="pref_pause_info_desc">After 5 s on pause: what is playing, the time left and when it ends, the audio track and the description, when the app that opened the video sends one</string>
+    <string name="pause_info_time">%1$d min left · ends at %2$s</string>
     <string name="dialog_input_url_title">Enter Playlist URL</string>
     <string name="dialog_input_url_hint">http://...</string>
     <string name="save">Save</string>

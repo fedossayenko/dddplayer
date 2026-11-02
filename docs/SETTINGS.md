@@ -39,6 +39,7 @@
 | `target_buffer_mb` | `BUFFER_SIZE_AUTO` (-1) | Буфер сетевого видео в МБ, варианты ограничены кучей |
 | `render_api_mode` | `RENDER_API_AUTO` (0) | 0 авто (ES 3.0 если есть), 1 принудительно GLES 2.0 |
 | `pause_dim_level` | 60 | Затемнение на паузе, % |
+| `pause_info` | false | Экран паузы: через 5 с паузы пользователем - название, «Осталось N мин · закончится в ЧЧ:ММ», звуковая дорожка, описание (Intent `overview`, `video_list.overview`); любое действие убирает |
 | `global_resize_mode`, `video_zoom_scale`, `remember_zoom` | 0 (FIT), 115, false | Масштаб |
 | `video_decoder_priority` | как `decoder_priority`, если его меняли, иначе `EXTENSION_RENDERER_MODE_ON` (HW+) | Приоритет встроенного AV1 (dav1d) перед декодерами устройства, раздел «Видео» |
 | `audio_decoder_priority` | как `decoder_priority`, если его меняли, иначе `EXTENSION_RENDERER_MODE_PREFER` (SW) | Приоритет встроенного FFmpeg перед декодерами устройства, раздел «Аудио» |
