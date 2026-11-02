@@ -109,6 +109,9 @@ class PlayerManager(
     private var loudnessEnhancer: LoudnessEnhancer? = null
     private var iecSink: IecCarrierSink? = null
 
+    // Скорость, выбранная пользователем (PlayerViewModel), без поправок LivePlaybackSpeedControl: для SpeedDecodeSink
+    @Volatile var requestedSpeed = 1f
+
     // Состояние для восстановления
     private var currentWindowIndex = 0
     private var currentPosition = 0L
@@ -471,12 +474,23 @@ class PlayerManager(
                 // декодированного PCM, а битстрим и так идет мимо процессоров
                 val iec = if (settingsRepo.isHdAudioIecEnabled()) IecCarrierOutput.wrap(appContext, baseSink) else null
                 iecSink = iec
-                val finalSink = iec ?: baseSink
+                // Проброс только Dolby: DTS и TrueHD декодируются. Декодеры устройства перед FFmpeg (PREFER -> ON),
+                // иначе FFmpeg забрал бы и AC3/E-AC3 раньше, чем до них дойдет passthrough; «только устройства» (OFF)
+                // не трогаем
+                val dolbyOnly = settingsRepo.isDolbyOnlyPassthroughEnabled()
+                val audioPriority = settingsRepo.getAudioDecoderPriority().let {
+                    if (dolbyOnly && it == DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER) {
+                        DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON
+                    } else it
+                }
+                // Снаружи всех: при скорости не 1x битстрим уходит в декодер, иначе ускорять нечему
+                val finalSink = SpeedDecodeSink((iec ?: baseSink).let { if (dolbyOnly) DolbyOnlySink(it) else it },
+                    { requestedSpeed }, iec)
 
                 // Приоритет встроенного FFmpeg - своя настройка аудио
                 super.buildAudioRenderers(
                     context,
-                    settingsRepo.getAudioDecoderPriority(),
+                    audioPriority,
                     mediaCodecSelector,
                     enableDecoderFallback,
                     finalSink,
