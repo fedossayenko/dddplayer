@@ -209,6 +209,22 @@ A video's own saved tracks (the player's per-URI settings) still win, except a s
 the `audio_lang` languages (or has no language tag) when `audio_lang` is passed. Passing any of the three keys, even an empty
 `audio_track`, turns the memory on for this launch: a track the user picks is also used for the next items of the playlist.
 
+#### Skipping the Intro and Credits
+An app that knows when the intro, the recap of earlier episodes or the end credits run can pass them; the player then
+shows a button while each one runs, and OK on the remote (while the control panel is hidden) or a tap skips it:
+
+| Key | Type | Description |
+| :--- | :--- | :--- |
+| `segments` | String | Single video: `intro:0-58867;recap:95000-259000;credits:3395489-` (milliseconds; `credits` with no end runs to the end of the video). A recap with the intro within 3 s after it: one button skips both. |
+| `video_list.segments` | String[] | Playlist: the same per item, an empty string for none. |
+
+Unknown kinds and broken parts are ignored. "Skip Intro" and "Skip Recap" jump to the end of the part. Credits that
+run to the end of the video (within 15 s) skip to the next playlist item ("Next Episode") or end the video like a
+completion ("Skip Credits"); credits that end earlier (a scene after them) jump to their end. The "Skip Intros
+Automatically" setting (Playback, off by default) skips the intro and the recap without the button, once per
+video (seeking back into one shows the button). With credits that
+run to the end, "Ends at" counts to where they start.
+
 ### Tech Stack
 
 *   **Language**: Kotlin
