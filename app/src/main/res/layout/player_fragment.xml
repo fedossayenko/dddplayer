@@ -493,6 +493,58 @@
         tools:text="@string/skip_intro"
         tools:visibility="visible" />
 
+    <!-- Карточка следующей серии на финальных титрах (настройка next_card), на месте кнопки «Пропустить» -->
+    <LinearLayout
+        android:id="@+id/next_card"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_marginEnd="48dp"
+        android:layout_marginBottom="40dp"
+        android:background="@drawable/bg_player_panel"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:padding="12dp"
+        android:visibility="gone">
+        <ImageView
+            android:id="@+id/next_card_image"
+            android:layout_width="224dp"
+            android:layout_height="126dp"
+            android:importantForAccessibility="no"
+            android:scaleType="centerCrop" />
+        <LinearLayout
+            android:layout_width="280dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:orientation="vertical">
+            <TextView
+                android:id="@+id/next_card_countdown"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/tv_white"
+                android:alpha="0.8"
+                android:textSize="15sp" />
+            <TextView
+                android:id="@+id/next_card_title"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:ellipsize="end"
+                android:maxLines="2"
+                android:textColor="@color/tv_white"
+                android:textSize="20sp"
+                android:textStyle="bold" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:alpha="0.6"
+                android:text="@string/next_card_hint"
+                android:textColor="@color/tv_white"
+                android:textSize="13sp" />
+        </LinearLayout>
+    </LinearLayout>
+
     <!-- Индикатор буферизации (Одиночный) -->
     <FrameLayout
         android:id="@+id/buffering_container"

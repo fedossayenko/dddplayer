@@ -1087,6 +1087,8 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         _skipSegment.value = segment
     }
 
+    fun isNextCardEnabled() = repository.isNextCardEnabled()
+
     /** Пересказ, за которым сразу идет заставка: кнопка пропускает обе. */
     fun skipsIntroToo(segment: SkipSegment): Boolean =
         SkipSegmentLogic.introAfter(segment, getPlayingItem()?.segments.orEmpty()) != null

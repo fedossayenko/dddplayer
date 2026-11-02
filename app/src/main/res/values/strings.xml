@@ -527,4 +527,8 @@
     <string name="skip_to_next_episode">Next Episode</string>
     <string name="pref_auto_skip_intro">Skip Intros Automatically</string>
     <string name="pref_auto_skip_intro_desc">Skip the intro and the recap without the button, when the app that opened the video sends their times.</string>
+    <string name="pref_next_card">Next episode card</string>
+    <string name="pref_next_card_desc">At the final credits (when the app that opened the video sends their time): the next episode with its picture, playing in 8 s. Back watches the credits</string>
+    <string name="next_card_in">Next episode in %1$d s</string>
+    <string name="next_card_hint">OK: play now · Back: watch the credits</string>
 </resources>

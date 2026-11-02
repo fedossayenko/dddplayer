@@ -81,6 +81,8 @@ class GlobalSettingsActivity : AppCompatActivity() {
     private lateinit var itemAutoPip: LinearLayout
     private lateinit var switchAutoPip: SwitchCompat
     private lateinit var itemAutoSkipIntro: LinearLayout
+    private lateinit var itemNextCard: LinearLayout
+    private lateinit var switchNextCard: SwitchCompat
     private lateinit var switchAutoSkipIntro: SwitchCompat
     private lateinit var textDecoderDesc: TextView
     private lateinit var textDecoderValue: TextView
@@ -344,6 +346,8 @@ class GlobalSettingsActivity : AppCompatActivity() {
         itemAutoPip = findViewById(R.id.item_auto_pip)
         switchAutoPip = findViewById(R.id.switch_auto_pip)
         itemAutoSkipIntro = findViewById(R.id.item_auto_skip_intro)
+        itemNextCard = findViewById(R.id.item_next_card)
+        switchNextCard = findViewById(R.id.switch_next_card)
         switchAutoSkipIntro = findViewById(R.id.switch_auto_skip_intro)
         textDecoderDesc = findViewById(R.id.text_decoder_desc)
         textDecoderValue = findViewById(R.id.text_decoder_value)
@@ -456,6 +460,9 @@ class GlobalSettingsActivity : AppCompatActivity() {
         }
         itemAutoSkipIntro.setOnClickListener {
             settingsViewModel.toggleAutoSkipIntro(!switchAutoSkipIntro.isChecked)
+        }
+        itemNextCard.setOnClickListener {
+            settingsViewModel.toggleNextCard(!switchNextCard.isChecked)
         }
 
         // Downmix
@@ -701,6 +708,7 @@ class GlobalSettingsActivity : AppCompatActivity() {
         // Playback
         settingsViewModel.isAutoPipEnabled.observe(this) { switchAutoPip.isChecked = it }
         settingsViewModel.isAutoSkipIntroEnabled.observe(this) { switchAutoSkipIntro.isChecked = it }
+        settingsViewModel.isNextCardEnabled.observe(this) { switchNextCard.isChecked = it }
         settingsViewModel.videoDecoderPriority.observe(this) { mode ->
             textDecoderValue.text = settingsViewModel.getDecoderValueString(mode)
             textDecoderDesc.setText(settingsViewModel.getDecoderDescResId(mode, video = true))

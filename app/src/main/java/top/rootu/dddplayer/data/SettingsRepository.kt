@@ -325,6 +325,9 @@ class SettingsRepository private constructor(context: Context) {
 
     // Заставку и краткое содержание (отрезки из Intent) пропускать без кнопки
     fun isAutoSkipIntroEnabled(): Boolean = prefs.getBoolean("auto_skip_intro", false)
+    // Карточка следующей серии на финальных титрах с отсчетом (вместо кнопки «Следующая серия»)
+    fun isNextCardEnabled(): Boolean = prefs.getBoolean("next_card", false)
+    fun setNextCardEnabled(enabled: Boolean) = prefs.edit { putBoolean("next_card", enabled) }
     fun setAutoSkipIntroEnabled(enabled: Boolean) = prefs.edit { putBoolean("auto_skip_intro", enabled) }
 
     // Приоритет встроенных декодеров (EXTENSION_RENDERER_MODE_*) отдельно для видео (AV1) и аудио (FFmpeg).

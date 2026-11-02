@@ -510,4 +510,8 @@
     <string name="skip_to_next_episode">下一集</string>
     <string name="pref_auto_skip_intro">自动跳过片头</string>
     <string name="pref_auto_skip_intro_desc">当打开视频的应用提供了片头和前情提要的时间时，无需按键直接跳过。</string>
+    <string name="pref_next_card">下一集卡片</string>
+    <string name="pref_next_card_desc">片尾字幕时（打开视频的应用提供了其时间时）：显示下一集及其画面，8 秒后播放。返回键观看片尾</string>
+    <string name="next_card_in">%1$d 秒后播放下一集</string>
+    <string name="next_card_hint">OK：立即播放 · 返回：观看片尾</string>
 </resources>

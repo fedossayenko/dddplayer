@@ -87,7 +87,9 @@ class PlayerInputHandler(
         }
 
         // Кнопка «Пропустить» на экране: OK пропускает отрезок, пока панель скрыта (с панелью OK - ее кнопки, пауза)
-        if (isOkKey && ui.skipButton.isVisible && !ui.controlsView.isVisible && viewModel.skipCurrentSegment()) {
+        if (isOkKey && (ui.skipButton.isVisible || ui.nextCard.isVisible) && !ui.controlsView.isVisible &&
+            viewModel.skipCurrentSegment()
+        ) {
             return true
         }
 

@@ -46,6 +46,7 @@ import top.rootu.dddplayer.R
 import top.rootu.dddplayer.data.SettingsRepository
 import top.rootu.dddplayer.logic.AnaglyphLogic
 import top.rootu.dddplayer.logic.SkipSegmentLogic
+import top.rootu.dddplayer.model.SkipSegment
 import top.rootu.dddplayer.logic.StereoFormatLogic
 import top.rootu.dddplayer.logic.TrackLogic
 import top.rootu.dddplayer.model.AspectRatioMode
@@ -1070,11 +1071,21 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
             // Сбрасываем таймер затемнения при снятии/постановке на паузу
             resetDimTimer()
         }
-        // Отрезок для кнопки «Пропустить» (заставка, титры)
+        // Отрезок для кнопки «Пропустить» (заставка, титры); финальные титры перед следующей серией - карточка
         viewModel.skipSegment.observe(viewLifecycleOwner) { segment ->
             val p = viewModel.player
-            ui.showSkipButton(segment, segment != null && p != null && p.hasNextMediaItem() &&
-                SkipSegmentLogic.runsToEnd(segment, p.duration), segment != null && viewModel.skipsIntroToo(segment))
+            val toNext = segment != null && p != null && p.hasNextMediaItem() && SkipSegmentLogic.runsToEnd(segment, p.duration)
+            nextCardHandler.removeCallbacks(nextCardTick)
+            if (segment == null) nextCardDismissed = null
+            if (toNext && segment != nextCardDismissed && viewModel.isNextCardEnabled()) {
+                ui.showSkipButton(null, false)
+                nextCardLeft = NEXT_CARD_SECONDS
+                ui.showNextCard(viewModel.getAdjacentPlaylistItem(true), nextCardLeft)
+                nextCardHandler.postDelayed(nextCardTick, 1000)
+            } else {
+                ui.hideNextCard()
+                ui.showSkipButton(segment, toNext, segment != null && viewModel.skipsIntroToo(segment))
+            }
         }
         ui.skipButton.setOnClickListener { viewModel.skipCurrentSegment() }
         ui.creditsStartMs = { viewModel.creditsStartMs() }
@@ -1703,6 +1714,25 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
         return SystemClock.elapsedRealtime() - lastExitBackPressMs > EXIT_CONFIRM_WINDOW_MS
     }
 
+    // Карточка следующей серии: отсчет идет, пока видео играет (пауза его держит); 0 - следующая серия
+    private val nextCardHandler = Handler(Looper.getMainLooper())
+    private var nextCardLeft = 0
+    // Титры, для которых карточку закрыли (Назад): остается кнопка, карточка не возвращается
+    private var nextCardDismissed: SkipSegment? = null
+    private val nextCardTick = object : Runnable {
+        override fun run() {
+            if (!ui.isNextCardShown) return
+            if (viewModel.player?.isPlaying == true) nextCardLeft--
+            if (nextCardLeft <= 0) {
+                ui.hideNextCard()
+                viewModel.skipCurrentSegment()
+                return
+            }
+            ui.setNextCardSeconds(nextCardLeft)
+            nextCardHandler.postDelayed(this, 1000)
+        }
+    }
+
     private fun setupBackPressedHandler() {
         requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
@@ -1711,6 +1741,14 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
                     viewModel.restoreSettings()
                 } else if (ui.controlsView.isVisible) {
                     ui.hideControls()
+                } else if (ui.isNextCardShown) {
+                    // Смотреть титры: карточка уходит, остается кнопка «Следующая серия»
+                    nextCardHandler.removeCallbacks(nextCardTick)
+                    ui.hideNextCard()
+                    viewModel.skipSegment.value?.let { segment ->
+                        nextCardDismissed = segment
+                        ui.showSkipButton(segment, true)
+                    }
                 } else if (shouldAskExitConfirmation()) {
                     // Первое нажатие только предупреждает, выход - повторным нажатием
                     lastExitBackPressMs = SystemClock.elapsedRealtime()
@@ -1812,6 +1850,7 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
     override fun onDestroyView() {
         // Сначала отвязываем поверхность от плеера
         viewModel.player?.setVideoSurface(null)
+        nextCardHandler.removeCallbacksAndMessages(null)
 
         // Останавливаем таймеры
         timerController.cleanup()
@@ -1837,6 +1876,8 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
     }
 
     companion object {
+        // Отсчет карточки следующей серии, секунд воспроизведения
+        private const val NEXT_CARD_SECONDS = 8
         private const val EXIT_CONFIRM_WINDOW_MS = 2000L
 
         fun newInstance() = PlayerFragment()

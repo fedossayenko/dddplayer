@@ -496,4 +496,8 @@
     <string name="skip_to_next_episode">Наступная серыя</string>
     <string name="pref_auto_skip_intro">Прапускаць застаўкі аўтаматычна</string>
     <string name="pref_auto_skip_intro_desc">Прапускаць застаўку і пераказ папярэдніх серый без кнопкі, калі праграма, якая адкрыла відэа, перадала іх час.</string>
+    <string name="pref_next_card">Картка наступнай серыі</string>
+    <string name="pref_next_card_desc">На фінальных тытрах (калі праграма, якая адкрыла відэа, перадала іх час): наступная серыя з кадрам, запуск праз 8 с. Назад - глядзець тытры</string>
+    <string name="next_card_in">Наступная серыя праз %1$d с</string>
+    <string name="next_card_hint">OK - зараз · Назад - глядзець тытры</string>
 </resources>

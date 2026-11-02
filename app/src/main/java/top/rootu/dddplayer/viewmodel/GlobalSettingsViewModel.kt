@@ -201,6 +201,14 @@ class GlobalSettingsViewModel(application: Application) : AndroidViewModel(appli
         _isAutoPipEnabled.value = enabled
     }
 
+    private val _isNextCardEnabled = MutableLiveData(repository.isNextCardEnabled())
+    val isNextCardEnabled: LiveData<Boolean> = _isNextCardEnabled
+
+    fun toggleNextCard(enabled: Boolean) {
+        repository.setNextCardEnabled(enabled)
+        _isNextCardEnabled.value = enabled
+    }
+
     fun toggleAutoSkipIntro(enabled: Boolean) {
         repository.setAutoSkipIntroEnabled(enabled)
         _isAutoSkipIntroEnabled.value = enabled

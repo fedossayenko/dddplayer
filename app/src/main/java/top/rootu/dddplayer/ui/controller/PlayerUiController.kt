@@ -24,6 +24,7 @@ import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.SubtitleView
 import androidx.recyclerview.widget.LinearSmoothScroller
 import androidx.recyclerview.widget.RecyclerView
+import coil.load
 import top.rootu.dddplayer.R
 import top.rootu.dddplayer.data.SettingsRepository
 import top.rootu.dddplayer.logic.PlaybackErrorLogic
@@ -172,6 +173,34 @@ class PlayerUiController(private val rootView: View) {
     // Кнопка «Пропустить»: видна, пока идет отрезок (после пропуска или выхода из отрезка скрывается)
     val skipButton: TextView = rootView.findViewById(R.id.skip_segment_button)
 
+    // Карточка следующей серии на финальных титрах (настройка next_card), на месте кнопки «Пропустить»
+    val nextCard: View = rootView.findViewById(R.id.next_card)
+    private val nextCardImage: ImageView = rootView.findViewById(R.id.next_card_image)
+    private val nextCardTitle: TextView = rootView.findViewById(R.id.next_card_title)
+    private val nextCardCountdown: TextView = rootView.findViewById(R.id.next_card_countdown)
+    var isNextCardShown = false
+        private set
+
+    fun showNextCard(item: MediaItem?, seconds: Int) {
+        isNextCardShown = true
+        nextCardTitle.text = item?.title ?: item?.filename ?: item?.uri?.lastPathSegment.orEmpty()
+        val still = item?.posterUri
+        nextCardImage.isVisible = still != null
+        if (still != null) nextCardImage.load(still)
+        setNextCardSeconds(seconds)
+        placeSkipButton()
+        nextCard.isVisible = !inPictureInPicture
+    }
+
+    fun setNextCardSeconds(seconds: Int) {
+        nextCardCountdown.text = rootView.context.getString(R.string.next_card_in, seconds)
+    }
+
+    fun hideNextCard() {
+        isNextCardShown = false
+        nextCard.isVisible = false
+    }
+
     // Начало финальных титров текущего видео (PlayerViewModel.creditsStartMs), для «Закончится в»
     var creditsStartMs: () -> Long? = { null }
 
@@ -212,6 +241,7 @@ class PlayerUiController(private val rootView: View) {
             else -> 40 * metrics.density
         }
         skipButton.updateLayoutParams<ViewGroup.MarginLayoutParams> { bottomMargin = bottom.toInt() }
+        nextCard.updateLayoutParams<ViewGroup.MarginLayoutParams> { bottomMargin = bottom.toInt() }
     }
 
     private var inPictureInPicture = false
@@ -221,6 +251,7 @@ class PlayerUiController(private val rootView: View) {
         if (enabled) {
             playlistDialog?.dismiss()
             skipButton.isVisible = false
+            nextCard.isVisible = false
             hideControls()
             topSettingsPanel.isVisible = false
             hideHandler.removeCallbacks(hideGestureRunnable)
@@ -235,6 +266,7 @@ class PlayerUiController(private val rootView: View) {
             showControls()
             placeSkipButton()
             skipButton.isVisible = skipWanted
+            nextCard.isVisible = isNextCardShown
         }
         updateClockVisibility()
     }

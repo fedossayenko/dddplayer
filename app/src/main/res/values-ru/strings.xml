@@ -524,4 +524,8 @@
     <string name="skip_to_next_episode">Следующая серия</string>
     <string name="pref_auto_skip_intro">Пропускать заставки автоматически</string>
     <string name="pref_auto_skip_intro_desc">Пропускать заставку и пересказ прошлых серий без кнопки, если приложение, открывшее видео, передало их время.</string>
+    <string name="pref_next_card">Карточка следующей серии</string>
+    <string name="pref_next_card_desc">На финальных титрах (если приложение, открывшее видео, передало их время): следующая серия с кадром, запуск через 8 с. Назад - смотреть титры</string>
+    <string name="next_card_in">Следующая серия через %1$d с</string>
+    <string name="next_card_hint">OK - сейчас · Назад - смотреть титры</string>
 </resources>

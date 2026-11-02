@@ -496,4 +496,8 @@
     <string name="skip_to_next_episode">Наступна серія</string>
     <string name="pref_auto_skip_intro">Пропускати заставки автоматично</string>
     <string name="pref_auto_skip_intro_desc">Пропускати заставку й переказ попередніх серій без кнопки, якщо застосунок, що відкрив відео, передав їхній час.</string>
+    <string name="pref_next_card">Картка наступної серії</string>
+    <string name="pref_next_card_desc">На фінальних титрах (якщо застосунок, що відкрив відео, передав їхній час): наступна серія з кадром, запуск через 8 с. Назад - дивитися титри</string>
+    <string name="next_card_in">Наступна серія через %1$d с</string>
+    <string name="next_card_hint">OK - зараз · Назад - дивитися титри</string>
 </resources>
