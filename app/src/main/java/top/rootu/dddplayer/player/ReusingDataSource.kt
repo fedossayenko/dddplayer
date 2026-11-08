@@ -220,10 +220,11 @@ class ReusingDataSource(
     companion object {
         const val WINDOW = 256 * 1024
         const val BACK = 64 * 1024L
-        // ~0.07 с чтения на 15 МБ/с против 0.3-0.8 с нового запроса; на 2 МБ/с - 0.5 с, как запрос
-        const val SKIP_AHEAD = 1L * 1024 * 1024
+        // ~0.27 с чтения на 15 МБ/с против 0.3-0.8 с нового запроса, а часть уже лежит в сокете с парковки.
+        // MP4 с дорожками вразброс прыгает вперед на 1-3 МБ (звук 7 языков, субтитры через 1.6 МБ)
+        const val SKIP_AHEAD = 4L * 1024 * 1024
         const val IDLE_MS = 10_000L // индекс в конце скачивается и разбирается ~3 с, потом возврат к началу
-        const val MAX_PARKED = 2
+        const val MAX_PARKED = 8 // видео со звуком и субтитры в 4-6 местах файла: у каждого места свое соединение
 
         private val closer = Executors.newSingleThreadScheduledExecutor { r ->
             Thread(r, "ReusingDataSource").apply { isDaemon = true }
