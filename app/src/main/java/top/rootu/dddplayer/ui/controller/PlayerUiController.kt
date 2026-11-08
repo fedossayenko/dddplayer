@@ -5,6 +5,10 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.os.Handler
 import android.os.Looper
+import android.text.SpannableStringBuilder
+import android.text.Spanned
+import android.text.style.ForegroundColorSpan
+import android.text.style.TabStopSpan
 import android.view.Gravity
 import android.view.SurfaceView
 import android.view.View
@@ -59,6 +63,12 @@ class PlayerUiController(private val rootView: View) {
     val subtitleViewLeft: SubtitleView = rootView.findViewById(R.id.subtitle_view_left)
     val subtitleViewRight: SubtitleView = rootView.findViewById(R.id.subtitle_view_right)
     val standaloneClock: OutlineTextView = rootView.findViewById(R.id.standalone_clock)
+
+    // Карточка статистики (BUFFER_DISPLAY_STATS), слева сверху напротив часов
+    val statsCard: View = rootView.findViewById(R.id.stats_card)
+    private val statsText: TextView = rootView.findViewById(R.id.stats_text)
+    private val statsBufferBar: ProgressBar = rootView.findViewById(R.id.stats_buffer_bar)
+    private var statsEnabled = false
 
     // Buffering
     val bufferingSplitContainer: View = rootView.findViewById(R.id.buffering_split_container)
@@ -212,6 +222,29 @@ class PlayerUiController(private val rootView: View) {
     private fun updateClockVisibility() {
         standaloneClock.isVisible = !inPictureInPicture &&
             clockTransparency != SettingsRepository.CLOCK_OFF && !topInfoPanel.isVisible
+        // Карточка уступает место инфопанели, как и часы
+        statsCard.isVisible = statsEnabled && !inPictureInPicture && !topInfoPanel.isVisible
+    }
+
+    fun setStatsEnabled(enabled: Boolean) {
+        statsEnabled = enabled
+        updateClockVisibility()
+    }
+
+    /** Подписи приглушены, значения выровнены по общей позиции табуляции. */
+    fun setStats(labels: List<String>, values: List<String>, bufferPercent: Int) {
+        val context = rootView.context
+        val gap = 14 * context.resources.displayMetrics.density
+        val tab = (labels.maxOf { statsText.paint.measureText(it) } + gap).toInt()
+        val muted = ContextCompat.getColor(context, R.color.text_secondary)
+        val text = SpannableStringBuilder()
+        labels.zip(values).forEachIndexed { i, (label, value) ->
+            if (i > 0) text.append('\n')
+            text.append(label, ForegroundColorSpan(muted), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE).append('\t').append(value)
+        }
+        text.setSpan(TabStopSpan.Standard(tab), 0, text.length, Spanned.SPAN_INCLUSIVE_INCLUSIVE)
+        statsText.text = text
+        statsBufferBar.progress = bufferPercent
     }
 
     /** Карточка соседнего видео вместо иконки; без [target] (выход) - иконка. */

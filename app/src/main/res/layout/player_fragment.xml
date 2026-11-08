@@ -95,6 +95,44 @@
         tools:visibility="visible"
         tools:text="19:36" />
 
+    <!-- Карточка статистики (Отображение буфера → Карточка статистики), слева сверху напротив часов -->
+    <LinearLayout
+        android:id="@+id/stats_card"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|start"
+        android:layout_marginStart="28dp"
+        android:layout_marginTop="28dp"
+        android:background="@drawable/bg_player_panel"
+        android:orientation="vertical"
+        android:paddingStart="16dp"
+        android:paddingTop="12dp"
+        android:paddingEnd="16dp"
+        android:paddingBottom="14dp"
+        android:visibility="gone"
+        tools:visibility="visible">
+
+        <TextView
+            android:id="@+id/stats_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:fontFeatureSettings="tnum"
+            android:lineSpacingExtra="4dp"
+            android:textColor="@color/tv_white"
+            android:textSize="13sp"
+            tools:text="Buffer\t42 s · 310 MB\nNetwork\t48.2 Mbps · 2 req/s" />
+
+        <!-- Заполненность буфера -->
+        <ProgressBar
+            android:id="@+id/stats_buffer_bar"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="match_parent"
+            android:layout_height="3dp"
+            android:layout_marginTop="10dp"
+            android:max="100"
+            android:progressDrawable="@drawable/progress_playlist_item" />
+    </LinearLayout>
+
     <!-- === ОВЕРЛЕЙ ЗАТЕМНЕНИЯ (ДЛЯ OLED) === -->
     <View
         android:id="@+id/dim_overlay"

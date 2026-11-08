@@ -310,6 +310,8 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
     // Безопасный доступ к плееру (может быть null, если не инициализирован)
     val player: ExoPlayer? get() = playerManager.exoPlayer
+
+    fun getPlaybackStats() = playerManager.getPlaybackStats()
     val isDirectAudioOutput: Boolean get() = playerManager.isDirectAudioOutput
     /** Плеер остановлен в onStop, чтобы освободить HDMI-выход; в onStart его нужно подготовить заново. */
     var stoppedInBackground = false

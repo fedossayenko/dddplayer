@@ -232,6 +232,15 @@
     <string name="buffer_off">Выкл</string>
     <string name="buffer_panel">У панэлі кіравання</string>
     <string name="buffer_clock">Побач з гадзіннікам і ў інфапанэлі</string>
+    <string name="buffer_stats">Картка статыстыкі</string>
+    <string name="stats_buffer">Буфер</string>
+    <string name="stats_network">Сетка</string>
+    <string name="stats_video">Відэа</string>
+    <string name="stats_audio">Гук</string>
+    <string name="stats_dropped">Прапушчана кадраў</string>
+    <string name="stats_buffer_value">%1$d с · %2$d МБ</string>
+    <string name="stats_network_value">%1$.1f Мбіт/с · %2$d запыт/с</string>
+    <string name="stats_fps">%s к/с</string>
     <string name="pref_buffer_size">Памер буфера</string>
     <string name="pref_buffer_size_desc">Памяць для буферызацыі сеткавага відэа. «Аўта» трымае запас 15–50 секунд: давантажвае відэа, калі наперадзе застаецца менш за 15 с, і спыняецца на 50 с. З памерам у МБ плэер загружае наперад, пакуль не запоўніць гэты аб\'ём. Лакальныя файлы заўсёды выкарыстоўваюць «Аўта»</string>
     <string name="buffer_size_auto">Аўта</string>
