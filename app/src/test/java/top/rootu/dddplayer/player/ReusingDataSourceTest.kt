@@ -20,7 +20,8 @@ import java.io.InterruptedIOException
 @RunWith(RobolectricTestRunner::class)
 class ReusingDataSourceTest {
 
-    private val file = ByteArray(3 * 1024 * 1024) { (it * 31 + it / 7).toByte() }
+    // Больше SKIP_AHEAD: индекс в конце - дальний прыжок
+    private val file = ByteArray(6 * ReusingDataSource.SKIP_AHEAD.toInt()) { (it * 31 + it / 7).toByte() }
     private val uri = Uri.parse("https://store.example/dld/film.mp4")
     private val opens = mutableListOf<Long>() // позиции запросов в "сеть"
     private var failReads = false
@@ -161,5 +162,13 @@ class ReusingDataSourceTest {
         assertReads(500, 10)
         // 0: голова; far: прыжок; 0: попытка после сброса припаркованного; 0: повтор плеера
         assertEquals(listOf(0L, far - ReusingDataSource.BACK, 0L, 0L), opens)
+    }
+
+    @Test
+    fun `MP4 with tracks in five far places read in turn keeps a connection for each`() {
+        // Фильм 28 ГБ: субтитры к 25-й минуте лежат на 0.56-0.72 ГБ, видео и звук - на 4.3 ГБ
+        val places = (0L until 5L).map { it * (ReusingDataSource.SKIP_AHEAD + 100_000) }
+        for (round in 0 until 3) places.forEach { assertReads(it + round * 300_000L, 10) }
+        assertEquals(places.map { maxOf(0L, it - ReusingDataSource.BACK) }, opens)
     }
 }
