@@ -72,6 +72,7 @@ class SettingsRepository private constructor(context: Context) {
         const val BUFFER_DISPLAY_OFF = 0
         const val BUFFER_DISPLAY_PANEL = 1
         const val BUFFER_DISPLAY_CLOCK = 2 // Рядом с часами (одиночные часы и инфопанель)
+        const val BUFFER_DISPLAY_STATS = 3 // Карточка статистики: буфер, сеть, форматы, пропущенные кадры
 
         const val BUFFER_SIZE_AUTO = -1
         // Запоминание аудиодорожки

@@ -6,6 +6,7 @@ import android.hardware.display.DisplayManager
 import android.media.audiofx.LoudnessEnhancer
 import android.os.Build
 import android.os.Handler
+import android.os.SystemClock
 import android.util.Log
 import android.view.Display
 import android.view.accessibility.CaptioningManager
@@ -21,8 +22,11 @@ import androidx.media3.common.MimeTypes
 import androidx.media3.common.Player
 import androidx.media3.common.audio.ChannelMixingAudioProcessor
 import androidx.media3.common.util.Util
+import androidx.media3.datasource.DataSource
+import androidx.media3.datasource.DataSpec
 import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.ResolvingDataSource
+import androidx.media3.datasource.TransferListener
 import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.DefaultRenderersFactory
@@ -72,6 +76,7 @@ import java.security.SecureRandom
 import java.security.cert.X509Certificate
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.TimeUnit
 import javax.net.ssl.SSLContext
 import javax.net.ssl.SSLSocketFactory
@@ -193,9 +198,23 @@ class PlayerManager(
         }
         .build()
 
+    // Байты и запросы всех HTTP-соединений с запуска приложения: карточка статистики берет разницу за секунду
+    private val netBytes = AtomicLong()
+    private val netRequests = AtomicLong()
+    private val netCounter = object : TransferListener {
+        override fun onTransferInitializing(source: DataSource, dataSpec: DataSpec, isNetwork: Boolean) {}
+        override fun onTransferStart(source: DataSource, dataSpec: DataSpec, isNetwork: Boolean) {
+            netRequests.incrementAndGet()
+        }
+        override fun onBytesTransferred(source: DataSource, dataSpec: DataSpec, isNetwork: Boolean, bytesTransferred: Int) {
+            netBytes.addAndGet(bytesTransferred.toLong())
+        }
+        override fun onTransferEnd(source: DataSource, dataSpec: DataSpec, isNetwork: Boolean) {}
+    }
+
     // Фабрика для HTTP (сеть). User-Agent не задаем: OkHttpDataSource добавляет его вторым заголовком
     // поверх User-Agent источника, и часть серверов отвечает 403. Он приходит в заголовках видео (requestHeaders)
-    private val baseHttpFactory = OkHttpDataSource.Factory(okHttpClient)
+    private val baseHttpFactory = OkHttpDataSource.Factory(okHttpClient).setTransferListener(netCounter)
 
     // Универсальная фабрика, которая умеет работать с content://, file:// и http://
     // Сеть идет через ReusingDataSource: прыжки экстрактора по файлу не открывают новое соединение каждый раз
@@ -995,6 +1014,21 @@ class PlayerManager(
         val scheme = player.currentMediaItem?.localConfiguration?.uri?.scheme
         if (scheme.isNullOrEmpty() || scheme in DefaultLoadControl.LOCAL_PLAYBACK_SCHEMES) return null
         return ((allocator.totalBytesAllocated * 100L) / networkBufferBytes).toInt().coerceIn(0, 100)
+    }
+
+    /** Снимок для карточки статистики, null - плеера нет. */
+    fun getPlaybackStats(): PlaybackStats? {
+        val player = exoPlayer ?: return null
+        return PlaybackStats(
+            timeMs = SystemClock.elapsedRealtime(),
+            bufferedMs = (player.bufferedPosition - player.currentPosition).coerceAtLeast(0),
+            bufferBytes = bufferAllocator?.totalBytesAllocated?.toLong() ?: 0,
+            netBytes = netBytes.get(),
+            netRequests = netRequests.get(),
+            video = player.videoFormat,
+            audio = player.audioFormat,
+            droppedFrames = player.videoDecoderCounters?.droppedBufferCount ?: 0
+        )
     }
 
     fun togglePlayPause() {

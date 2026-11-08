@@ -60,12 +60,14 @@ import top.rootu.dddplayer.model.StereoInputType
 import top.rootu.dddplayer.model.StereoOutputMode
 import top.rootu.dddplayer.renderer.OnSurfaceReadyListener
 import top.rootu.dddplayer.renderer.StereoRenderer
+import top.rootu.dddplayer.player.PlaybackStats
 import top.rootu.dddplayer.ui.adapter.ChoiceAdapter
 import top.rootu.dddplayer.ui.adapter.SideMenuAdapter
 import top.rootu.dddplayer.ui.controller.PlayerInputHandler
 import top.rootu.dddplayer.ui.controller.PlayerTimerController
 import top.rootu.dddplayer.ui.controller.PlayerTouchHandler
 import top.rootu.dddplayer.ui.controller.PlayerUiController
+import top.rootu.dddplayer.ui.controller.StatsCardText
 import top.rootu.dddplayer.utils.IntentUtils
 import top.rootu.dddplayer.utils.afr.AfrFormatItem
 import top.rootu.dddplayer.utils.afr.AutoFrameRateHelper
@@ -136,6 +138,7 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
     private lateinit var scaleDetector: ScaleGestureDetector
     private var pinchZoom = 100f
     private var bufferDisplayMode = SettingsRepository.BUFFER_DISPLAY_OFF
+    private var statsJob: Job? = null
     private var isSwipeSeeking = false
     private var swipeSeekStartPosition = 0L
     private var swipeSeekCurrentPosition = 0L
@@ -1066,6 +1069,23 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
     private fun applyBufferDisplayMode(mode: Int) {
         bufferDisplayMode = mode
         updateBufferDisplay(viewModel.bufferedPercentage.value ?: 0)
+        val stats = mode == SettingsRepository.BUFFER_DISPLAY_STATS
+        ui.setStatsEnabled(stats)
+        statsJob?.cancel()
+        if (stats) statsJob = viewLifecycleOwner.lifecycleScope.launch {
+            val labels = StatsCardText.labels(resources)
+            var prev: PlaybackStats? = null
+            while (true) {
+                // Снимок берем и под скрытой карточкой: после инфопанели скорость сразу верная
+                val now = viewModel.getPlaybackStats()
+                if (now != null && ui.statsCard.isVisible) {
+                    val values = StatsCardText.values(resources, now, prev, viewModel.audioOutputInfo.value.orEmpty())
+                    ui.setStats(labels, values, viewModel.bufferedPercentage.value ?: 0)
+                }
+                prev = now
+                delay(1000)
+            }
+        }
     }
 
     private fun updateBufferDisplay(percent: Int) {

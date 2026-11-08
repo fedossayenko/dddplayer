@@ -265,6 +265,15 @@
     <string name="buffer_off">Off</string>
     <string name="buffer_panel">In control panel</string>
     <string name="buffer_clock">Near the clock and in the info panel</string>
+    <string name="buffer_stats">Stats card</string>
+    <string name="stats_buffer">Buffer</string>
+    <string name="stats_network">Network</string>
+    <string name="stats_video">Video</string>
+    <string name="stats_audio">Audio</string>
+    <string name="stats_dropped">Dropped frames</string>
+    <string name="stats_buffer_value">%1$d s · %2$d MB</string>
+    <string name="stats_network_value">%1$.1f Mbps · %2$d req/s</string>
+    <string name="stats_fps">%s fps</string>
     <string name="pref_buffer_size">Buffer size</string>
     <string name="pref_buffer_size_desc">Memory for buffering network video. “Auto” keeps 15–50 seconds ahead: it loads more when less than 15 s is left and stops at 50 s. With a size in MB the player loads ahead until that amount is filled. Local files always use “Auto”</string>
     <string name="pref_connection_reuse">Reuse the connection</string>

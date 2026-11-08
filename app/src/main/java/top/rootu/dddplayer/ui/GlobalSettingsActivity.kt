@@ -692,7 +692,8 @@ class GlobalSettingsActivity : AppCompatActivity() {
         itemTrackChangeInfo.setOnClickListener { settingsViewModel.toggleShowInfoOnTrackChange(!switchTrackChangeInfo.isChecked) }
 
         itemBufferDisplay.setOnClickListener {
-            val options = listOf(getString(R.string.buffer_off), getString(R.string.buffer_panel), getString(R.string.buffer_clock))
+            val options = listOf(getString(R.string.buffer_off), getString(R.string.buffer_panel), getString(R.string.buffer_clock),
+                getString(R.string.buffer_stats))
             showSingleChoiceDialog(getString(R.string.pref_buffer_display), options, settingsViewModel.bufferDisplayMode.value ?: SettingsRepository.BUFFER_DISPLAY_OFF) {
                 settingsViewModel.setBufferDisplayMode(it)
             }
@@ -901,6 +902,7 @@ class GlobalSettingsActivity : AppCompatActivity() {
             textBufferDisplayValue.text = when (mode) {
                 SettingsRepository.BUFFER_DISPLAY_PANEL -> getString(R.string.buffer_panel)
                 SettingsRepository.BUFFER_DISPLAY_CLOCK -> getString(R.string.buffer_clock)
+                SettingsRepository.BUFFER_DISPLAY_STATS -> getString(R.string.buffer_stats)
                 else -> getString(R.string.buffer_off)
             }
         }

@@ -255,6 +255,15 @@
     <string name="buffer_off">Выкл</string>
     <string name="buffer_panel">В панели управления</string>
     <string name="buffer_clock">Рядом с часами и в инфопанели</string>
+    <string name="buffer_stats">Карточка статистики</string>
+    <string name="stats_buffer">Буфер</string>
+    <string name="stats_network">Сеть</string>
+    <string name="stats_video">Видео</string>
+    <string name="stats_audio">Звук</string>
+    <string name="stats_dropped">Пропущено кадров</string>
+    <string name="stats_buffer_value">%1$d с · %2$d МБ</string>
+    <string name="stats_network_value">%1$.1f Мбит/с · %2$d запр/с</string>
+    <string name="stats_fps">%s к/с</string>
     <string name="pref_buffer_size">Размер буфера</string>
     <string name="pref_buffer_size_desc">Память для буферизации сетевого видео. «Авто» держит запас 15–50 секунд: догружает видео, когда впереди остаётся меньше 15 с, и останавливается на 50 с. С размером в МБ плеер загружает вперёд, пока не заполнит этот объём. Локальные файлы всегда используют «Авто»</string>
     <string name="pref_connection_reuse">Повторно использовать соединение</string>
