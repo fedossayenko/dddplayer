@@ -171,4 +171,19 @@ class ReusingDataSourceTest {
         for (round in 0 until 3) places.forEach { assertReads(it + round * 300_000L, 10) }
         assertEquals(places.map { maxOf(0L, it - ReusingDataSource.BACK) }, opens)
     }
+
+    @Test
+    fun `MP4 audio tracks read in turn step back up to the window from memory, one request for the film`() {
+        // Mp4Extractor с 7 дорожками звука: вперед через куски других дорожек, потом назад за ними (до ~10 МБ)
+        val forward = ReusingDataSource.SKIP_AHEAD - 500_000
+        val back = 8_000_000L // куча тестов 512 МБ: окно 12 МБ
+        assertReads(0, 100_000)
+        var far = 0L
+        while (far + forward + 100_000 < file.size) {
+            far += forward
+            assertReads(far, 100_000)
+            if (far >= back) assertReads(far - back, 100_000)
+        }
+        assertEquals(listOf(0L), opens)
+    }
 }
