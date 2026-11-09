@@ -23,7 +23,7 @@ import kotlin.math.min
  * субтитров читает их пустые 2-байтовые сэмплы по времени, а лежат они в файле в обратном порядке - каждый шаг
  * назад на 2 байта был новым запросом (East of Eden: 32 запроса подряд, 26 с без видео).
  * Здесь соединение после close() остается открытым (паркуется) на IDLE_MS: возврат к нему, шаг назад в пределах
- * последних WINDOW байт или вперед до SKIP_AHEAD байт обходятся без запроса. Новое соединение открывается
+ * последних WINDOW_MAX байт или вперед до SKIP_AHEAD байт обходятся без запроса. Новое соединение открывается
  * на BACK байт раньше запрошенного, чтобы шаги назад сразу попадали в окно.
  * Только GET без длины запроса (так читает файлы ProgressiveMediaPeriod) и только файлы с известным размером;
  * остальное (HLS с диапазонами, POST, эфир без Content-Length) - как раньше.
@@ -41,13 +41,15 @@ class ReusingDataSource(
     private data class Key(val uri: String, val headers: Map<String, String>)
 
     private class Connection(val key: Key, val upstream: DataSource, start: Long, val end: Long) {
-        private val window = ByteArray(WINDOW)
+        // Кольцо последних прочитанных байт: растет вместе с прочитанным до WINDOW_MAX, так что соединение
+        // субтитров (несколько КБ) остается маленьким, а соединение видео держит последние WINDOW_MAX
+        private var window = ByteArray(WINDOW_MIN)
         private val first = start
         var position = start // следующий байт из сети
         var lastUsed = 0L
         var reusable = true // false: ошибка чтения или конец файла
 
-        fun windowStart() = max(first, position - WINDOW)
+        fun windowStart() = max(first, position - window.size)
 
         fun pull(buffer: ByteArray, offset: Int, length: Int): Int {
             val count = try {
@@ -60,24 +62,41 @@ class ReusingDataSource(
                 reusable = false
                 return count
             }
+            grow(position + count - first)
             // Последние байты - в кольцо окна
-            var from = offset + max(0, count - WINDOW)
-            var at = position + (from - offset)
-            while (from < offset + count) {
-                val index = (at % WINDOW).toInt()
-                val chunk = min(offset + count - from, WINDOW - index)
-                System.arraycopy(buffer, from, window, index, chunk)
-                from += chunk
-                at += chunk
-            }
+            val from = offset + max(0, count - window.size)
+            put(position + (from - offset), buffer, from, offset + count - from)
             position += count
             return count
         }
 
+        /** Окно до [needed] байт (не больше WINDOW_MAX), прочитанное раньше остается на своих местах. */
+        private fun grow(needed: Long) {
+            if (needed <= window.size || window.size >= WINDOW_MAX) return
+            var size = window.size.toLong()
+            while (size < needed && size < WINDOW_MAX) size *= 2
+            val start = windowStart()
+            val kept = ByteArray((position - start).toInt())
+            var done = 0
+            while (done < kept.size) done += copy(start + done, kept, done, kept.size - done)
+            window = ByteArray(min(size, WINDOW_MAX.toLong()).toInt())
+            put(start, kept, 0, kept.size)
+        }
+
+        private fun put(at: Long, source: ByteArray, from: Int, count: Int) {
+            var done = 0
+            while (done < count) {
+                val index = ((at + done) % window.size).toInt()
+                val chunk = min(count - done, window.size - index)
+                System.arraycopy(source, from + done, window, index, chunk)
+                done += chunk
+            }
+        }
+
         /** Байты из окна начиная с [at] (windowStart() <= at < position). */
         fun copy(at: Long, buffer: ByteArray, offset: Int, length: Int): Int {
-            val index = (at % WINDOW).toInt()
-            val count = minOf(length.toLong(), position - at, (WINDOW - index).toLong()).toInt()
+            val index = (at % window.size).toInt()
+            val count = minOf(length.toLong(), position - at, (window.size - index).toLong()).toInt()
             System.arraycopy(window, index, buffer, offset, count)
             return count
         }
@@ -218,7 +237,13 @@ class ReusingDataSource(
     }
 
     companion object {
-        const val WINDOW = 256 * 1024
+        const val WINDOW_MIN = 256 * 1024
+        // MP4 с 7 дорожками звука: Mp4Extractor читает куски дорожек по очереди и возвращается назад до ~10 МБ
+        // (MAXIMUM_READ_AHEAD_BYTES_STREAM). С окном 256 КБ каждый такой шаг был новым соединением, которое заново
+        // качало те же байты: 4-6x трафика, и фильм 25 Мбит/с не успевал буферизоваться на линии 57 Мбит/с.
+        // ponytail: до 9 соединений по 12 МБ - 108 МБ кучи в худшем случае (частые перемотки за 10 с);
+        // общий лимит окон, если на маленькой куче будет OutOfMemory
+        val WINDOW_MAX = (Runtime.getRuntime().maxMemory() / 32).coerceIn(WINDOW_MIN.toLong(), 12L * 1024 * 1024).toInt()
         const val BACK = 64 * 1024L
         // ~0.27 с чтения на 15 МБ/с против 0.3-0.8 с нового запроса, а часть уже лежит в сокете с парковки.
         // MP4 с дорожками вразброс прыгает вперед на 1-3 МБ (звук 7 языков, субтитры через 1.6 МБ)
