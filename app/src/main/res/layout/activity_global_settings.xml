@@ -865,6 +865,35 @@
                         app:tint="@color/selector_settings_secondary" />
                 </LinearLayout>
 
+                <!-- Декодированный 7.1 в 5.1 -->
+                <LinearLayout
+                    android:id="@+id/item_fold_71"
+                    style="@style/SettingsItemContainer">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:duplicateParentState="true"
+                        android:orientation="vertical">
+
+                        <TextView
+                            style="@style/SettingsItemTitle"
+                            android:text="@string/pref_fold_71" />
+
+                        <TextView
+                            style="@style/SettingsItemDesc"
+                            android:text="@string/pref_fold_71_summary" />
+                    </LinearLayout>
+
+                    <androidx.appcompat.widget.SwitchCompat
+                        android:id="@+id/switch_fold_71"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:clickable="false"
+                        android:focusable="false" />
+                </LinearLayout>
+
                 <!-- Без изменений только Dolby -->
                 <LinearLayout
                     android:id="@+id/item_dolby_only"

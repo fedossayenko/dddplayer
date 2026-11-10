@@ -37,6 +37,8 @@ class GlobalSettingsViewModel(application: Application) : AndroidViewModel(appli
     val isHdr10PlusEnabled: LiveData<Boolean> = _isHdr10PlusEnabled
     private val _isHdAudioIecEnabled = MutableLiveData(repository.isHdAudioIecEnabled())
     val isHdAudioIecEnabled: LiveData<Boolean> = _isHdAudioIecEnabled
+    private val _isFold71Enabled = MutableLiveData(repository.isFold71Enabled())
+    val isFold71Enabled: LiveData<Boolean> = _isFold71Enabled
     private val _isDolbyOnlyPassthroughEnabled = MutableLiveData(repository.isDolbyOnlyPassthroughEnabled())
     val isDolbyOnlyPassthroughEnabled: LiveData<Boolean> = _isDolbyOnlyPassthroughEnabled
 
@@ -311,6 +313,11 @@ class GlobalSettingsViewModel(application: Application) : AndroidViewModel(appli
     fun toggleDolbyOnlyPassthrough(enabled: Boolean) {
         repository.setDolbyOnlyPassthroughEnabled(enabled)
         _isDolbyOnlyPassthroughEnabled.value = enabled
+    }
+
+    fun toggleFold71(enabled: Boolean) {
+        repository.setFold71Enabled(enabled)
+        _isFold71Enabled.value = enabled
     }
 
     fun toggleHdAudioIec(enabled: Boolean) {

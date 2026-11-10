@@ -204,4 +204,23 @@ class IecCarrierSinkSwitchTest {
         }
         return units.copyOfRange(0, exss)
     }
+
+    @Test
+    fun theOfferDecisionIsLoggedOncePerChangeWithItsReason() {
+        val lines = mutableListOf<String>()
+        var speed = 1.5f
+        val sink = IecCarrierSink(
+            normalSink(AudioSink.SINK_FORMAT_SUPPORTED_DIRECTLY), recordingSink(mutableListOf()), { true }, { false },
+            log = { _, _, message -> lines += message }, requestedSpeed = { speed }
+        )
+        val trueHd = format(MimeTypes.AUDIO_TRUEHD, 8)
+        sink.getFormatSupport(trueHd)
+        sink.getFormatSupport(trueHd)
+        speed = 1f
+        sink.getFormatSupport(trueHd)
+        sink.getFormatSupport(format(MimeTypes.AUDIO_AC3, 6)) // не HD-звук: без строки
+        assertEquals(2, lines.size)
+        assertTrue(lines[0], "no carrier (speed 1.5x)" in lines[0] && "support=${AudioSink.SINK_FORMAT_UNSUPPORTED}" in lines[0])
+        assertTrue(lines[1], ": carrier," in lines[1])
+    }
 }

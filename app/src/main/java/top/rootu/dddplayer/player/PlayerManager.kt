@@ -37,6 +37,7 @@ import androidx.media3.exoplayer.audio.AudioRendererEventListener
 import androidx.media3.exoplayer.audio.AudioSink
 import androidx.media3.exoplayer.audio.AudioTrackAudioOutputProvider
 import androidx.media3.exoplayer.audio.DefaultAudioSink
+import androidx.media3.exoplayer.audio.MediaCodecAudioRenderer
 import androidx.media3.exoplayer.hls.DefaultHlsExtractorFactory
 import androidx.media3.exoplayer.hls.HlsMediaSource
 import androidx.media3.exoplayer.mediacodec.MediaCodecSelector
@@ -446,8 +447,10 @@ class PlayerManager(
                 out: ArrayList<Renderer>
             ) {
                 // Решаем, какой Sink использовать
-                val baseSink = if (settingsRepo.isStereoDownmixEnabled()) {
-                    // Если нужен Downmix -> создаем свой Sink с процессором
+                val downmix = settingsRepo.isStereoDownmixEnabled()
+                val fold71 = !downmix && settingsRepo.isFold71Enabled()
+                val baseSink = if (downmix || fold71) {
+                    // Если нужен Downmix (или свертка 7.1 -> 5.1) -> создаем свой Sink с процессором
 
                     // Ограничиваем аудиобуффер, чтобы не упасть по памяти
                     val bufferSizeProvider = DefaultAudioSink.AudioTrackBufferSizeProvider {
@@ -468,8 +471,9 @@ class PlayerManager(
                         standardSize.coerceAtMost(256 * 1024) // 256КБ должно хватить
                     }
 
+                    // Свертка 7.1 не должна менять буфер битстрима (TrueHD/E-AC3 идут через тот же Sink): стандартный размер
                     val audioOutputProvider = AudioTrackAudioOutputProvider.Builder(appContext)
-                        .setAudioTrackBufferSizeProvider(bufferSizeProvider)
+                        .apply { if (downmix) setAudioTrackBufferSizeProvider(bufferSizeProvider) }
                         .build()
                     //~ Ограничиваем аудиобуффер, чтобы не упасть по памяти
 
@@ -479,7 +483,7 @@ class PlayerManager(
                         .setAudioOutputProvider(audioOutputProvider) // Ограничиваем аудиобуффер, чтобы не упасть по памяти
 
                     val mixingProcessor = ChannelMixingAudioProcessor()
-                    val matrices = AudioMixerLogic.createMatrices(settingsRepo)
+                    val matrices = if (downmix) AudioMixerLogic.createMatrices(settingsRepo) else Fold71.matrices()
                     matrices.forEach { matrix ->
                         mixingProcessor.putChannelMixingMatrix(matrix)
                     }
@@ -499,10 +503,11 @@ class PlayerManager(
                 iecSink = iec
                 // Проброс только Dolby: DTS и TrueHD декодируются. Декодеры устройства перед FFmpeg (PREFER -> ON),
                 // иначе FFmpeg забрал бы и AC3/E-AC3 раньше, чем до них дойдет passthrough; «только устройства» (OFF)
-                // не трогаем
+                // не трогаем. То же с несущей IEC: оба рендерера принимают TrueHD/DTS-HD одинаково, при равенстве
+                // выигрывает первый, и с FFmpeg впереди несущая не получала ни одного трека
                 val dolbyOnly = settingsRepo.isDolbyOnlyPassthroughEnabled()
                 val audioPriority = settingsRepo.getAudioDecoderPriority().let {
-                    if (dolbyOnly && it == DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER) {
+                    if ((dolbyOnly || iec != null) && it == DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER) {
                         DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON
                     } else it
                 }
@@ -523,6 +528,13 @@ class PlayerManager(
                     eventListener,
                     out
                 )
+                // Декодер устройства (Dolby c2 по умолчанию отдает стерео) просим не больше 6 каналов
+                if (fold71) {
+                    val index = out.indexOfFirst { it.javaClass == MediaCodecAudioRenderer::class.java }
+                    if (index >= 0) out[index] = Fold71.Renderer(
+                        context, getCodecAdapterFactory(), mediaCodecSelector, enableDecoderFallback, eventHandler, eventListener, finalSink
+                    )
+                }
             }
         }.apply {
             // Режим для остальных рендереров; видео и аудио берут свои настройки в build*Renderers

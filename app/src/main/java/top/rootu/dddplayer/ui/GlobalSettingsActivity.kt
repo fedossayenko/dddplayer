@@ -94,6 +94,8 @@ class GlobalSettingsActivity : AppCompatActivity() {
     private lateinit var switchTunneling: SwitchCompat
     private lateinit var itemHdAudioIec: LinearLayout
     private lateinit var switchHdAudioIec: SwitchCompat
+    private lateinit var itemFold71: LinearLayout
+    private lateinit var switchFold71: SwitchCompat
     private lateinit var itemDolbyOnly: LinearLayout
     private lateinit var switchDolbyOnly: SwitchCompat
     private lateinit var itemDv: LinearLayout
@@ -367,6 +369,8 @@ class GlobalSettingsActivity : AppCompatActivity() {
         switchTunneling = findViewById(R.id.switch_tunneling)
         itemHdAudioIec = findViewById(R.id.item_hd_audio_iec)
         switchHdAudioIec = findViewById(R.id.switch_hd_audio_iec)
+        itemFold71 = findViewById(R.id.item_fold_71)
+        switchFold71 = findViewById(R.id.switch_fold_71)
         itemDolbyOnly = findViewById(R.id.item_dolby_only)
         switchDolbyOnly = findViewById(R.id.switch_dolby_only)
         itemDv = findViewById(R.id.item_dv)
@@ -503,6 +507,9 @@ class GlobalSettingsActivity : AppCompatActivity() {
         }
 
         // Проброс только Dolby
+        itemFold71.setOnClickListener {
+            settingsViewModel.toggleFold71(!switchFold71.isChecked)
+        }
         itemDolbyOnly.setOnClickListener {
             settingsViewModel.toggleDolbyOnlyPassthrough(!switchDolbyOnly.isChecked)
         }
@@ -751,6 +758,7 @@ class GlobalSettingsActivity : AppCompatActivity() {
         settingsViewModel.isConnectionReuseEnabled.observe(this) { switchConnectionReuse.isChecked = it }
         settingsViewModel.isHdr10PlusEnabled.observe(this) { switchHdr10Plus.isChecked = it }
         settingsViewModel.isHdAudioIecEnabled.observe(this) { switchHdAudioIec.isChecked = it }
+        settingsViewModel.isFold71Enabled.observe(this) { switchFold71.isChecked = it }
         settingsViewModel.isDolbyOnlyPassthroughEnabled.observe(this) { switchDolbyOnly.isChecked = it }
         settingsViewModel.dvMode.observe(this) { mode ->
             textDvValue.text = when (mode) {
