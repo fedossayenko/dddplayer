@@ -10,6 +10,7 @@ import androidx.media3.datasource.TransferListener
 import org.junit.After
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -21,12 +22,14 @@ import java.io.InterruptedIOException
 class ReusingDataSourceTest {
 
     // Больше SKIP_AHEAD: индекс в конце - дальний прыжок
-    private val file = ByteArray(6 * ReusingDataSource.SKIP_AHEAD.toInt()) { (it * 31 + it / 7).toByte() }
+    private fun fileOf(size: Int) = ByteArray(size) { (it * 31 + it / 7).toByte() }
+    private var file = fileOf(6 * ReusingDataSource.SKIP_AHEAD.toInt())
     private val uri = Uri.parse("https://store.example/dld/film.mp4")
     private val opens = mutableListOf<Long>() // позиции запросов в "сеть"
     private var failReads = false
     private var limit = Int.MAX_VALUE // соединений сразу, как у IPTV с одним на аккаунт
     private var live = 0
+    private var pulled = 0L // байт, отданных "сетью"
 
     /** "Сеть": каждый open - запрос с Range, чтение отдает файл с этой позиции. */
     private inner class Network : DataSource {
@@ -46,6 +49,7 @@ class ReusingDataSourceTest {
             val count = minOf(length, file.size - position)
             System.arraycopy(file, position, buffer, offset, count)
             position += count
+            pulled += count
             return count
         }
         override fun getUri(): Uri = uri
@@ -176,7 +180,7 @@ class ReusingDataSourceTest {
     fun `MP4 audio tracks read in turn step back up to the window from memory, one request for the film`() {
         // Mp4Extractor с 7 дорожками звука: вперед через куски других дорожек, потом назад за ними (до ~10 МБ)
         val forward = ReusingDataSource.SKIP_AHEAD - 500_000
-        val back = 8_000_000L // куча тестов 512 МБ: окно 12 МБ
+        val back = ReusingDataSource.WINDOW_MAX - 300_000L // шаг назад почти на все окно, какой бы ни была куча
         assertReads(0, 100_000)
         var far = 0L
         while (far + forward + 100_000 < file.size) {
@@ -185,5 +189,62 @@ class ReusingDataSourceTest {
             if (far >= back) assertReads(far - back, 100_000)
         }
         assertEquals(listOf(0L), opens)
+    }
+
+    @Test
+    fun `the window grows from an unaligned start with a wrapped ring and a step back across the old edge is served from memory`() {
+        val far = 3_000_001L
+        assertReads(far, 10)
+        // По 200 КБ: окно 256 КБ растет, когда кольцо уже обернулось (начало не кратно размеру окна)
+        var at = far
+        while (at < far + 1_500_000) { assertReads(at, 200_000); at += 200_000 }
+        assertReads(far + 1_400_000 - 1_000_000, 100_000) // назад на 1 МБ: за прежней границей окна
+        assertReads(far - 30_000, 1000) // и ниже начала запроса, но в пределах BACK
+        assertEquals(listOf(far - ReusingDataSource.BACK), opens)
+    }
+
+    @Test
+    fun `more far places than MAX_PARKED close the oldest connections`() {
+        val step = ReusingDataSource.SKIP_AHEAD + 100_000
+        file = fileOf(((ReusingDataSource.MAX_PARKED + 2) * step + step).toInt())
+        val places = (0L until ReusingDataSource.MAX_PARKED + 2L).map { it * step }
+        places.forEach { assertReads(it, 10) }
+        assertEquals(places.size, opens.size)
+        assertEquals(2, closes)
+    }
+
+    @Test
+    fun `over the windows budget old windows shrink and the sockets stay`() {
+        val saved = ReusingDataSource.parkedBudget
+        try {
+            ReusingDataSource.parkedBudget = 600_000
+            val step = ReusingDataSource.SKIP_AHEAD + 1_500_000
+            file = fileOf((5 * step).toInt())
+            val places = (0L until 4L).map { it * step }
+            // Каждое соединение читает 700 КБ: окно растет до 1 МБ
+            places.forEach { assertReads(it, 700_000) }
+            assertEquals(0, closes)
+            assertEquals(4L * ReusingDataSource.WINDOW_MIN, ReusingDataSource.parkedWindowBytes()) // бюджет меньше минимума: все сжаты
+            // Старое соединение по-прежнему принимает возврат без нового запроса
+            assertReads(places[0] + 700_000, 10)
+            // Окно снова выросло, но настоящих байт в нем только последние 256 КБ: ниже - новый запрос, не нули
+            assertReads(places[0] + 100_000, 10)
+            assertReads(places[0] + 650_000, 10)
+            assertEquals(5, opens.size)
+        } finally {
+            ReusingDataSource.parkedBudget = saved
+        }
+    }
+
+    @Test
+    fun `of two parked connections the one needing less skipping is taken`() {
+        val p = 1_000_000L
+        val b = p + 2_000_000
+        assertReads(b, 10) // B
+        assertReads(p, 10) // A: ниже окна B, свое соединение, припаркована позже B
+        val before = pulled
+        assertReads(b + 5_000, 10) // подходят оба: у B до цели ~5 КБ, у A ~2 МБ
+        assertTrue("took the far connection: ${pulled - before} bytes pulled", pulled - before < 100_000)
+        assertEquals(2, opens.size)
     }
 }
