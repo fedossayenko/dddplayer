@@ -156,15 +156,14 @@ internal class IecCarrierSink(
     return null
   }
 
-  private var lastLoggedDecision: String? = null
+  private val loggedDecisions = HashSet<String>() // дорожки проверяются по очереди: по одной строке на разное решение
 
   /** Решение для TrueHD/DTS-HD в лог, один раз на смену: по нему видно, почему формат ушел в декодер. */
   private fun logDecision(format: Format, support: Int, refusal: String?) {
     if (log == null || (!isTrueHd(format) && !isDtsCandidate(format))) return
     val message = "offer ${format.sampleMimeType} ${format.channelCount}ch ${format.sampleRate}Hz: " +
       "${if (refusal == null) "carrier" else "no carrier ($refusal)"}, sink support=$support"
-    if (message == lastLoggedDecision) return
-    lastLoggedDecision = message
+    if (!loggedDecisions.add(message)) return
     log.invoke("info", "audio", message)
   }
 

@@ -506,10 +506,10 @@ class GlobalSettingsActivity : AppCompatActivity() {
             settingsViewModel.toggleTunneling(!switchTunneling.isChecked)
         }
 
-        // Проброс только Dolby
         itemFold71.setOnClickListener {
             settingsViewModel.toggleFold71(!switchFold71.isChecked)
         }
+        // Проброс только Dolby
         itemDolbyOnly.setOnClickListener {
             settingsViewModel.toggleDolbyOnlyPassthrough(!switchDolbyOnly.isChecked)
         }
@@ -809,6 +809,8 @@ class GlobalSettingsActivity : AppCompatActivity() {
         settingsViewModel.isStereoDownmixEnabled.observe(this) { enabled ->
             switchDownmix.isChecked = enabled
             itemDownmixConfig.visibility = if (enabled) View.VISIBLE else View.GONE
+            // Свертка 7.1 -> 5.1 работает только без стерео-даунмикса (он и так сводит все в стерео)
+            itemFold71.visibility = if (enabled) View.GONE else View.VISIBLE
         }
 
         // Languages

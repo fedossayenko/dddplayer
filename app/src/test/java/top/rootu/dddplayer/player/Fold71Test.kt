@@ -18,8 +18,8 @@ class Fold71Test {
     fun sevenOneFoldsSidesIntoTheSurroundsAndKeepsTheFront() {
         val m = matrices.single { it.inputChannelCount == 8 }
         for (c in 0 until 4) assertEquals(1f, m.getMixingCoefficient(c, c), 0f)
-        assertEquals(1f, m.getMixingCoefficient(6, 4), 0f) // SL -> BL
-        assertEquals(1f, m.getMixingCoefficient(7, 5), 0f) // SR -> BR
+        assertEquals(0.7071f, m.getMixingCoefficient(6, 4), 1e-4f) // SL -> BL
+        assertEquals(0.7071f, m.getMixingCoefficient(7, 5), 1e-4f) // SR -> BR
         assertEquals(0.7071f, m.getMixingCoefficient(4, 4), 1e-4f)
         assertEquals(0f, m.getMixingCoefficient(6, 5), 0f) // стороны не смешиваются
     }

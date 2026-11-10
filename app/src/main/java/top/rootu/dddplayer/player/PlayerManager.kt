@@ -478,7 +478,7 @@ class PlayerManager(
                     //~ Ограничиваем аудиобуффер, чтобы не упасть по памяти
 
                     val sinkBuilder = DefaultAudioSink.Builder(appContext)
-                        .setEnableAudioOutputPlaybackParameters(true)
+                        .setEnableAudioOutputPlaybackParameters(downmix) // свертка 7.1 скорость звука не трогает
                         .setEnableFloatOutput(false) // Важно для стабильности Downmix на старых чипах
                         .setAudioOutputProvider(audioOutputProvider) // Ограничиваем аудиобуффер, чтобы не упасть по памяти
 
