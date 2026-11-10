@@ -276,7 +276,7 @@ class ReusingDataSource(
         // (MAXIMUM_READ_AHEAD_BYTES_STREAM). С окном 256 КБ каждый такой шаг был новым соединением, которое заново
         // качало те же байты: 4-6x трафика, и фильм 25 Мбит/с не успевал буферизоваться на линии 57 Мбит/с.
         val WINDOW_MAX = (Runtime.getRuntime().maxMemory() / 32).coerceIn(WINDOW_MIN.toLong(), 12L * 1024 * 1024).toInt()
-        // Окна припаркованных вместе: резерв кучи под остальное приложение (NetworkBufferLoadControl) не съедается
+        // Окна припаркованных вместе: не больше доли резерва кучи (NetworkBufferLoadControl); окна читающих соединений сюда не входят
         internal var parkedBudget = 3L * WINDOW_MAX
         const val BACK = 64 * 1024L
         // ~0.27 с чтения на 15 МБ/с против 0.3-0.8 с нового запроса, а часть уже лежит в сокете с парковки.
