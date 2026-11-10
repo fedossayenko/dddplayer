@@ -18,18 +18,21 @@ import androidx.media3.extractor.TrackOutput
 import androidx.media3.extractor.mp4.Mp4Extractor
 import androidx.media3.extractor.text.DefaultSubtitleParserFactory
 import okhttp3.OkHttpClient
+import org.junit.Assume
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import java.io.EOFException
 
-// Not a unit test: replays ProgressiveMediaPeriod's read loop (Mp4Extractor, RESULT_SEEK = new open) over a real file
-// through ReusingDataSource and prints the requests. DDD_URL=... DDD_FROM_S=1497 ./gradlew testDebugUnitTest --tests '*Mp4Jumps*'
+// Не юнит-тест (без DDD_URL пропускается): повторяет цикл чтения ProgressiveMediaPeriod (Mp4Extractor, RESULT_SEEK =
+// новый open) по настоящему файлу через ReusingDataSource и печатает запросы. DDD_URL=... DDD_FROM_S=1497 ./gradlew testDebugUnitTest --tests '*Mp4Jumps*'
 @RunWith(RobolectricTestRunner::class)
 class Mp4JumpsDiagnostic {
     @Test
     fun replay() {
-        val url = System.getenv("DDD_URL") ?: return
+        val url = System.getenv("DDD_URL")
+        Assume.assumeTrue("DDD_URL не задан", url != null)
+        url!!
         val fromUs = (System.getenv("DDD_FROM_S") ?: "1497").toLong() * 1_000_000
         val endUs = fromUs + 60_000_000
         var opens = 0

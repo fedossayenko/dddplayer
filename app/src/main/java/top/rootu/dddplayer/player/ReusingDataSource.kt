@@ -93,6 +93,22 @@ class ReusingDataSource(
             window = next
         }
 
+        /** Окно уменьшается до [WINDOW_MIN], сокет остается: он дорогой (0.3-0.8 с), окно - только запас для шагов назад. */
+        fun shrink() {
+            if (window.size <= WINDOW_MIN) return
+            val old = window
+            val next = ByteArray(WINDOW_MIN)
+            var at = max(windowStart(), position - next.size)
+            while (at < position) {
+                val from = (at % old.size).toInt()
+                val to = (at % next.size).toInt()
+                val chunk = minOf(position - at, (old.size - from).toLong(), (next.size - to).toLong()).toInt()
+                System.arraycopy(old, from, next, to, chunk)
+                at += chunk
+            }
+            window = next
+        }
+
         private fun put(at: Long, source: ByteArray, from: Int, count: Int) {
             var done = 0
             while (done < count) {
@@ -233,10 +249,17 @@ class ReusingDataSource(
         connection.lastUsed = SystemClock.elapsedRealtime()
         val evicted = synchronized(lock) {
             parked.add(0, connection)
+            // Лимит числа: самое старое закрывается
             val out = mutableListOf<Connection>()
-            // Лимит числа и общий лимит окон: перемотка пультом открывает по соединению на каждый шаг
-            while (parked.size > 1 && (parked.size > MAX_PARKED || parked.sumOf { it.windowBytes.toLong() } > PARKED_BUDGET)) {
-                out += parked.removeAt(parked.lastIndex)
+            while (parked.size > MAX_PARKED) out += parked.removeAt(parked.lastIndex)
+            // Общий лимит окон: перемотка пультом открывает по соединению на каждый шаг. Сокеты не закрываем (при
+            // круге по местам файла старое - именно то, что понадобится следующим), а старым уменьшаем окно
+            var total = parked.sumOf { it.windowBytes.toLong() }
+            for (c in parked.asReversed()) {
+                if (total <= parkedBudget) break
+                val before = c.windowBytes
+                c.shrink()
+                total -= before - c.windowBytes
             }
             out
         }
@@ -259,12 +282,11 @@ class ReusingDataSource(
         // качало те же байты: 4-6x трафика, и фильм 25 Мбит/с не успевал буферизоваться на линии 57 Мбит/с.
         val WINDOW_MAX = (Runtime.getRuntime().maxMemory() / 32).coerceIn(WINDOW_MIN.toLong(), 12L * 1024 * 1024).toInt()
         // Окна припаркованных вместе: резерв кучи под остальное приложение (NetworkBufferLoadControl) не съедается
-        val PARKED_BUDGET = 3L * WINDOW_MAX
+        internal var parkedBudget = 3L * WINDOW_MAX
         const val BACK = 64 * 1024L
         // ~0.27 с чтения на 15 МБ/с против 0.3-0.8 с нового запроса, а часть уже лежит в сокете с парковки.
-        // На медленной линии (2 МБ/с) это ~2 с, дороже нового запроса: цена сознательная, MP4 с дорожками вразброс
-        // без нее открывает запрос на каждый прыжок
-        // MP4 с дорожками вразброс прыгает вперед на 1-3 МБ (звук 7 языков, субтитры через 1.6 МБ)
+        // MP4 с дорожками вразброс прыгает вперед на 1-3 МБ (звук 7 языков, субтитры через 1.6 МБ). На медленной
+        // линии (2 МБ/с) 4 МБ - это ~2 с, дороже нового запроса: цена сознательная, без нее каждый прыжок - запрос
         const val SKIP_AHEAD = 4L * 1024 * 1024
         const val IDLE_MS = 10_000L // индекс в конце скачивается и разбирается ~3 с, потом возврат к началу
         const val MAX_PARKED = 8 // видео со звуком и субтитры в 4-6 местах файла: у каждого места свое соединение
@@ -272,6 +294,9 @@ class ReusingDataSource(
         private val closer = Executors.newSingleThreadScheduledExecutor { r ->
             Thread(r, "ReusingDataSource").apply { isDaemon = true }
         }
+
+        /** Байты окон припаркованных соединений (для тестов). */
+        internal fun parkedWindowBytes(): Long = synchronized(lock) { parked.sumOf { it.windowBytes.toLong() } }
 
         // Все экземпляры, под lock: лимит соединений у сервера общий, а источник у каждого элемента свой
         private val parked = ArrayList<Connection>()
