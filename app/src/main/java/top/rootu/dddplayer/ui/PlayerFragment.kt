@@ -1893,6 +1893,7 @@ class PlayerFragment : Fragment(), OnSurfaceReadyListener {
     }
 
     override fun onStop() {
+        statsJob?.cancel() // onResume запускает заново; в фоне и в PiP счетчик раз в секунду не нужен
         viewModel.player?.let { player ->
             viewModel.resumePlayWhenReady = player.playWhenReady
             player.pause()

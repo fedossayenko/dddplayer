@@ -118,6 +118,7 @@
             android:layout_height="wrap_content"
             android:fontFeatureSettings="tnum"
             android:lineSpacingExtra="4dp"
+            android:minWidth="260dp"
             android:textColor="@color/tv_white"
             android:textSize="13sp"
             tools:text="Buffer\t42 s · 310 MB\nNetwork\t48.2 Mbps · 2 req/s" />
