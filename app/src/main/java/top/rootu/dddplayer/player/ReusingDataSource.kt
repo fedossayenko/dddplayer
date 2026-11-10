@@ -70,17 +70,27 @@ class ReusingDataSource(
             return count
         }
 
+        /** Байт в окне сейчас (для общего лимита припаркованных). */
+        val windowBytes get() = window.size
+
         /** Окно до [needed] байт (не больше WINDOW_MAX), прочитанное раньше остается на своих местах. */
         private fun grow(needed: Long) {
             if (needed <= window.size || window.size >= WINDOW_MAX) return
             var size = window.size.toLong()
             while (size < needed && size < WINDOW_MAX) size *= 2
+            val old = window
+            val next = ByteArray(min(size, WINDOW_MAX.toLong()).toInt())
+            // Кольцо в кольцо, без промежуточной копии (на 8 -> 12 МБ она давала бы лишние 8 МБ кучи)
             val start = windowStart()
-            val kept = ByteArray((position - start).toInt())
-            var done = 0
-            while (done < kept.size) done += copy(start + done, kept, done, kept.size - done)
-            window = ByteArray(min(size, WINDOW_MAX.toLong()).toInt())
-            put(start, kept, 0, kept.size)
+            var at = start
+            while (at < position) {
+                val from = (at % old.size).toInt()
+                val to = (at % next.size).toInt()
+                val chunk = minOf(position - at, (old.size - from).toLong(), (next.size - to).toLong()).toInt()
+                System.arraycopy(old, from, next, to, chunk)
+                at += chunk
+            }
+            window = next
         }
 
         private fun put(at: Long, source: ByteArray, from: Int, count: Int) {
@@ -139,9 +149,10 @@ class ReusingDataSource(
         // у многих IPTV одно соединение на аккаунт
         val (found, other) = synchronized(lock) {
             val other = parked.filter { it.key != key }.also { parked.removeAll(it) }
-            parked.firstOrNull {
+            // Самое дешевое: то, до которого читать меньше всего (цель в окне - ноль)
+            parked.filter {
                 target >= it.windowStart() && target <= it.position + SKIP_AHEAD && now - it.lastUsed < IDLE_MS
-            }?.also { parked.remove(it) } to other
+            }.minByOrNull { max(0L, target - it.position) }?.also { parked.remove(it) } to other
         }
         other.forEach { DataSourceUtil.closeQuietly(it.upstream) }
         val connection = found?.takeIf { reached(it, target) } ?: try {
@@ -222,9 +233,14 @@ class ReusingDataSource(
         connection.lastUsed = SystemClock.elapsedRealtime()
         val evicted = synchronized(lock) {
             parked.add(0, connection)
-            if (parked.size > MAX_PARKED) parked.removeAt(parked.lastIndex) else null
+            val out = mutableListOf<Connection>()
+            // Лимит числа и общий лимит окон: перемотка пультом открывает по соединению на каждый шаг
+            while (parked.size > 1 && (parked.size > MAX_PARKED || parked.sumOf { it.windowBytes.toLong() } > PARKED_BUDGET)) {
+                out += parked.removeAt(parked.lastIndex)
+            }
+            out
         }
-        evicted?.let { DataSourceUtil.closeQuietly(it.upstream) }
+        evicted.forEach { DataSourceUtil.closeQuietly(it.upstream) }
         // Source не освобождают явно: соединения, к которым не вернулись, закрывает таймер
         closer.schedule({ closeIdle() }, IDLE_MS + 100, TimeUnit.MILLISECONDS)
     }
@@ -241,11 +257,13 @@ class ReusingDataSource(
         // MP4 с 7 дорожками звука: Mp4Extractor читает куски дорожек по очереди и возвращается назад до ~10 МБ
         // (MAXIMUM_READ_AHEAD_BYTES_STREAM). С окном 256 КБ каждый такой шаг был новым соединением, которое заново
         // качало те же байты: 4-6x трафика, и фильм 25 Мбит/с не успевал буферизоваться на линии 57 Мбит/с.
-        // ponytail: до 9 соединений по 12 МБ - 108 МБ кучи в худшем случае (частые перемотки за 10 с);
-        // общий лимит окон, если на маленькой куче будет OutOfMemory
         val WINDOW_MAX = (Runtime.getRuntime().maxMemory() / 32).coerceIn(WINDOW_MIN.toLong(), 12L * 1024 * 1024).toInt()
+        // Окна припаркованных вместе: резерв кучи под остальное приложение (NetworkBufferLoadControl) не съедается
+        val PARKED_BUDGET = 3L * WINDOW_MAX
         const val BACK = 64 * 1024L
         // ~0.27 с чтения на 15 МБ/с против 0.3-0.8 с нового запроса, а часть уже лежит в сокете с парковки.
+        // На медленной линии (2 МБ/с) это ~2 с, дороже нового запроса: цена сознательная, MP4 с дорожками вразброс
+        // без нее открывает запрос на каждый прыжок
         // MP4 с дорожками вразброс прыгает вперед на 1-3 МБ (звук 7 языков, субтитры через 1.6 МБ)
         const val SKIP_AHEAD = 4L * 1024 * 1024
         const val IDLE_MS = 10_000L // индекс в конце скачивается и разбирается ~3 с, потом возврат к началу

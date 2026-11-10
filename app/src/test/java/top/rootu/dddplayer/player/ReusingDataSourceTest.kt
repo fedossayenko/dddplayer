@@ -21,7 +21,7 @@ import java.io.InterruptedIOException
 class ReusingDataSourceTest {
 
     // Больше SKIP_AHEAD: индекс в конце - дальний прыжок
-    private val file = ByteArray(6 * ReusingDataSource.SKIP_AHEAD.toInt()) { (it * 31 + it / 7).toByte() }
+    private val file = ByteArray(12 * ReusingDataSource.SKIP_AHEAD.toInt()) { (it * 31 + it / 7).toByte() }
     private val uri = Uri.parse("https://store.example/dld/film.mp4")
     private val opens = mutableListOf<Long>() // позиции запросов в "сеть"
     private var failReads = false
@@ -176,7 +176,7 @@ class ReusingDataSourceTest {
     fun `MP4 audio tracks read in turn step back up to the window from memory, one request for the film`() {
         // Mp4Extractor с 7 дорожками звука: вперед через куски других дорожек, потом назад за ними (до ~10 МБ)
         val forward = ReusingDataSource.SKIP_AHEAD - 500_000
-        val back = 8_000_000L // куча тестов 512 МБ: окно 12 МБ
+        val back = ReusingDataSource.WINDOW_MAX - 300_000L // шаг назад почти на все окно, какой бы ни была куча
         assertReads(0, 100_000)
         var far = 0L
         while (far + forward + 100_000 < file.size) {
@@ -185,5 +185,34 @@ class ReusingDataSourceTest {
             if (far >= back) assertReads(far - back, 100_000)
         }
         assertEquals(listOf(0L), opens)
+    }
+
+    @Test
+    fun `the window grows from an unaligned start and a step back across the old window edge is served from memory`() {
+        val far = 3_000_001L
+        assertReads(far, 10)
+        assertReads(far, 1_500_000) // окно 256 КБ растет до 2 МБ на том же соединении
+        assertReads(far + 1_400_000 - 1_000_000, 100_000) // назад на 1 МБ: за прежней границей окна
+        assertReads(far - 30_000, 1000) // и ниже начала запроса, но в пределах BACK
+        assertEquals(listOf(far - ReusingDataSource.BACK), opens)
+    }
+
+    @Test
+    fun `more far places than MAX_PARKED close the oldest connections`() {
+        val places = (0L until 10L).map { it * (ReusingDataSource.SKIP_AHEAD + 100_000) }
+        places.forEach { assertReads(it, 10) }
+        assertEquals(10, opens.size)
+        assertEquals(10 - ReusingDataSource.MAX_PARKED, closes)
+    }
+
+    @Test
+    fun `of two parked connections the one needing less skipping is taken`() {
+        val near = 500_000L
+        val far = ReusingDataSource.SKIP_AHEAD + 1_000_000
+        assertReads(far, 10)   // соединение A: позиция far + 10
+        assertReads(near, 10)  // соединение B: позиция near + 10
+        assertReads(near + 5_000, 10) // B, а не A: до него 5 КБ, а A цель позади окна - нельзя
+        assertReads(far + 20, 10)
+        assertEquals(listOf(far - ReusingDataSource.BACK, 0L), opens)
     }
 }
