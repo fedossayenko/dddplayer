@@ -151,19 +151,19 @@ internal class IecCarrierSink(
     // A_DTS может оказаться обычным ядром: тогда его заберет обычный Sink, и он должен это уметь
     if (format.sampleMimeType == MimeTypes.AUDIO_DTS &&
       defaultSink.getFormatSupport(format) != AudioSink.SINK_FORMAT_SUPPORTED_DIRECTLY
-    ) return "plain DTS core, normal sink takes it"
+    ) return "A_DTS may be a plain core and the normal sink cannot pass DTS directly"
     if (!carrierRouteAvailable(format)) return "no IEC 61937 route"
     return null
   }
 
-  private val loggedDecisions = HashSet<String>() // дорожки проверяются по очереди: по одной строке на разное решение
+  private val lastDecisions = HashMap<String?, String>() // по mime: строка при смене решения
 
   /** Решение для TrueHD/DTS-HD в лог, один раз на смену: по нему видно, почему формат ушел в декодер. */
   private fun logDecision(format: Format, support: Int, refusal: String?) {
     if (log == null || (!isTrueHd(format) && !isDtsCandidate(format))) return
     val message = "offer ${format.sampleMimeType} ${format.channelCount}ch ${format.sampleRate}Hz: " +
       "${if (refusal == null) "carrier" else "no carrier ($refusal)"}, sink support=$support"
-    if (!loggedDecisions.add(message)) return
+    if (lastDecisions.put(format.sampleMimeType, message) == message) return
     log.invoke("info", "audio", message)
   }
 

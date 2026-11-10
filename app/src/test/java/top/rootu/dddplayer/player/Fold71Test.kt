@@ -9,8 +9,8 @@ class Fold71Test {
 
     @Test
     fun coversEveryChannelCountUpToEightAndOnlyEightChangesTheCount() {
-        assertEquals((1..8).toList(), matrices.map { it.inputChannelCount }.sorted())
-        matrices.filter { it.inputChannelCount <= 7 }.forEach { assertTrue(it.isIdentity) }
+        assertEquals((1..12).toList(), matrices.map { it.inputChannelCount }.sorted())
+        matrices.filter { it.inputChannelCount != 8 }.forEach { assertTrue(it.isIdentity) }
         assertEquals(6, matrices.single { it.inputChannelCount == 8 }.outputChannelCount)
     }
 

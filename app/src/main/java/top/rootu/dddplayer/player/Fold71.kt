@@ -28,7 +28,9 @@ internal object Fold71 {
         // Тыловые и боковые каналы 7.1 делят окружающие 5.1: по 0.7071 каждый, сумма не больше 1.41 (клип только у синфазного пика)
         put(4, 4, SURROUND_GAIN); put(5, 5, SURROUND_GAIN)
         put(6, 4, SURROUND_GAIN); put(7, 5, SURROUND_GAIN)
-        return identity + ChannelMixingMatrix(8, 6, matrix)
+        // Больше 8 каналов (7.1.4 и т.п.) идут как есть, а не ошибкой конфигурации
+        val wide = (9..12).map { ChannelMixingMatrix.create(it, it) }
+        return identity + wide + ChannelMixingMatrix(8, 6, matrix)
     }
 
     private const val SURROUND_GAIN = 0.7071f

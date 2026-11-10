@@ -219,7 +219,10 @@ class IecCarrierSinkSwitchTest {
         speed = 1f
         sink.getFormatSupport(trueHd)
         sink.getFormatSupport(format(MimeTypes.AUDIO_AC3, 6)) // не HD-звук: без строки
-        assertEquals(2, lines.size)
+        speed = 1.5f
+        sink.getFormatSupport(trueHd) // решение снова сменилось: строка снова
+        assertEquals(3, lines.size)
+        assertTrue(lines[2], "no carrier (speed 1.5x)" in lines[2])
         assertTrue(lines[0], "no carrier (speed 1.5x)" in lines[0] && "support=${AudioSink.SINK_FORMAT_UNSUPPORTED}" in lines[0])
         assertTrue(lines[1], ": carrier," in lines[1])
     }
