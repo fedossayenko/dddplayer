@@ -52,6 +52,7 @@
     если обычный sink принимает DTS напрямую; ошибка такого перехода приходит как `InitializationException`).
     Бейдж аудио при несущей показывает `TrueHD (IEC 61937)` / `DTS-HD (IEC 61937)` (`carrierCodecLabel`).
     Защелка несовпадения потока сбрасывается в `loadPlaylist` и при `onMediaItemTransition`;
+  - `fold_71_to_51` (без стерео-даунмикса): свой `DefaultAudioSink` с `ChannelMixingAudioProcessor` 8 -> 6 (`Fold71.matrices`, стандартный размер буфера, скорость как обычно) и рендерер `Fold71.Renderer`, который подменяет стандартный `MediaCodecAudioRenderer` и просит у декодера не больше 6 каналов (`KEY_MAX_OUTPUT_CHANNEL_COUNT`, API 30+);
   - `NetworkBufferLoadControl` (см. ниже);
   - `LoudnessEnhancer` по `audioSessionId` (`loudness_boost`), `skipSilence`, шаг перемотки 15 с.
 - `loadPlaylist(items, startIndex, startPosMs)` превращает `MediaItem` в `Media3MediaItem`

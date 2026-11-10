@@ -137,19 +137,34 @@ internal class IecCarrierSink(
    * from the bitstream once buffers are already flowing — far too late for a selection that
    * happens before configure.
    */
-  private fun shouldUseCarrier(format: Format): Boolean {
-    if (!isTrueHd(format) && !isDtsCandidate(format)) return false
-    if (mismatchGeneration == mediaGeneration.get()) return false
+  private fun shouldUseCarrier(format: Format): Boolean = carrierRefusal(format) == null
+
+  /** Почему формат не идет на несущую; null - идет. Порядок проверок тот же, что и был у shouldUseCarrier. */
+  private fun carrierRefusal(format: Format): String? {
+    if (!isTrueHd(format) && !isDtsCandidate(format)) return "not TrueHD/DTS"
+    if (mismatchGeneration == mediaGeneration.get()) return "stream mismatch latched"
     // Туннелирование синхронизирует видео с AudioTrack обычного Sink; несущая его не поддерживает
-    if (tunneling) return false
-    if (!isCarrierRateFamily(format.sampleRate)) return false
-    if (!isUnitSpeed()) return false
-    if (directOutputBlocked(format)) return false
+    if (tunneling) return "tunneling"
+    if (!isCarrierRateFamily(format.sampleRate)) return "sample rate ${format.sampleRate}Hz is not 48kHz family"
+    if (!isUnitSpeed()) return "speed ${requestedSpeed?.invoke() ?: playbackParameters.speed}x"
+    if (directOutputBlocked(format)) return "direct output blocked"
     // A_DTS может оказаться обычным ядром: тогда его заберет обычный Sink, и он должен это уметь
     if (format.sampleMimeType == MimeTypes.AUDIO_DTS &&
       defaultSink.getFormatSupport(format) != AudioSink.SINK_FORMAT_SUPPORTED_DIRECTLY
-    ) return false
-    return carrierRouteAvailable(format)
+    ) return "plain DTS core, normal sink takes it"
+    if (!carrierRouteAvailable(format)) return "no IEC 61937 route"
+    return null
+  }
+
+  private val loggedDecisions = HashSet<String>() // дорожки проверяются по очереди: по одной строке на разное решение
+
+  /** Решение для TrueHD/DTS-HD в лог, один раз на смену: по нему видно, почему формат ушел в декодер. */
+  private fun logDecision(format: Format, support: Int, refusal: String?) {
+    if (log == null || (!isTrueHd(format) && !isDtsCandidate(format))) return
+    val message = "offer ${format.sampleMimeType} ${format.channelCount}ch ${format.sampleRate}Hz: " +
+      "${if (refusal == null) "carrier" else "no carrier ($refusal)"}, sink support=$support"
+    if (!loggedDecisions.add(message)) return
+    log.invoke("info", "audio", message)
   }
 
   /**
@@ -225,10 +240,15 @@ internal class IecCarrierSink(
     else -> defaultSink.supportsFormat(format)
   }
 
-  override fun getFormatSupport(format: Format): Int = when {
-    shouldUseCarrier(format) -> AudioSink.SINK_FORMAT_SUPPORTED_DIRECTLY
-    forceDecode(format) -> AudioSink.SINK_FORMAT_UNSUPPORTED
-    else -> defaultSink.getFormatSupport(format)
+  override fun getFormatSupport(format: Format): Int {
+    val refusal = carrierRefusal(format)
+    val support = when {
+      refusal == null -> AudioSink.SINK_FORMAT_SUPPORTED_DIRECTLY
+      forceDecode(format) -> AudioSink.SINK_FORMAT_UNSUPPORTED
+      else -> defaultSink.getFormatSupport(format)
+    }
+    logDecision(format, support, refusal)
+    return support
   }
 
   // Media3 1.9: configure(Format, bufferSize, outputChannels) вместо AudioSinkConfig из 1.11

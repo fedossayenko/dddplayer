@@ -366,6 +366,11 @@ class SettingsRepository private constructor(context: Context) {
     fun isDolbyOnlyPassthroughEnabled(): Boolean = prefs.getBoolean("dolby_only_passthrough", false)
     fun setDolbyOnlyPassthroughEnabled(enabled: Boolean) = prefs.edit { putBoolean("dolby_only_passthrough", enabled) }
 
+    // Декодированный звук 7.1 сворачивается в 5.1: выходы, где 8-канальный PCM уходит в стерео-микшер (Fire OS), а 6 каналов
+    // идут напрямую. По умолчанию выкл: ресиверу с честным PCM 7.1 тылы нужны
+    fun isFold71Enabled(): Boolean = prefs.getBoolean("fold_71_to_51", false)
+    fun setFold71Enabled(enabled: Boolean) = prefs.edit { putBoolean("fold_71_to_51", enabled) }
+
     // Принудительный Downmix в стерео
     fun isStereoDownmixEnabled(): Boolean = prefs.getBoolean("stereo_downmix", true)
     fun setStereoDownmixEnabled(enabled: Boolean) = prefs.edit { putBoolean("stereo_downmix", enabled) }
@@ -696,7 +701,7 @@ class SettingsRepository private constructor(context: Context) {
 
     // Сигнатура настроек, требующих полного перезапуска плеера
     fun getHardSettingsSignature(): String {
-        val videoParams = "${getVideoDecoderPriority()}_${getAudioDecoderPriority()}_${isTunnelingEnabled()}_${getDvMode()}_${isHdAudioIecEnabled()}_${isDolbyOnlyPassthroughEnabled()}_${isHdr10PlusEnabled()}"
+        val videoParams = "${getVideoDecoderPriority()}_${getAudioDecoderPriority()}_${isTunnelingEnabled()}_${getDvMode()}_${isHdAudioIecEnabled()}_${isDolbyOnlyPassthroughEnabled()}_${isFold71Enabled()}_${isHdr10PlusEnabled()}"
         val audioDownmix = "${isStereoDownmixEnabled()}_${getMixPreset()}_${getMixFront()}_${getMixCenter()}_${getMixRear()}_${getMixMiddle()}_${getMixLfe()}"
         return "${videoParams}_${audioDownmix}_${getTargetBufferCorrectMB()}"
     }
