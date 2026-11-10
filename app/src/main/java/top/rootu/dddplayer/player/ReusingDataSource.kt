@@ -44,7 +44,7 @@ class ReusingDataSource(
         // Кольцо последних прочитанных байт: растет вместе с прочитанным до WINDOW_MAX, так что соединение
         // субтитров (несколько КБ) остается маленьким, а соединение видео держит последние WINDOW_MAX
         private var window = ByteArray(WINDOW_MIN)
-        private val first = start
+        private var first = start // начало того, что окно держит целиком
         var position = start // следующий байт из сети
         var lastUsed = 0L
         var reusable = true // false: ошибка чтения или конец файла
@@ -78,27 +78,20 @@ class ReusingDataSource(
             if (needed <= window.size || window.size >= WINDOW_MAX) return
             var size = window.size.toLong()
             while (size < needed && size < WINDOW_MAX) size *= 2
-            val old = window
-            val next = ByteArray(min(size, WINDOW_MAX.toLong()).toInt())
-            // Кольцо в кольцо, без промежуточной копии (на 8 -> 12 МБ она давала бы лишние 8 МБ кучи)
-            val start = windowStart()
-            var at = start
-            while (at < position) {
-                val from = (at % old.size).toInt()
-                val to = (at % next.size).toInt()
-                val chunk = minOf(position - at, (old.size - from).toLong(), (next.size - to).toLong()).toInt()
-                System.arraycopy(old, from, next, to, chunk)
-                at += chunk
-            }
-            window = next
+            resize(min(size, WINDOW_MAX.toLong()).toInt())
         }
 
         /** Окно уменьшается до [WINDOW_MIN], сокет остается: он дорогой (0.3-0.8 с), окно - только запас для шагов назад. */
         fun shrink() {
-            if (window.size <= WINDOW_MIN) return
+            if (window.size > WINDOW_MIN) resize(WINDOW_MIN)
+        }
+
+        /** Кольцо в кольцо: сохраняются последние min(прочитанное, [size]) байт, [first] подтягивается к ним. */
+        private fun resize(size: Int) {
             val old = window
-            val next = ByteArray(WINDOW_MIN)
-            var at = max(windowStart(), position - next.size)
+            val next = ByteArray(size)
+            val keepFrom = max(windowStart(), position - size)
+            var at = keepFrom
             while (at < position) {
                 val from = (at % old.size).toInt()
                 val to = (at % next.size).toInt()
@@ -106,6 +99,8 @@ class ReusingDataSource(
                 System.arraycopy(old, from, next, to, chunk)
                 at += chunk
             }
+            // Окно утверждает, что держит все байты от first: после сжатия это уже не так
+            first = keepFrom
             window = next
         }
 

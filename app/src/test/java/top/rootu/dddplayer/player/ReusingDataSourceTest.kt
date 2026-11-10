@@ -227,7 +227,10 @@ class ReusingDataSourceTest {
             assertTrue(ReusingDataSource.parkedWindowBytes() <= 600_000 + 1_048_576) // только свежее может быть больше
             // Старое соединение по-прежнему принимает возврат без нового запроса
             assertReads(places[0] + 700_000, 10)
-            assertEquals(4, opens.size)
+            // Окно снова выросло, но настоящих байт в нем только последние 256 КБ: ниже - новый запрос, не нули
+            assertReads(places[0] + 100_000, 10)
+            assertReads(places[0] + 650_000, 10)
+            assertEquals(5, opens.size)
         } finally {
             ReusingDataSource.parkedBudget = saved
         }
